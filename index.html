@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>
+            body {
+                margin: 0;
+            }
+            .full-screen {
+                position: fixed;
+                width: 100%;
+                height: 100dvh;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="renderCanvas" class="full-screen"></canvas>
+        <div id="debugLayer" class="full-screen"></div>
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>
