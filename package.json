@@ -26,6 +26,8 @@
   "dependencies": {
     "@babylonjs/inspector": "^8.18.0",
     "@babylonjs/loaders": "^8.18.0",
-    "chokidar": "^4.0.3"
+    "@clack/prompts": "^0.11.0",
+    "chokidar": "^4.0.3",
+    "tsx": "^4.20.3"
   }
 }
