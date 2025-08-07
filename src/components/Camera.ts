@@ -3,15 +3,21 @@ import { Component, Entity, World, System } from "~/lib/ECS";
 
 export interface CameraComponentInput {
   type: "Free" | "Static" | "Follow";
+  offset: [number, number, number];
+  target?: string;
 }
 
 export class CameraComponent extends Component {
-  // Define properties/options, inported from data.
-  // public enabled = true
-  // public loaded = false
+  public type: "Free" | "Static" | "Follow";
+  public offset: Vector3;
+  public target: string;
+  public camera: UniversalCamera | null = null;
+
   constructor(data: CameraComponentInput) {
     super(data);
+    this.type = data.type;
     this.offset = Vector3.FromArray(data.offset);
+    this.target = data.target || "World";
   }
 }
 
@@ -24,14 +30,11 @@ export class CameraSystem extends System {
     const cameraComponent = entity.getComponent(CameraComponent);
     let { offset, type, target, camera } = cameraComponent;
     const canvas = this.scene.getEngine().getRenderingCanvas();
-    if (type == "Free" || type == "Static") {
-      camera = new UniversalCamera(
-        "UniversalCamera",
-        entity.position,
-        this.scene,
-      );
-      type != "Static" ? camera.attachControl(canvas, true) : "";
-    }
+    camera = new UniversalCamera(
+      "UniversalCamera",
+      entity.position,
+      this.scene,
+    );
     let t =
       this.scene.getNodeByName(target) || this.scene.getNodeByName("World");
 
@@ -53,8 +56,17 @@ export class CameraSystem extends System {
       this.scene.getNodeByName(target) || this.scene.getNodeByName("World");
     // gui[entity.name].addLabel("CAM", camera.getTarget());
     // gui[entity.name].addLabel("TAR", t.position);
-    camera.setTarget(Vector3.Lerp(camera.getTarget(), t.position, 0.01));
-    var dist = Vector3.Distance(camera.position, t.position);
+
+    // Handle null camera target gracefully
+    const currentTarget = camera.getTarget() || new Vector3(0, 0, 0);
+    camera.setTarget(
+      Vector3.Lerp(currentTarget, t?.position || new Vector3(0, 0, 0), 0.01),
+    );
+
+    var dist = Vector3.Distance(
+      camera.position,
+      t?.position || new Vector3(0, 0, 0),
+    );
     const amount = (Math.min(dist - 2, 0) + Math.max(dist - 8, 0)) * 0.01;
     var cameraDirection = camera.getDirection(new Vector3(0, 0, 1));
     cameraDirection.y = 0;

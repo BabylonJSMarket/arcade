@@ -43,5 +43,6 @@ export class InspectorSystem extends System {
         }
       }
     });
+    console.log("Inspector loaded");
   }
 }

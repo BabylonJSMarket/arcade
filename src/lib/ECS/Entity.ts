@@ -1,9 +1,10 @@
 import { Mesh, TransformNode } from "@babylonjs/core";
 import { Component } from "./Component";
 
+// Entity.ts
 export class Entity extends Mesh {
   public name: string;
-  private _components: Map<Component, any>;
+  private _components: Map<string, Component>;
   public meshLoaded = false;
 
   constructor(name: string) {
@@ -16,37 +17,23 @@ export class Entity extends Mesh {
     return this._components;
   }
 
-  isReady() {
-    const c = this.getAllComponents();
-    for (let i in c) {
-      if (!c[i].ready()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  peep(label, obj) {
-    window.gui[this.name].addLabel(label, obj);
-  }
-
   // Add a component to this entity
-  addComponent(component: any): Entity {
+  addComponent(component: Component): Entity {
     component.entity = this;
     this._components.set(component.constructor.name, component);
     return this;
   }
 
   // Remove a component from this entity by its class
-  removeComponent(componentClass: any): Entity {
-    this._components.delete(componentClass.name);
+  removeComponent(componentClass: Component): Entity {
+    this._components.delete(componentClass.constructor.name);
     return this;
   }
 
   // Get a component by its class
-  getComponent<T>(componentClass: new (...args: any[]) => T): T {
+  getComponent(componentClass: Component): Component {
     try {
-      const t = this._components.get(componentClass.name) as T;
+      const t = this._components.get(componentClass.name) as Component;
       if (!t) throw `${componentClass.name} Not Found for ${this.name}`;
       return t;
     } catch (e) {
@@ -59,31 +46,19 @@ export class Entity extends Mesh {
     return this._components.has(componentClass.name);
   }
 
-  getComponentByName(name: string) {
-    return this._components.get(name + "Component");
-  }
+  toJSON(): string {
+    const components: any = {};
+    this._components.forEach((component, key) => {
+      // Avoid circular references by not including the entity reference
+      const componentData = { ...component };
+      delete componentData.entity;
+      components[key] = componentData;
+    });
 
-  getComponentTypes(): string[] {
-    return Array.from(this._components.keys());
-  }
-
-  isPrimitive(value: any) {
-    return (
-      value === null ||
-      (typeof value !== "object" && typeof value !== "function")
-    );
-  }
-
-  serialize(): any {
-    const data = {
-      id: this.id,
+    const entity = {
       name: this.name,
-      components: new Map(),
+      components: components,
     };
-
-    for (const [key, value] of this._components) {
-      if (this.isPrimitive(value)) data.components.set(key, value);
-    }
-    return data;
+    return JSON.stringify(entity);
   }
 }

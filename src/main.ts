@@ -5,7 +5,7 @@ import { World } from "./lib/ECS";
 document.addEventListener("DOMContentLoaded", async () => {
   // 3. Figure out what to load from Params with some defaults.
   const params = new URLSearchParams(location.search);
-  const gameName = params.get("game") || "Arcade";
+  const gameName = params.get("game") || "FirstGame";
   const level = params.get("scene") || params.get("level") || "0";
   const canvasId = "renderCanvas";
 

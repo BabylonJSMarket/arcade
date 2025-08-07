@@ -34,9 +34,9 @@ export class World {
   }
 
   async start() {
-    // 5. Render Loop and Game Update
     await this.loadSystems();
 
+    // 5. Render Loop and Game Update
     this.engine.runRenderLoop(() => {
       const scene = this.currentScene;
       if (!scene || !scene.isReady()) return;
@@ -61,6 +61,7 @@ export class World {
   async loadSceneData(sceneName: string, gameName: string) {
     // 1.
     const scenePath = `/GameData/${gameName}/scenes/${sceneName}.json`;
+    document.title = `${gameName} - ${sceneName}`;
     const response = await fetch(scenePath, {
       method: "GET",
       headers: {
@@ -83,16 +84,29 @@ export class World {
   async loadSceneCode(data: any) {
     // Process entities and components
     const entities: any = {};
-    const componentTypes = new Set();
+    const componentTypes = new Set<string>();
     const systems: System[] = [];
     const components: Map<string, Component> = new Map();
 
-    const uniqueComponents = new Set(
+    const uniqueComponents = new Set<string>(
       Object.keys(data.entities).flatMap((entityName) =>
         Object.keys(data.entities[entityName].components),
       ),
     );
 
+    await this.loadUniqueComponents(uniqueComponents);
+    this.processEntitiesAndComponents(
+      data,
+      entities,
+      componentTypes,
+      components,
+    );
+    this.instantiateSystems(systems);
+
+    return { entities, componentTypes, systems, components }; // Return processed scene data
+  }
+
+  private async loadUniqueComponents(uniqueComponents: Set<string>) {
     for (let componentType of uniqueComponents) {
       try {
         const { component, system } =
@@ -110,7 +124,14 @@ export class World {
         );
       }
     }
+  }
 
+  private processEntitiesAndComponents(
+    data: any,
+    entities: any,
+    componentTypes: Set<string>,
+    components: Map<string, Component>,
+  ) {
     //Process each entity and component
     for (const entityName in data.entities) {
       const entityData = data.entities[entityName];
@@ -127,7 +148,7 @@ export class World {
         // debugger;
         if (cachedComponent && cachedComponent.component) {
           components.set(componentType, cachedComponent.component);
-          const c = new cachedComponent.component(componentData);
+          const c = new (cachedComponent.component as any)(componentData);
           entities[entityName].addComponent(c);
           componentTypes.add(componentType);
         } else {
@@ -135,7 +156,9 @@ export class World {
         }
       }
     }
+  }
 
+  private instantiateSystems(systems: System[]) {
     // 3. Instantiate Systems - AFTER all components are loaded
     for (const systemName of this.componentCache) {
       const cachedComponent = this.componentCache.get(systemName[0]);
@@ -149,11 +172,9 @@ export class World {
         console.warn(`System not found in cache for: ${systemName}`); //Handle missing system appropriately
       }
     }
-
-    return { entities, componentTypes, systems, components }; // Return processed scene data
   }
 
-  async importComponentAndSystem(componentType: string): any {
+  async importComponentAndSystem(componentType: string): Promise<any> {
     try {
       const module = await import(
         /* @vite-ignore */ `${BASE_COMPONENT_DIR}${componentType}.ts`
