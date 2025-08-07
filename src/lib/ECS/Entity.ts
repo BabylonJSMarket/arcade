@@ -1,5 +1,5 @@
-import { Mesh, TransformNode } from "@babylonjs/core";
-import { Component } from "./Component";
+import { Mesh } from "@babylonjs/core";
+import { Component } from "./Component.js";
 
 // Entity.ts
 export class Entity extends Mesh {
@@ -31,9 +31,11 @@ export class Entity extends Mesh {
   }
 
   // Get a component by its class
-  getComponent(componentClass: Component): Component {
+  getComponent<T extends Component>(
+    componentClass: new (...args: any[]) => T,
+  ): T {
     try {
-      const t = this._components.get(componentClass.name) as Component;
+      const t = this._components.get(componentClass.name) as T;
       if (!t) throw `${componentClass.name} Not Found for ${this.name}`;
       return t;
     } catch (e) {
@@ -42,7 +44,7 @@ export class Entity extends Mesh {
   }
 
   // Check if the entity has a specific component
-  hasComponent(componentClass: any): boolean {
+  hasComponent(componentClass: new (...args: any[]) => Component): boolean {
     return this._components.has(componentClass.name);
   }
 
@@ -50,7 +52,7 @@ export class Entity extends Mesh {
     const components: any = {};
     this._components.forEach((component, key) => {
       // Avoid circular references by not including the entity reference
-      const componentData = { ...component };
+      const componentData = { ...component } as any;
       delete componentData.entity;
       components[key] = componentData;
     });

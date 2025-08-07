@@ -1,5 +1,5 @@
-import { Vector3, UniversalCamera, FollowCamera } from "@babylonjs/core";
-import { Component, Entity, World, System } from "~/lib/ECS";
+import { Vector3, UniversalCamera } from "@babylonjs/core";
+import { Component, Entity, World, System } from "../lib/ECS/index.js";
 
 export interface CameraComponentInput {
   type: "Free" | "Static" | "Follow";
@@ -26,22 +26,22 @@ export class CameraSystem extends System {
     super(world, componentClasses);
   }
 
+  load(): void {
+    // Initialize the camera system
+  }
+
   loadEntity(entity: Entity) {
     const cameraComponent = entity.getComponent(CameraComponent);
-    let { offset, type, target, camera } = cameraComponent;
-    const canvas = this.scene.getEngine().getRenderingCanvas();
-    camera = new UniversalCamera(
+    // Get camera component properties
+    let camera = new UniversalCamera(
       "UniversalCamera",
       entity.position,
       this.scene,
     );
-    let t =
-      this.scene.getNodeByName(target) || this.scene.getNodeByName("World");
 
     // This attaches the camera to the canvas
     camera.checkCollisions = true;
-    camera.collisionRadius = new Vector3(0.5, 0.5, 0.5);
-    camera.useFramingBehavior = true;
+    camera.ellipsoid = new Vector3(0.5, 0.5, 0.5);
 
     cameraComponent.camera = camera;
     camera.parent = entity;
@@ -49,30 +49,25 @@ export class CameraSystem extends System {
     console.log("Camera component loaded");
   }
 
-  processEntity(entity: Entity, deltaTime: number) {
+  processEntity(entity: Entity, _deltaTime: number) {
     const cameraComponent = entity.getComponent(CameraComponent);
     const { camera, target } = cameraComponent;
     const t =
       this.scene.getNodeByName(target) || this.scene.getNodeByName("World");
-    // gui[entity.name].addLabel("CAM", camera.getTarget());
-    // gui[entity.name].addLabel("TAR", t.position);
+
+    if (!camera) return;
 
     // Handle null camera target gracefully
     const currentTarget = camera.getTarget() || new Vector3(0, 0, 0);
-    camera.setTarget(
-      Vector3.Lerp(currentTarget, t?.position || new Vector3(0, 0, 0), 0.01),
-    );
+    const targetPosition = (t as any)?.position || new Vector3(0, 0, 0);
+    camera.setTarget(Vector3.Lerp(currentTarget, targetPosition, 0.01));
 
-    var dist = Vector3.Distance(
-      camera.position,
-      t?.position || new Vector3(0, 0, 0),
-    );
+    var dist = Vector3.Distance(camera.position, targetPosition);
     const amount = (Math.min(dist - 2, 0) + Math.max(dist - 8, 0)) * 0.01;
     var cameraDirection = camera.getDirection(new Vector3(0, 0, 1));
     cameraDirection.y = 0;
     cameraDirection.normalize();
     cameraDirection.scaleAndAddToRef(amount, camera.position);
-    // camera.position.y += (t.position.y + 2 - camera.position.y) * 0.04;
     if (camera.position.y < 0) camera.position.y = 0;
   }
 }

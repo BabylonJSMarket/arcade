@@ -1,7 +1,7 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
 
-import { Component, Entity, World, System } from "~/lib/ECS";
+import { Component, Entity, World, System } from "../lib/ECS";
 
 export interface InspectorComponentInput {
   debugLayerId: string;
@@ -25,12 +25,22 @@ export class InspectorSystem extends System {
     super(world, componentClasses);
   }
 
-  loadEntity(entity: Entity, deltaTime: number) {
+  load(): void {
+    // Initialize the inspector system
+  }
+
+  processEntity(_entity: Entity, _deltaTime: number): void {
+    // Process inspector updates if needed
+  }
+
+  loadEntity(entity: Entity) {
     const inspectorComponent = entity.getComponent(InspectorComponent);
     const { triggerKey, debugLayerId } = inspectorComponent;
     window.addEventListener("keydown", (ev) => {
       const canvas = this.scene.getEngine().getRenderingCanvas();
-      canvas.focus();
+      if (canvas) {
+        canvas.focus();
+      }
       if (ev.code === triggerKey) {
         if (this.scene.debugLayer?.isVisible()) {
           this.scene.debugLayer.hide();

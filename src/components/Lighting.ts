@@ -1,4 +1,4 @@
-import { Entity, World, System, Component } from "~/lib/ECS";
+import { Entity, World, System, Component } from "../lib/ECS/index.js";
 import { HemisphericLight, Vector3, DirectionalLight } from "@babylonjs/core";
 
 export interface LightingComponentInput {
@@ -26,12 +26,20 @@ export class LightingSystem extends System {
     super(world, componentClasses);
   }
 
+  load(): void {
+    // Initialize the lighting system
+  }
+
+  processEntity(_entity: Entity, _deltaTime: number): void {
+    // Process lighting updates if needed
+  }
+
   loadEntity(entity: Entity) {
     const lightingComponent = entity.getComponent(LightingComponent);
     lightingComponent.loading = true;
     const { lights, types, offset } = lightingComponent;
     const ov = Vector3.FromArray(offset);
-    types.forEach((type, index) => {
+    types.forEach((type: string) => {
       if (type === "ambient") {
         const light = new HemisphericLight(
           `HemisphericLight-${lights.length}`,

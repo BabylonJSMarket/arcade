@@ -1,20 +1,67 @@
 {
   "name": "my-arcade",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "1.0.0",
+  "description": "A lightweight TypeScript Entity-Component-System (ECS) library built for BabylonJS game development",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:lib": "tsc -p tsconfig.lib.json",
+    "prepublishOnly": "npm run build:lib",
+    "publish:dry": "npm publish --dry-run",
+    "publish:patch": "npm version patch && npm publish",
+    "publish:minor": "npm version minor && npm publish",
+    "publish:major": "npm version major && npm publish",
     "preview": "vite preview",
     "games": "tsx scripts/make-game-data.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
   },
+  "keywords": [
+    "ecs",
+    "entity-component-system",
+    "game-engine",
+    "babylonjs",
+    "3d",
+    "game-development",
+    "typescript"
+  ],
+  "author": "My Arcade",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/my-arcade.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/my-arcade/issues"
+  },
+  "homepage": "https://github.com/yourusername/my-arcade#readme",
+  "peerDependencies": {
+    "@babylonjs/core": "^8.0.0",
+    "@babylonjs/materials": "^8.0.0",
+    "@babylonjs/inspector": "^8.0.0",
+    "@babylonjs/loaders": "^8.0.0"
+  },
   "devDependencies": {
     "@babylonjs/core": "^8.22.0",
     "@babylonjs/materials": "^8.22.0",
+    "@babylonjs/inspector": "^8.18.0",
+    "@babylonjs/loaders": "^8.18.0",
     "@types/node": "^24.2.0",
     "@vitest/ui": "^3.2.4",
     "canvas": "^3.1.2",
@@ -24,8 +71,6 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@babylonjs/inspector": "^8.18.0",
-    "@babylonjs/loaders": "^8.18.0",
     "@clack/prompts": "^0.11.0",
     "chokidar": "^4.0.3",
     "tsx": "^4.20.3"

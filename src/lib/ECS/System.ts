@@ -1,16 +1,19 @@
-import { Entity } from "./Entity";
-import { World } from "./World";
-import { Component } from "./Component";
+import { Entity } from "./Entity.js";
+import { World } from "./World.js";
+import { Component } from "./Component.js";
 import { Scene } from "@babylonjs/core";
 
 export abstract class System {
   protected entities: Entity[] = [];
-  protected componentClasses: Component[];
+  protected componentClasses: (new (...args: any[]) => Component)[];
   protected scene: Scene;
   public world: World;
   public isPauseable: boolean = false;
 
-  constructor(world: World, componentClasses: Component[]) {
+  constructor(
+    world: World,
+    componentClasses: (new (...args: any[]) => Component)[],
+  ) {
     this.world = world;
     this.scene = world.currentScene;
     this.componentClasses = componentClasses;

@@ -1,7 +1,7 @@
 import { AbstractEngine, Engine, Scene } from "@babylonjs/core";
-import { System } from "./System";
-import { Entity } from "./Entity";
-import { Component } from "./Component";
+import { System } from "./System.js";
+import { Entity } from "./Entity.js";
+import { Component } from "./Component.js";
 
 const BASE_COMPONENT_DIR = "../../Components/";
 
@@ -203,7 +203,11 @@ export class World {
   }
 
   // Refreshes the entities this system is concerned with
-  entitiesWith(componentClasses: Component | Component[]): Entity[] {
+  entitiesWith(
+    componentClasses:
+      | (new (...args: any[]) => Component)
+      | (new (...args: any[]) => Component)[],
+  ): Entity[] {
     const entities = this.entities.values();
     const e = Array.from(entities).filter((entity: Entity) =>
       Array.isArray(componentClasses)
