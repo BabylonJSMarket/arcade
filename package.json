@@ -1,5 +1,5 @@
 {
-  "name": "@babylonjsmarket/arcade",
+  "name": "arcade",
   "private": false,
   "version": "1.0.0",
   "description": "A lightweight TypeScript Entity-Component-System (ECS) starter built for endless BabylonJS game development",
