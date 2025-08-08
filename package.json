@@ -1,8 +1,8 @@
 {
-  "name": "my-arcade",
+  "name": "@babylonjsmarket/arcade",
   "private": false,
   "version": "1.0.0",
-  "description": "A lightweight TypeScript Entity-Component-System (ECS) library built for BabylonJS game development",
+  "description": "A lightweight TypeScript Entity-Component-System (ECS) starter built for endless BabylonJS game development",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,6 +17,18 @@
     "README.md",
     "LICENSE"
   ],
+  "github": {
+    "url": "https://github.com/babylonjsmarket/arcade.git"
+  },
+  "author": "Lawrence Whiteside contact@lawrencewhiteside.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/babylonjsmarket/arcade.git"
+  },
+  "bugs": {
+    "url": "https://github.com/babylonjsmarket/arcade/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
