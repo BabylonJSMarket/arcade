@@ -1,0 +1,8 @@
+{
+  "name": "HemisphericLight",
+  "description": "Ambient hemisphere lighting with sky and ground color blending",
+  "category": "lighting",
+  "components": ["HemisphericLightComponent"],
+  "systems": ["HemisphericLightSystem"],
+  "dependencies": []
+}

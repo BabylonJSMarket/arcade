@@ -1,0 +1,8 @@
+{
+  "name": "ArcCamera",
+  "description": "Arc rotate camera that orbits around and follows target entities with smooth movement",
+  "category": "camera",
+  "components": ["ArcCameraComponent"],
+  "systems": ["ArcCameraSystem"],
+  "dependencies": ["MeshPrimitive"]
+}

@@ -1,0 +1,83 @@
+{
+  "name": "@babylonjsmarket/arcade",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Reusable arcade-style components (mesh, camera, lights, input, physics, scoring, animation) for the @babylonjsmarket/ecs framework",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/babylonjsmarket/arcade.git"
+  },
+  "author": "BabylonJS Market",
+  "bin": {
+    "arcade": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./viz": {
+      "types": "./src/viz.ts",
+      "import": "./src/viz.ts"
+    },
+    "./cli": "./dist/cli/index.js",
+    "./package.json": "./package.json",
+    "./MeshPrimitive": "./dist/Components/MeshPrimitive/MeshPrimitive.js",
+    "./Movement": "./dist/Components/Movement/Movement.js",
+    "./KeyboardMover": "./dist/Components/KeyboardMover/KeyboardMover.js",
+    "./PlayerInput": "./dist/Components/PlayerInput/PlayerInput.js",
+    "./ArcCamera": "./dist/Components/ArcCamera/ArcCamera.js",
+    "./CameraFollow": "./dist/Components/CameraFollow/CameraFollow.js",
+    "./DirectionalLight": "./dist/Components/DirectionalLight/DirectionalLight.js",
+    "./HemisphericLight": "./dist/Components/HemisphericLight/HemisphericLight.js",
+    "./Physics": "./dist/Components/Physics/Physics.js",
+    "./Score": "./dist/Components/Score/Score.js",
+    "./Scoreboard": "./dist/Components/Scoreboard/Scoreboard.js",
+    "./Shadow": "./dist/Components/Shadow/Shadow.js",
+    "./Animation": "./dist/Components/Animation/Animation.js",
+    "./Mesh": "./dist/Components/Mesh/Mesh.js"
+  },
+  "files": [
+    "dist",
+    "src/viz.ts",
+    "src/Components/**/*.viz.tsx",
+    "src/Components/**/*.panel.tsx",
+    "src/Components/_shared",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "dependencies": {
+    "@babylonjsmarket/ecs": "*",
+    "@clack/prompts": "^0.10.0",
+    "cross-spawn": "^7.0.6",
+    "mri": "^1.2.0",
+    "picocolors": "^1.1.1"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.8.0"
+  },
+  "peerDependenciesMeta": {
+    "solid-js": { "optional": true }
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "^0.8.10",
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^20.0.0",
+    "jsdom": "^27.3.0",
+    "memfs": "^4.36.0",
+    "solid-js": "^1.9.3",
+    "typescript": "^5.3.0",
+    "vite-plugin-solid": "^2.11.0",
+    "vitest": "^2.0.0"
+  }
+}

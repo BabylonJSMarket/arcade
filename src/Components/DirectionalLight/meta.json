@@ -1,0 +1,8 @@
+{
+  "name": "DirectionalLight",
+  "description": "Directional light source with shadow generation support for sun-like lighting",
+  "category": "lighting",
+  "components": ["DirectionalLightComponent"],
+  "systems": ["DirectionalLightSystem"],
+  "dependencies": []
+}

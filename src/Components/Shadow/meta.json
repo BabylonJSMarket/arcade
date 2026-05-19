@@ -1,0 +1,8 @@
+{
+  "name": "Shadow",
+  "description": "Shadow casting and receiving for entity meshes using ShadowGenerator",
+  "category": "rendering",
+  "components": ["ShadowComponent"],
+  "systems": ["ShadowSystem"],
+  "dependencies": ["DirectionalLight", "MeshPrimitive"]
+}

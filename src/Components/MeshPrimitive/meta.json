@@ -1,0 +1,8 @@
+{
+  "name": "MeshPrimitive",
+  "description": "Create primitive 3D meshes (box, sphere, cylinder, capsule, plane, ground, torus, disc) with materials",
+  "category": "rendering",
+  "components": ["MeshPrimitiveComponent"],
+  "systems": ["MeshPrimitiveSystem"],
+  "dependencies": []
+}
