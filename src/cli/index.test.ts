@@ -174,7 +174,7 @@ describe("arcade CLI", () => {
   });
 
   describe("FirstPerson template", () => {
-    it("imports KeyboardMover and Movement components", async () => {
+    it("wires a UniversalCamera with pointer-lock and crosshair UI", async () => {
       const { code } = await runCli(
         ["fp-project", "-t", "FirstPerson", "--overwrite"],
         tmpDir,
@@ -184,8 +184,10 @@ describe("arcade CLI", () => {
         path.join(tmpDir, "fp-project", "src", "main.ts"),
         "utf-8",
       );
-      expect(mainTs).toContain("KeyboardMoverComponent");
-      expect(mainTs).toContain("MovementComponent");
+      // First-person needs the actual mouse-look camera, not ECS movement.
+      expect(mainTs).toContain("UniversalCamera");
+      expect(mainTs).toContain("requestPointerLock");
+      expect(mainTs).toContain("addCrosshair");
     }, 60_000);
   });
 
