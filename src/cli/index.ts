@@ -206,13 +206,13 @@ async function init() {
     dependencies: {
       "@babylonjsmarket/ecs": "^0.1.0",
       "@babylonjsmarket/arcade": "^0.1.0",
-      "@babylonjs/core": "^7.0.0",
-      "@babylonjs/loaders": "^7.0.0",
+      "@babylonjs/core": "^9.0.0",
+      "@babylonjs/loaders": "^9.0.0",
       "@babylonjs/havok": "^1.3.0",
     },
     devDependencies: {
       typescript: "^5.5.0",
-      vite: "^5.0.0",
+      vite: "^6.0.0",
     },
   };
 
