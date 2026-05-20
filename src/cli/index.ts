@@ -226,7 +226,10 @@ export default defineConfig({
     port: 3000,
   },
   optimizeDeps: {
-    include: ['@babylonjs/core', '@babylonjs/materials', '@babylonjs/loaders', '@babylonjs/gui', '@babylonjs/inspector']
+    // Only pre-bundle deps the scaffolded project actually installs. Add
+    // entries here if you bring in @babylonjs/gui, @babylonjs/inspector,
+    // @babylonjs/materials, etc., so Vite warms them on first load.
+    include: ['@babylonjs/core', '@babylonjs/loaders']
   }
 });
 `;
