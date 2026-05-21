@@ -1,0 +1,7 @@
+{
+  "name": "arcade-ecs",
+  "description": "Skills and commands for scaffolding @babylonjsmarket/arcade ECS games",
+  "version": "0.2.0",
+  "author": "BabylonJS Market",
+  "homepage": "https://babylonjsmarket.com"
+}
