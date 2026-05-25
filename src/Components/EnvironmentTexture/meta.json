@@ -1,0 +1,8 @@
+{
+  "name": "EnvironmentTexture",
+  "description": "Image-based lighting via a prefiltered cubemap. Drop it on any entity in the scene and PBR materials reflect a real environment (chrome balls, polished floors). One URL per renderer.",
+  "category": "rendering",
+  "components": ["EnvironmentTextureComponent"],
+  "systems": ["EnvironmentTextureSystem"],
+  "dependencies": []
+}

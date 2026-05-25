@@ -6,7 +6,7 @@
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-import type { Color, HemisphericLightSpec, LightHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+import type { Color, HemisphericLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 
 export interface HemisphericLightInput {
   direction?: Vec3;
@@ -32,9 +32,6 @@ export class HemisphericLightComponent extends Component {
   diffuse: Color;
   groundColor: Color;
   specular: Color;
-
-  handle?: LightHandle;
-  initialized = false;
 
   constructor(data: HemisphericLightInput = {}) {
     super();

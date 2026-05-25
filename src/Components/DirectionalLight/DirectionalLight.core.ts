@@ -4,7 +4,7 @@
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-import type { Color, DirectionalLightSpec, LightHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+import type { Color, DirectionalLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 
 export interface DirectionalLightInput {
   direction?: Vec3;
@@ -40,9 +40,6 @@ export class DirectionalLightComponent extends Component {
   shadowMaxZ: number;
   shadowMapSize: number;
   autoCreate: boolean;
-
-  handle?: LightHandle;
-  initialized = false;
 
   constructor(data: DirectionalLightInput = {}) {
     super();

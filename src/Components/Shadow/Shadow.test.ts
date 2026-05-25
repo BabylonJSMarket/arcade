@@ -10,7 +10,6 @@ describe('ShadowComponent (core)', () => {
     const c = new ShadowComponent();
     expect(c.castShadow).toBe(true);
     expect(c.receiveShadow).toBe(true);
-    expect(c.initialized).toBe(false);
   });
 
   it('accepts overrides', () => {

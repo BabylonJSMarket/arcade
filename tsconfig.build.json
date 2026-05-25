@@ -15,6 +15,7 @@
     "dist",
     "src/**/*.test.ts",
     "src/**/*.tsx",
-    "src/viz.ts"
+    "src/viz.ts",
+    "src/Components/_shared/viz"
   ]
 }

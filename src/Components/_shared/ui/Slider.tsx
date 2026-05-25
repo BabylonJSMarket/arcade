@@ -35,8 +35,8 @@ export const Slider: Component<SliderProps> = (props) => {
           'margin-bottom': '2px',
         }}
       >
-        <span style={{ color: '#aaa', 'font-size': '10px' }}>{props.label}</span>
-        <span style={{ color: props.color || '#66ccff', 'font-size': '10px' }}>{displayValue()}</span>
+        <span style={{ color: 'var(--viz-fg-soft, #aaa)', 'font-size': '10px' }}>{props.label}</span>
+        <span style={{ color: props.color || 'var(--viz-accent, #66ccff)', 'font-size': '10px' }}>{displayValue()}</span>
       </div>
       <input
         type="range"
@@ -45,7 +45,7 @@ export const Slider: Component<SliderProps> = (props) => {
         step={props.step}
         value={props.value}
         onInput={(e) => props.onChange(parseFloat(e.currentTarget.value))}
-        style={{ width: '100%', cursor: 'pointer' }}
+        style={{ width: '100%', cursor: 'pointer', 'accent-color': 'var(--viz-slider-thumb, #66ccff)' }}
       />
     </div>
   );

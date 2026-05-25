@@ -28,7 +28,7 @@ describe('DirectionalLightDebuggerComponent', () => {
     it('should use defaults when no data provided', () => {
       const defaultComponent = new DirectionalLightDebuggerComponent();
       expect(defaultComponent.visible).toBe(false);
-      expect(defaultComponent.activationKey).toBe('Digit8');
+      expect(defaultComponent.activationKey).toBe('');
       expect(defaultComponent.position).toBe('top-right');
       expect(defaultComponent.showArrows).toBe(true);
     });
@@ -38,7 +38,7 @@ describe('DirectionalLightDebuggerComponent', () => {
         visible: true,
       });
       expect(partialComponent.visible).toBe(true);
-      expect(partialComponent.activationKey).toBe('Digit8');
+      expect(partialComponent.activationKey).toBe('');
       expect(partialComponent.position).toBe('top-right');
       expect(partialComponent.showArrows).toBe(true);
     });
@@ -82,9 +82,9 @@ describe('DirectionalLightDebuggerComponent', () => {
       expect(comp.activationKey).toBe('Digit8');
     });
 
-    it('should default to Digit8', () => {
+    it("should default to '' (auto-assigned by the viz layer)", () => {
       const comp = new DirectionalLightDebuggerComponent();
-      expect(comp.activationKey).toBe('Digit8');
+      expect(comp.activationKey).toBe('');
     });
 
     it('should allow changing activation key', () => {
@@ -169,7 +169,7 @@ describe('DirectionalLightDebuggerComponent', () => {
       const defaultComp = new DirectionalLightDebuggerComponent();
       const serialized = defaultComp.serialize();
       expect(serialized.visible).toBe(false);
-      expect(serialized.activationKey).toBe('Digit8');
+      expect(serialized.activationKey).toBe('');
       expect(serialized.position).toBe('top-right');
       expect(serialized.showArrows).toBe(true);
     });

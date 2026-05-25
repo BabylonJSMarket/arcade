@@ -39,7 +39,7 @@ export const ScoreboardEvents = {
 
 export const ScoreboardInputEvents = {
   /** Public Score-system event — `{ ownerEntity, score, allScores }`. */
-  SCORE_CHANGED: 'score.updated',
+  SCORE_CHANGED: 'score.changed',
   /** Public Score-system event — clears every row to zero. */
   SCORE_RESET: 'score.reset',
 } as const;
@@ -96,23 +96,32 @@ export class ScoreboardComponent extends Component {
 // ============================================
 
 export class ScoreboardSystem extends System {
+  protected query = { required: [ScoreboardComponent] };
+  private unsubscribes: Array<() => void> = [];
+
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ScoreboardComponent] };
     this._pauseable = false;
   }
 
   protected onInitialize(): void {
-    this.eventBus.on(
-      ScoreboardInputEvents.SCORE_CHANGED,
-      (e: ScoreboardScoreUpdateEvent) => this.handleScoreChanged(e),
-    );
-    this.eventBus.on(
-      ScoreboardInputEvents.SCORE_RESET,
-      (e: ScoreboardScoreResetEvent) => this.handleScoreReset(e),
+    this.unsubscribes.push(
+      this.eventBus.on(
+        ScoreboardInputEvents.SCORE_CHANGED,
+        (e: ScoreboardScoreUpdateEvent) => this.handleScoreChanged(e),
+      ),
+      this.eventBus.on(
+        ScoreboardInputEvents.SCORE_RESET,
+        (e: ScoreboardScoreResetEvent) => this.handleScoreReset(e),
+      ),
     );
 
     for (const entity of this.entities) this.ensureInstance(entity);
+  }
+
+  protected onShutdown(): void {
+    this.unsubscribes.forEach((u) => u());
+    this.unsubscribes = [];
   }
 
   protected onEntityAdded(entity: Entity): void {

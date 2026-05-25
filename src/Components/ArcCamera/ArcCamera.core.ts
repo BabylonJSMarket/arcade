@@ -7,7 +7,21 @@ import { Component } from '@babylonjsmarket/ecs';
 import type { ArcCameraSpec, CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 
 export interface ArcCameraInput {
+  /** Entity the camera tracks when `follow` is true (kept centred). */
   target?: string;
+  /**
+   * Entity the camera centres on when `follow` is FALSE. If omitted, turning
+   * follow off leaves the camera free (it holds its last look point and can be
+   * panned). Used by pinball so "not following" frames the table while
+   * "following" tracks the ball.
+   */
+  restTarget?: string;
+  /**
+   * When true, the camera keeps `target` centred each frame. When false it
+   * centres `restTarget` (if set) or stays put, and `targetOffset` pans it.
+   * Default true.
+   */
+  follow?: boolean;
   distance?: number;
   minDistance?: number;
   maxDistance?: number;
@@ -24,14 +38,53 @@ export interface ArcCameraInput {
   targetOffset?: Vec3;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
+  /**
+   * When false, the renderer detaches mouse controls — the camera ignores
+   * orbit/pan/dolly input. Default true. Useful for fixed-camera games
+   * (top-down shooter, pinball) where the player shouldn't be able to
+   * unhinge the framing by accident.
+   */
+  controlsEnabled?: boolean;
 }
 
 function cloneVec3(v: Vec3): Vec3 {
   return [v[0], v[1], v[2]];
 }
 
+/**
+ * Runtime (non-serializable) state. The camera handle is a live engine
+ * reference that can't survive a serialize round-trip, but sibling systems
+ * (CameraFollow, KeyboardMover, PinballCamera, TwinStickShooter) read it via
+ * `component.handle` — so it's backed by this module-level WeakMap and exposed
+ * through a getter/setter rather than a private System map. Pooled entities
+ * reuse the same Component instance, so the handle survives parking.
+ */
+export interface ArcCameraRuntime {
+  handle?: CameraHandle;
+  initialized: boolean;
+  /**
+   * Look point held while in free mode (follow off + no restTarget). Captured
+   * the frame the camera goes free so panning (targetOffset) moves relative to
+   * it; cleared whenever an active target is tracked again.
+   */
+  freeBase?: Vec3;
+}
+
+const runtimeByComponent = new WeakMap<ArcCameraComponent, ArcCameraRuntime>();
+
+export function getArcCameraRuntime(comp: ArcCameraComponent): ArcCameraRuntime {
+  let rt = runtimeByComponent.get(comp);
+  if (!rt) {
+    rt = { initialized: false };
+    runtimeByComponent.set(comp, rt);
+  }
+  return rt;
+}
+
 export class ArcCameraComponent extends Component {
   target?: string;
+  restTarget?: string;
+  follow: boolean;
 
   distance: number;
   minDistance: number;
@@ -55,18 +108,26 @@ export class ArcCameraComponent extends Component {
 
   autoRotate: boolean;
   autoRotateSpeed: number;
-
-  handle?: CameraHandle;
-  initialized = false;
+  controlsEnabled: boolean;
 
   // Change-detection snapshots; updated by the System after each adapter read.
   lastAlpha = 0;
   lastBeta = 0;
   lastRadius = 0;
 
+  /** Live engine camera handle, backed by {@link getArcCameraRuntime}. */
+  get handle(): CameraHandle | undefined {
+    return getArcCameraRuntime(this).handle;
+  }
+  set handle(value: CameraHandle | undefined) {
+    getArcCameraRuntime(this).handle = value;
+  }
+
   constructor(data: ArcCameraInput = {}) {
     super();
     this.target = data.target;
+    this.restTarget = data.restTarget;
+    this.follow = data.follow ?? true;
     this.distance = data.distance ?? 15;
     this.minDistance = data.minDistance ?? 5;
     this.maxDistance = data.maxDistance ?? 50;
@@ -83,6 +144,7 @@ export class ArcCameraComponent extends Component {
     this.targetOffset = data.targetOffset ? cloneVec3(data.targetOffset) : [0, 0, 0];
     this.autoRotate = data.autoRotate ?? false;
     this.autoRotateSpeed = data.autoRotateSpeed ?? 0.5;
+    this.controlsEnabled = data.controlsEnabled ?? true;
   }
 
   toSpec(): ArcCameraSpec {
@@ -98,12 +160,15 @@ export class ArcCameraComponent extends Component {
       inertia: this.inertia,
       wheelPrecision: this.wheelPrecision,
       angularSensibility: this.angularSensibility,
+      controlsEnabled: this.controlsEnabled,
     };
   }
 
   serialize(): ArcCameraInput {
     return {
       target: this.target,
+      restTarget: this.restTarget,
+      follow: this.follow,
       distance: this.distance,
       minDistance: this.minDistance,
       maxDistance: this.maxDistance,
@@ -120,6 +185,7 @@ export class ArcCameraComponent extends Component {
       targetOffset: cloneVec3(this.targetOffset),
       autoRotate: this.autoRotate,
       autoRotateSpeed: this.autoRotateSpeed,
+      controlsEnabled: this.controlsEnabled,
     };
   }
 }

@@ -15,8 +15,6 @@ describe('HemisphericLightComponent (core)', () => {
     expect(c.diffuse).toEqual([1, 1, 1]);
     expect(c.groundColor).toEqual([0.2, 0.2, 0.2]);
     expect(c.specular).toEqual([0, 0, 0]);
-    expect(c.initialized).toBe(false);
-    expect(c.handle).toBeUndefined();
   });
 
   it('normalizes direction when provided', () => {
@@ -89,8 +87,6 @@ describe('HemisphericLightSystem — adapter integration', () => {
     const entity = world.createEntity();
     const comp = new HemisphericLightComponent({ intensity: 0.5 });
     entity.add(comp);
-    expect(comp.initialized).toBe(true);
-    expect(comp.handle).toBeDefined();
     const call = renderer.calls.find((c) => c.method === 'createHemisphericLight');
     expect(call).toBeDefined();
     expect((call?.args[1] as { intensity: number }).intensity).toBe(0.5);

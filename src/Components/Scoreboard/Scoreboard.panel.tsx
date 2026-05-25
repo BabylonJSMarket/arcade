@@ -65,7 +65,7 @@ export const ScoreboardPanel: SolidComponent<ScoreboardPanelProps> = (props) => 
   };
 
   return (
-    <div style={{ 'font-family': 'system-ui, sans-serif', color: '#ddd', 'min-width': '260px' }}>
+    <div style={{ 'font-family': 'var(--viz-font, system-ui, sans-serif)', color: 'var(--viz-fg, #ddd)', 'min-width': '260px' }}>
       <Section title="Live overlay">
         <div
           style={{
@@ -142,7 +142,7 @@ export const ScoreboardPanel: SolidComponent<ScoreboardPanelProps> = (props) => 
           onChange={(v) => push('fontSize', v)}
         />
         <div style={{ 'margin-top': '8px' }}>
-          <div style={{ color: '#aaa', 'font-size': '10px', 'margin-bottom': '4px' }}>
+          <div style={{ color: 'var(--viz-fg-soft, #aaa)', 'font-size': '10px', 'margin-bottom': '4px' }}>
             Position
           </div>
           <select
@@ -151,10 +151,10 @@ export const ScoreboardPanel: SolidComponent<ScoreboardPanelProps> = (props) => 
             style={{
               width: '100%',
               padding: '6px',
-              background: '#222',
-              color: '#ddd',
-              border: '1px solid #444',
-              'border-radius': '4px',
+              background: 'var(--viz-input-bg, #222)',
+              color: 'var(--viz-input-fg, #ddd)',
+              border: '1px solid var(--viz-input-border, #444)',
+              'border-radius': 'var(--viz-radius-sm, 4px)',
               cursor: 'pointer',
             }}
           >

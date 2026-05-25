@@ -19,8 +19,6 @@ describe('ArcCameraComponent (core)', () => {
     expect(c.wheelPrecision).toBe(50);
     expect(c.targetOffset).toEqual([0, 0, 0]);
     expect(c.autoRotate).toBe(false);
-    expect(c.initialized).toBe(false);
-    expect(c.handle).toBeUndefined();
   });
 
   it('derives maxBeta from allowBelowGround', () => {
@@ -148,9 +146,10 @@ describe('ArcCameraSystem — adapter integration', () => {
     const spy = vi.fn();
     eventBus.on(ArcCameraEvents.ROTATED, spy);
     const entity = world.createEntity();
-    const comp = new ArcCameraComponent();
-    entity.add(comp);
-    const angles = renderer.cameraAngles.get(comp.handle!);
+    entity.add(new ArcCameraComponent());
+    // The System created exactly one camera; mutate the angles the adapter
+    // will report so onUpdate detects an alpha change.
+    const angles = [...renderer.cameraAngles.values()][0];
     if (angles) angles.alpha += 0.5;
     world.update(0.016);
     expect(spy).toHaveBeenCalled();
@@ -160,9 +159,10 @@ describe('ArcCameraSystem — adapter integration', () => {
     const spy = vi.fn();
     eventBus.on(ArcCameraEvents.ZOOMED, spy);
     const entity = world.createEntity();
-    const comp = new ArcCameraComponent();
-    entity.add(comp);
-    const angles = renderer.cameraAngles.get(comp.handle!);
+    entity.add(new ArcCameraComponent());
+    // The System created exactly one camera; mutate the radius the adapter
+    // will report so onUpdate detects a zoom change.
+    const angles = [...renderer.cameraAngles.values()][0];
     if (angles) angles.radius += 2;
     world.update(0.016);
     expect(spy).toHaveBeenCalled();

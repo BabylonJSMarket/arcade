@@ -119,10 +119,10 @@ export class MovementSystem extends System {
   private unsubscribes: Array<() => void> = [];
   /** Reusable tuple for get/set adapter calls — avoids per-frame allocation. */
   private _tmp: Vec3 = [0, 0, 0];
+  protected query = { required: [MovementComponent] };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [MovementComponent] };
   }
 
   protected onInitialize(): void {

@@ -322,3 +322,53 @@ describe('MeshPrimitiveSystem — adapter integration', () => {
     expect(comp.isCreated).toBe(true);
   });
 });
+
+describe('MeshPrimitiveSystem — park-aware (pooling)', () => {
+  let eventBus: EventBus;
+  let renderer: MockRendererAdapter;
+  let world: World;
+
+  beforeEach(() => {
+    eventBus = new EventBus();
+    renderer = new MockRendererAdapter();
+    world = new World({ eventBus, renderer, detectRaces: false });
+    world.addSystem(new MeshPrimitiveSystem(eventBus));
+    world.initialize();
+  });
+
+  it('deactivating keeps the mesh (hide, no dispose) and reactivating reuses it', () => {
+    const e = world.createEntity();
+    const comp = new MeshPrimitiveComponent({ primitive: 'sphere', position: [1, 1, 1] });
+    e.add(comp);
+    const handle = comp.handle;
+    expect(handle).toBeDefined();
+    const created = renderer.calls.filter((c) => c.method === 'createMesh').length;
+
+    // Park: removed from play.
+    e.active = false;
+    expect(comp.handle).toBe(handle); // kept, not disposed
+    expect(renderer.calls.some((c) => c.method === 'disposeMesh')).toBe(false);
+    expect(
+      renderer.calls.some((c) => c.method === 'setMeshVisible' && c.args[1] === false),
+    ).toBe(true);
+
+    // Unpark: reused, not recreated.
+    comp.position = [7, 0, 7];
+    e.active = true;
+    expect(comp.handle).toBe(handle);
+    expect(renderer.calls.filter((c) => c.method === 'createMesh').length).toBe(created);
+    expect(
+      renderer.calls.some(
+        (c) => c.method === 'setMeshPosition' && c.args[1] === 7 && c.args[3] === 7,
+      ),
+    ).toBe(true);
+  });
+
+  it('truly removing (destroy) disposes the mesh', () => {
+    const e = world.createEntity();
+    e.add(new MeshPrimitiveComponent({ primitive: 'box' }));
+    renderer.calls.length = 0;
+    world.removeEntity(e); // not pooled → destroy
+    expect(renderer.calls.some((c) => c.method === 'disposeMesh')).toBe(true);
+  });
+});

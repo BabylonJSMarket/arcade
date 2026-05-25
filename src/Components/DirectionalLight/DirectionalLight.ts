@@ -6,6 +6,7 @@
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
+import type { LightHandle } from '@babylonjsmarket/ecs/renderer-types';
 import { DirectionalLightComponent, type DirectionalLightInput } from './DirectionalLight.core';
 
 export { DirectionalLightComponent, type DirectionalLightInput };
@@ -26,12 +27,27 @@ interface Snapshot {
   specular: [number, number, number];
 }
 
+interface DirectionalLightRuntime {
+  handle?: LightHandle;
+  initialized: boolean;
+}
+
 export class DirectionalLightSystem extends System {
+  protected query = { required: [DirectionalLightComponent] };
   private snapshots = new WeakMap<DirectionalLightComponent, Snapshot>();
+  private runtime = new WeakMap<DirectionalLightComponent, DirectionalLightRuntime>();
+
+  private getRuntime(comp: DirectionalLightComponent): DirectionalLightRuntime {
+    let rt = this.runtime.get(comp);
+    if (!rt) {
+      rt = { initialized: false };
+      this.runtime.set(comp, rt);
+    }
+    return rt;
+  }
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [DirectionalLightComponent] };
   }
 
   protected onInitialize(): void {
@@ -46,22 +62,26 @@ export class DirectionalLightSystem extends System {
 
   protected onEntityRemoved(entity: Entity): void {
     const comp = entity.get(DirectionalLightComponent);
-    if (comp?.handle) {
-      this.world?.renderer?.disposeLight(comp.handle);
-      comp.handle = undefined;
-      comp.initialized = false;
+    if (!comp) return;
+    const rt = this.getRuntime(comp);
+    if (rt.handle) {
+      this.world?.renderer?.disposeLight(rt.handle);
+      rt.handle = undefined;
+      rt.initialized = false;
     }
   }
 
   protected onUpdate(_deltaTime: number): void {
     for (const entity of this.entities) {
       const comp = entity.get(DirectionalLightComponent);
-      if (!comp?.initialized || !comp.handle) continue;
+      if (!comp) continue;
+      const rt = this.getRuntime(comp);
+      if (!rt.initialized || !rt.handle) continue;
       const prev = this.snapshots.get(comp);
       if (!prev) continue;
 
       if (Math.abs(prev.intensity - comp.intensity) > 0.001) {
-        this.world?.renderer?.updateLightIntensity(comp.handle, comp.intensity);
+        this.world?.renderer?.updateLightIntensity(rt.handle, comp.intensity);
         prev.intensity = comp.intensity;
         this.eventBus.emit(DirectionalLightEvents.INTENSITY_CHANGED, {
           entityId: entity.id,
@@ -93,12 +113,14 @@ export class DirectionalLightSystem extends System {
 
   private ensureLight(entity: Entity): void {
     const comp = entity.get(DirectionalLightComponent);
-    if (!comp || comp.initialized || !comp.autoCreate) return;
+    if (!comp || !comp.autoCreate) return;
+    const rt = this.getRuntime(comp);
+    if (rt.initialized) return;
     const r = this.world?.renderer;
     if (!r) return;
 
-    comp.handle = r.createDirectionalLight(entity.id, comp.toSpec());
-    comp.initialized = true;
+    rt.handle = r.createDirectionalLight(entity.id, comp.toSpec());
+    rt.initialized = true;
     this.snapshots.set(comp, {
       dir: [...comp.direction] as [number, number, number],
       pos: [...comp.position] as [number, number, number],
@@ -109,6 +131,7 @@ export class DirectionalLightSystem extends System {
 
     this.eventBus.emit(DirectionalLightEvents.CREATED, {
       entityId: entity.id,
+      handle: rt.handle,
       direction: [...comp.direction] as [number, number, number],
       position: [...comp.position] as [number, number, number],
       intensity: comp.intensity,

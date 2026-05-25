@@ -77,7 +77,7 @@ export class DirectionalLightDebuggerComponent extends Component {
   constructor(data: DirectionalLightDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit8';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
     this.showArrows = data.showArrows ?? true;
   }
@@ -158,13 +158,8 @@ const PANEL_ID = 'directional-light-debugger';
  * - Handles keyboard shortcuts
  */
 export class DirectionalLightDebuggerSystem extends System {
+  protected query = { required: [DirectionalLightDebuggerComponent] };
   private component: DirectionalLightDebuggerComponent | null = null;
-
-  // Keyboard handler
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-
-  // Solid store for reactive params
-  private paramsStore: ReturnType<typeof createStore<DirectionalLightParams>> | null = null;
 
   // Local params reference for applying to lights
   private params: DirectionalLightParams = { ...DEFAULT_PARAMS };
@@ -174,7 +169,6 @@ export class DirectionalLightDebuggerSystem extends System {
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [DirectionalLightDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -187,7 +181,6 @@ export class DirectionalLightDebuggerSystem extends System {
       }
     }
 
-    this.setupKeyboardListener();
     this.registerPanel();
   }
 
@@ -200,14 +193,15 @@ export class DirectionalLightDebuggerSystem extends System {
 
     // Create reactive store
     const [params, setParams] = createStore<DirectionalLightParams>({ ...this.params });
-    this.paramsStore = [params, setParams];
 
     // Register panel with VizRoot
     vizStore.registerPanel({
       id: PANEL_ID,
       title: 'Directional Light Controls',
+      activationKey: this.component.activationKey,
       position: this.component.position,
       titleColor: '#ffa500',
+      visible: this.component.visible,
       content: () => (
         <DirectionalLightPanel
           params={params}
@@ -227,32 +221,6 @@ export class DirectionalLightDebuggerSystem extends System {
         />
       ),
     });
-
-    // If component says visible, show the panel
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-      this.eventBus.emit(DirectionalLightDebuggerEvents.SHOWN, {});
-    }
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        const isVisible = vizStore.isVisible(PANEL_ID);
-        this.component.visible = isVisible;
-        if (isVisible) {
-          this.eventBus.emit(DirectionalLightDebuggerEvents.SHOWN, {});
-        } else {
-          this.eventBus.emit(DirectionalLightDebuggerEvents.HIDDEN, {});
-        }
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: any): void {
@@ -303,11 +271,6 @@ export class DirectionalLightDebuggerSystem extends System {
 
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
-    this.paramsStore = null;
   }
 
   protected onEntityRemoved(entity: any): void {

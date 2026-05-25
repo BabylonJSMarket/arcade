@@ -17,6 +17,7 @@ import type { Entity } from '@babylonjsmarket/ecs';
 import type { CameraHandle, MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshPrimitiveEvents } from '../MeshPrimitive/MeshPrimitive';
 import {
   createCameraFollow,
   type CameraFollowInstance,
@@ -51,6 +52,7 @@ export class CameraFollowComponent extends Component {
 }
 
 export class CameraFollowSystem extends System {
+  protected query = { required: [CameraFollowComponent] };
   private unsubscribes: Array<() => void> = [];
   private targetHandles = new Map<string, MeshHandle>();
   private primed = new Set<string>();
@@ -58,14 +60,13 @@ export class CameraFollowSystem extends System {
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [CameraFollowComponent] };
     this._pauseable = false;
   }
 
   protected onInitialize(): void {
     this.unsubscribes.push(
       this.eventBus.on(
-        'meshprimitive.created',
+        MeshPrimitiveEvents.CREATED,
         (data: { entityId: string; handle: MeshHandle }) => {
           if (data?.entityId && data.handle) {
             this.targetHandles.set(data.entityId, data.handle);

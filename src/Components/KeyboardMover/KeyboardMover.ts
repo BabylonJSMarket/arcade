@@ -14,6 +14,7 @@ import type { EventBus } from '@babylonjsmarket/ecs';
 import type { CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
+import { KeyboardInputEvents } from '../_shared/inputEvents';
 
 export interface KeyboardMoverInput {
   /** World units per second at full input. */
@@ -51,20 +52,40 @@ export class KeyboardMoverSystem extends System {
   private currentYaw = 0;
   private _fwdTmp: Vec3 = [0, 0, 0];
   private _rightTmp: Vec3 = [0, 0, 0];
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private keyupHandler: ((e: KeyboardEvent) => void) | null = null;
+  protected query = { required: [KeyboardMoverComponent, MeshPrimitiveComponent] };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [KeyboardMoverComponent, MeshPrimitiveComponent] };
   }
 
   protected onInitialize(): void {
     this.unsubscribes.push(
-      this.eventBus.on('keyboard.keydown', (e: { code: string }) => this.setKey(e.code, 1)),
-      this.eventBus.on('keyboard.keyup', (e: { code: string }) => this.setKey(e.code, 0)),
+      this.eventBus.on(KeyboardInputEvents.KEYDOWN, (e: { code: string }) => this.setKey(e.code, 1)),
+      this.eventBus.on(KeyboardInputEvents.KEYUP, (e: { code: string }) => this.setKey(e.code, 0)),
     );
+
+    // Bridge DOM keyboard events to the bus so scaffolded projects work
+    // out of the box without needing a separate input-source system.
+    // Tests skip this branch and emit the bus events directly.
+    if (typeof window !== 'undefined') {
+      this.keydownHandler = (e: KeyboardEvent) =>
+        this.eventBus.emit(KeyboardInputEvents.KEYDOWN, { code: e.code });
+      this.keyupHandler = (e: KeyboardEvent) =>
+        this.eventBus.emit(KeyboardInputEvents.KEYUP, { code: e.code });
+      window.addEventListener('keydown', this.keydownHandler);
+      window.addEventListener('keyup', this.keyupHandler);
+    }
   }
 
   protected onShutdown(): void {
+    if (typeof window !== 'undefined') {
+      if (this.keydownHandler) window.removeEventListener('keydown', this.keydownHandler);
+      if (this.keyupHandler) window.removeEventListener('keyup', this.keyupHandler);
+    }
+    this.keydownHandler = null;
+    this.keyupHandler = null;
     this.unsubscribes.forEach((u) => u());
     this.unsubscribes = [];
   }

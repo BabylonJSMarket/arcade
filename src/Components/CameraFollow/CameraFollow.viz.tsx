@@ -27,7 +27,7 @@ export class CameraFollowDebuggerComponent extends Component {
   constructor(data: CameraFollowDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit1';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
   }
 
@@ -43,13 +43,12 @@ export class CameraFollowDebuggerComponent extends Component {
 const PANEL_ID = 'camera-follow-debugger';
 
 export class CameraFollowDebuggerSystem extends System {
+  protected query = { required: [CameraFollowDebuggerComponent] };
   private component: CameraFollowDebuggerComponent | null = null;
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private panelRegistered = false;
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [CameraFollowDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -61,7 +60,6 @@ export class CameraFollowDebuggerSystem extends System {
         break;
       }
     }
-    this.setupKeyboardListener();
     this.tryRegisterPanel();
   }
 
@@ -77,15 +75,14 @@ export class CameraFollowDebuggerSystem extends System {
     vizStore.registerPanel({
       id: PANEL_ID,
       title: 'Camera Follow',
+      activationKey: this.component.activationKey,
       position: this.component.position,
       titleColor: '#66ccff',
+      visible: this.component.visible,
       content: () => <CameraFollowPanel core={core} />,
     });
 
     this.panelRegistered = true;
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-    }
   }
 
   private findCoreInstance(): CameraFollowInstance | null {
@@ -95,19 +92,6 @@ export class CameraFollowDebuggerSystem extends System {
       if (comp?.instance) return comp.instance;
     }
     return null;
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        this.component.visible = vizStore.isVisible(PANEL_ID);
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: Entity): void {
@@ -121,9 +105,5 @@ export class CameraFollowDebuggerSystem extends System {
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
     this.panelRegistered = false;
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
   }
 }

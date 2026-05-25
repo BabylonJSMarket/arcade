@@ -33,7 +33,7 @@ export class ScoreDebuggerComponent extends Component {
   constructor(data: ScoreDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit1';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
     this.players = data.players ? [...data.players] : [];
   }
@@ -51,13 +51,12 @@ export class ScoreDebuggerComponent extends Component {
 const PANEL_ID = 'score-debugger';
 
 export class ScoreDebuggerSystem extends System {
+  protected query = { required: [ScoreDebuggerComponent] };
   private component: ScoreDebuggerComponent | null = null;
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private panelRegistered = false;
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ScoreDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -69,7 +68,6 @@ export class ScoreDebuggerSystem extends System {
         break;
       }
     }
-    this.setupKeyboardListener();
     this.tryRegisterPanel();
   }
 
@@ -87,7 +85,9 @@ export class ScoreDebuggerSystem extends System {
       id: PANEL_ID,
       title: 'Score',
       position: this.component.position,
+      activationKey: this.component.activationKey,
       titleColor: '#fbbf24',
+      visible: this.component.visible,
       content: () => (
         <ScorePanel
           core={core}
@@ -101,9 +101,6 @@ export class ScoreDebuggerSystem extends System {
     });
 
     this.panelRegistered = true;
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-    }
   }
 
   private findCoreInstance(): ScoreInstance | null {
@@ -113,19 +110,6 @@ export class ScoreDebuggerSystem extends System {
       if (comp?.instance) return comp.instance;
     }
     return null;
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        this.component.visible = vizStore.isVisible(PANEL_ID);
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: Entity): void {
@@ -139,9 +123,5 @@ export class ScoreDebuggerSystem extends System {
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
     this.panelRegistered = false;
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
   }
 }

@@ -1,41 +1,56 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@solidjs/testing-library';
-import { ArcCameraPanel, type ArcCameraParams } from './ArcCamera.panel';
+import { CameraControlPanel, type CameraControlParams } from './ArcCamera.panel';
 
-function makeParams(): ArcCameraParams {
+function makeParams(over: Partial<CameraControlParams> = {}): CameraControlParams {
+  return { zoom: 30, panX: 0, panZ: 0, follow: true, ...over };
+}
+
+function noop() {
   return {
-    distance: 10, minDistance: 1, maxDistance: 100,
-    alpha: 0, beta: 1, minBeta: 0, maxBeta: 1.5,
-    inertia: 0.9, wheelPrecision: 50, angularSensibility: 1000,
-    speed: 1, autoRotateSpeed: 0.5,
+    setZoom: vi.fn(),
+    setPanX: vi.fn(),
+    setPanZ: vi.fn(),
+    setFollow: vi.fn(),
+    onCenter: vi.fn(),
   };
 }
 
-describe('ArcCameraPanel', () => {
-  it('mounts and shows the Distance slider', () => {
+describe('CameraControlPanel', () => {
+  it('mounts and shows the Zoom slider + follow state', () => {
     const { container } = render(() => (
-      <ArcCameraPanel params={makeParams()} setParam={vi.fn()} onReset={vi.fn()} />
+      <CameraControlPanel params={makeParams()} {...noop()} />
     ));
-    expect(container.textContent).toContain('Distance');
+    expect(container.textContent).toContain('Zoom');
+    expect(container.textContent).toMatch(/Following/i);
   });
 
-  it('moving a slider calls setParam', () => {
-    const setParam = vi.fn();
+  it('moving the Zoom slider calls setZoom', () => {
+    const fns = noop();
     const { getAllByRole } = render(() => (
-      <ArcCameraPanel params={makeParams()} setParam={setParam} onReset={vi.fn()} />
+      <CameraControlPanel params={makeParams()} {...fns} />
     ));
     const slider = (getAllByRole('slider') as HTMLInputElement[])[0];
-    fireEvent.input(slider, { target: { value: '25' } });
-    expect(setParam).toHaveBeenCalledWith('distance', 25);
+    fireEvent.input(slider, { target: { value: '50' } });
+    expect(fns.setZoom).toHaveBeenCalledWith(50);
   });
 
-  it('Reset button fires onReset', () => {
-    const onReset = vi.fn();
+  it('clicking the follow toggle flips follow', () => {
+    const fns = noop();
     const { getByText } = render(() => (
-      <ArcCameraPanel params={makeParams()} setParam={vi.fn()} onReset={onReset} />
+      <CameraControlPanel params={makeParams({ follow: true })} {...fns} />
     ));
-    fireEvent.click(getByText(/reset/i));
-    expect(onReset).toHaveBeenCalled();
+    fireEvent.click(getByText(/Following/i));
+    expect(fns.setFollow).toHaveBeenCalledWith(false);
+  });
+
+  it('Center button fires onCenter', () => {
+    const fns = noop();
+    const { getByText } = render(() => (
+      <CameraControlPanel params={makeParams()} {...fns} />
+    ));
+    fireEvent.click(getByText(/center/i));
+    expect(fns.onCenter).toHaveBeenCalled();
   });
 });

@@ -12,10 +12,10 @@ export const Section: Component<SectionProps> = (props) => {
       style={{
         'margin-bottom': '12px',
         'padding-bottom': '8px',
-        'border-bottom': '1px solid #444',
+        'border-bottom': '1px solid var(--viz-border, #444)',
       }}
     >
-      <strong style={{ color: props.color || '#ffa500' }}>{props.title}</strong>
+      <strong style={{ color: props.color || 'var(--viz-section-title, #ffa500)' }}>{props.title}</strong>
       <div style={{ 'margin-top': '8px' }}>{props.children}</div>
     </div>
   );

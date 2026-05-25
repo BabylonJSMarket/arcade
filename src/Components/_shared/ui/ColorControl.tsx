@@ -14,15 +14,15 @@ export const ColorControl: Component<ColorControlProps> = (props) => {
       style={{
         'margin-bottom': '12px',
         'padding-top': '8px',
-        'border-top': '1px solid #444',
+        'border-top': '1px solid var(--viz-border, #444)',
       }}
     >
-      <div style={{ 'margin-bottom': '4px', color: '#aaa', 'font-weight': 'bold', 'font-size': '10px' }}>
+      <div style={{ 'margin-bottom': '4px', color: 'var(--viz-fg-soft, #aaa)', 'font-weight': 'bold', 'font-size': '10px' }}>
         {props.label}
       </div>
       <div style={{ display: 'flex', gap: '8px', 'align-items': 'center' }}>
         <label style={{ flex: '1' }}>
-          <span style={{ 'font-size': '10px', color: '#888' }}>R</span>
+          <span style={{ 'font-size': '10px', color: 'var(--viz-fg-muted, #888)' }}>R</span>
           <input
             type="range"
             min={0}
@@ -34,7 +34,7 @@ export const ColorControl: Component<ColorControlProps> = (props) => {
           />
         </label>
         <label style={{ flex: '1' }}>
-          <span style={{ 'font-size': '10px', color: '#888' }}>G</span>
+          <span style={{ 'font-size': '10px', color: 'var(--viz-fg-muted, #888)' }}>G</span>
           <input
             type="range"
             min={0}
@@ -46,7 +46,7 @@ export const ColorControl: Component<ColorControlProps> = (props) => {
           />
         </label>
         <label style={{ flex: '1' }}>
-          <span style={{ 'font-size': '10px', color: '#888' }}>B</span>
+          <span style={{ 'font-size': '10px', color: 'var(--viz-fg-muted, #888)' }}>B</span>
           <input
             type="range"
             min={0}
@@ -63,7 +63,7 @@ export const ColorControl: Component<ColorControlProps> = (props) => {
             height: '24px',
             'border-radius': '4px',
             background: `rgb(${props.r * 255}, ${props.g * 255}, ${props.b * 255})`,
-            border: '1px solid #666',
+            border: '1px solid var(--viz-border, #666)',
           }}
         />
       </div>

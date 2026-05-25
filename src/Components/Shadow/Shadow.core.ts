@@ -3,7 +3,6 @@
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-import type { MeshHandle, ShadowCasterHandle } from '@babylonjsmarket/ecs/renderer-types';
 
 export interface ShadowInput {
   castShadow?: boolean;
@@ -13,9 +12,6 @@ export interface ShadowInput {
 export class ShadowComponent extends Component {
   castShadow: boolean;
   receiveShadow: boolean;
-  casterHandle?: ShadowCasterHandle;
-  meshHandle?: MeshHandle;
-  initialized = false;
 
   constructor(data: ShadowInput = {}) {
     super();

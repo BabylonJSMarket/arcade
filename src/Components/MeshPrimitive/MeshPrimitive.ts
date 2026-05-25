@@ -10,9 +10,15 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { MeshHandle } from '@babylonjsmarket/ecs/renderer-types';
-import { MeshPrimitiveComponent, type MeshPrimitiveInput, type PrimitiveType } from './MeshPrimitive.core';
+import {
+  MeshPrimitiveComponent,
+  getMeshPrimitiveRuntime,
+  type MeshPrimitiveInput,
+  type MeshPrimitiveRuntime,
+  type PrimitiveType,
+} from './MeshPrimitive.core';
 
-export { MeshPrimitiveComponent, type MeshPrimitiveInput, type PrimitiveType };
+export { MeshPrimitiveComponent, type MeshPrimitiveInput, type MeshPrimitiveRuntime, type PrimitiveType };
 
 export const MeshPrimitiveEvents = {
   CREATED: 'meshprimitive.created',
@@ -37,9 +43,26 @@ interface BabylonMeshExposer {
 export class MeshPrimitiveSystem extends System {
   private unsubscribes: Array<() => void> = [];
 
+  /**
+   * Per-component runtime state (the renderer handle). The Component is pure
+   * data, so the live handle lives here, keyed by the Component instance.
+   * Backed by the shared module-level map in MeshPrimitive.core so the
+   * Component's `handle` getter and this System observe the SAME slot — that
+   * shared identity is what lets pooled entities (which reuse the same
+   * Component instance) keep their mesh across park/unpark.
+   */
+  private runtime = new WeakMap<MeshPrimitiveComponent, MeshPrimitiveRuntime>();
+
+  private getRuntime(comp: MeshPrimitiveComponent): MeshPrimitiveRuntime {
+    const rt = getMeshPrimitiveRuntime(comp);
+    this.runtime.set(comp, rt);
+    return rt;
+  }
+
+  protected query = { required: [MeshPrimitiveComponent] };
+
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [MeshPrimitiveComponent] };
   }
 
   protected onInitialize(): void {
@@ -79,18 +102,39 @@ export class MeshPrimitiveSystem extends System {
 
   protected onEntityAdded(entity: Entity): void {
     const comp = entity.get(MeshPrimitiveComponent);
-    if (comp?.autoCreate && !comp.isCreated) {
+    if (!comp) return;
+    if (comp.autoCreate && !comp.isCreated) {
       this.createPrimitive(entity, comp);
+      return;
+    }
+    // Reactivated from a pool: the mesh still exists (kept alive while parked).
+    // Reposition + show it instead of recreating — `reset()` may have moved
+    // comp.position while it was out of play.
+    const r = this.world?.renderer;
+    const rt = this.getRuntime(comp);
+    if (rt.handle && r) {
+      r.setMeshPosition(rt.handle, comp.position[0], comp.position[1], comp.position[2]);
+      r.setMeshRotation(rt.handle, comp.rotation[0], comp.rotation[1], comp.rotation[2]);
+      r.setMeshVisible(rt.handle, comp.visible);
     }
   }
 
   protected onEntityRemoved(entity: Entity): void {
     const comp = entity.get(MeshPrimitiveComponent);
-    if (comp?.handle) {
-      this.world?.renderer?.disposeMesh(comp.handle);
-      comp.handle = undefined;
-      comp.isCreated = false;
+    if (!comp) return;
+    const rt = this.getRuntime(comp);
+    if (!rt.handle) return;
+    const r = this.world?.renderer;
+    // Parked (pooled, removed from play) — keep the mesh for reuse, just hide
+    // it. Disposing here would re-churn the GPU work pooling exists to avoid.
+    if (!entity.active) {
+      r?.setMeshVisible(rt.handle, false);
+      return;
     }
+    // Destroyed, or the MeshPrimitive component was removed — dispose for real.
+    r?.disposeMesh(rt.handle);
+    rt.handle = undefined;
+    comp.isCreated = false;
   }
 
   protected onUpdate(_deltaTime: number): void {}
@@ -103,9 +147,10 @@ export class MeshPrimitiveSystem extends System {
       return;
     }
 
-    if (comp.handle) {
-      r.disposeMesh(comp.handle);
-      comp.handle = undefined;
+    const rt = this.getRuntime(comp);
+    if (rt.handle) {
+      r.disposeMesh(rt.handle);
+      rt.handle = undefined;
     }
 
     const handle = r.createMesh(entity.id, comp.toPrimitiveSpec(), comp.material);
@@ -113,7 +158,7 @@ export class MeshPrimitiveSystem extends System {
     r.setMeshRotation(handle, comp.rotation[0], comp.rotation[1], comp.rotation[2]);
     r.setMeshVisible(handle, comp.visible);
 
-    comp.handle = handle;
+    rt.handle = handle;
     comp.isCreated = true;
 
     if (comp.material) {
@@ -167,7 +212,8 @@ export class MeshPrimitiveSystem extends System {
     comp.position[0] = x;
     comp.position[1] = y;
     comp.position[2] = z;
-    if (comp.handle) this.world?.renderer?.setMeshPosition(comp.handle, x, y, z);
+    const { handle } = this.getRuntime(comp);
+    if (handle) this.world?.renderer?.setMeshPosition(handle, x, y, z);
   }
 
   private handleSetScale(entityId: string, x: number, y: number, z: number): void {
@@ -184,7 +230,8 @@ export class MeshPrimitiveSystem extends System {
     const comp = entity.get(MeshPrimitiveComponent);
     if (!comp) return;
     comp.material = { ...(comp.material ?? {}), diffuse: [r, g, b] };
-    if (comp.handle) this.world?.renderer?.setMeshColor(comp.handle, r, g, b);
+    const rt = this.getRuntime(comp);
+    if (rt.handle) this.world?.renderer?.setMeshColor(rt.handle, r, g, b);
   }
 
   private handleSetVisible(entityId: string, visible: boolean): void {
@@ -193,16 +240,19 @@ export class MeshPrimitiveSystem extends System {
     const comp = entity.get(MeshPrimitiveComponent);
     if (!comp) return;
     comp.visible = visible;
-    if (comp.handle) this.world?.renderer?.setMeshVisible(comp.handle, visible);
+    const { handle } = this.getRuntime(comp);
+    if (handle) this.world?.renderer?.setMeshVisible(handle, visible);
   }
 
   private handleDispose(entityId: string): void {
     const entity = this.getEntityById(entityId);
     if (!entity) return;
     const comp = entity.get(MeshPrimitiveComponent);
-    if (!comp?.handle) return;
-    this.world?.renderer?.disposeMesh(comp.handle);
-    comp.handle = undefined;
+    if (!comp) return;
+    const rt = this.getRuntime(comp);
+    if (!rt.handle) return;
+    this.world?.renderer?.disposeMesh(rt.handle);
+    rt.handle = undefined;
     comp.isCreated = false;
     this.eventBus.emit(MeshPrimitiveEvents.DISPOSED, { entityId });
   }

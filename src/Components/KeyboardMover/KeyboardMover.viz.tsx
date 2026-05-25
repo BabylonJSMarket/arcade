@@ -26,7 +26,7 @@ export class KeyboardMoverDebuggerComponent extends Component {
   constructor(data: KeyboardMoverDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit1';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
   }
 
@@ -43,12 +43,11 @@ const PANEL_ID = 'keyboard-mover-debugger';
 
 export class KeyboardMoverDebuggerSystem extends System {
   private component: KeyboardMoverDebuggerComponent | null = null;
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private panelRegistered = false;
+  protected query = { required: [KeyboardMoverDebuggerComponent] };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [KeyboardMoverDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -60,7 +59,6 @@ export class KeyboardMoverDebuggerSystem extends System {
         break;
       }
     }
-    this.setupKeyboardListener();
     this.tryRegisterPanel();
   }
 
@@ -78,11 +76,12 @@ export class KeyboardMoverDebuggerSystem extends System {
       id: PANEL_ID,
       title: 'Keyboard Mover',
       position: this.component.position,
+      activationKey: this.component.activationKey,
       titleColor: '#fbbf24',
+      visible: this.component.visible,
       content: () => <KeyboardMoverPanel component={target} />,
     });
     this.panelRegistered = true;
-    if (this.component.visible) vizStore.showPanel(PANEL_ID);
   }
 
   private findComponent(): KeyboardMoverComponent | null {
@@ -92,19 +91,6 @@ export class KeyboardMoverDebuggerSystem extends System {
       if (comp) return comp;
     }
     return null;
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        this.component.visible = vizStore.isVisible(PANEL_ID);
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: Entity): void {
@@ -118,9 +104,5 @@ export class KeyboardMoverDebuggerSystem extends System {
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
     this.panelRegistered = false;
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
   }
 }

@@ -35,6 +35,18 @@ export const PhysicsInputEvents = {
   PAUSE: 'physics.pause',
   /** Resume physics stepping. Payload: {}. */
   RESUME: 'physics.resume',
+  /**
+   * Reconfigure the engine's fixed simulation rate. Payload: { hz }. Higher
+   * Hz = smaller substep → fewer tunneling artifacts at the cost of CPU.
+   * Adapters without a configurable rate (Three/Mock) no-op.
+   */
+  SET_TIME_STEP: 'physics.setTimeStep',
+  /** Set the world gravity vector. Payload: { x, y, z }. */
+  SET_GRAVITY: 'physics.setGravity',
+  /** Set a body's restitution (bounciness). Payload: { entityId, restitution }. */
+  SET_RESTITUTION: 'physics.setRestitution',
+  /** Toggle wireframe outlines of every collider. Payload: { visible }. */
+  SET_COLLIDERS_VISIBLE: 'physics.setCollidersVisible',
 } as const;
 
 export interface PhysicsSetVelocityEvent {
@@ -42,6 +54,25 @@ export interface PhysicsSetVelocityEvent {
   vx: number;
   vy: number;
   vz: number;
+}
+
+export interface PhysicsSetTimeStepEvent {
+  hz: number;
+}
+
+export interface PhysicsSetGravityEvent {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface PhysicsSetRestitutionEvent {
+  entityId: string;
+  restitution: number;
+}
+
+export interface PhysicsSetCollidersVisibleEvent {
+  visible: boolean;
 }
 
 // ============================================
@@ -64,6 +95,15 @@ export interface PhysicsInput {
    * body creation (e.g., respawn flows that want to re-pose the mesh first).
    */
   autoCreate?: boolean;
+  /**
+   * Engine fixed simulation rate in Hertz. Applied once at system init via
+   * `physicsSetTimeStep` and updateable live via the SET_TIME_STEP event
+   * (e.g. the Physics debugger panel slider). The Hz lives on the component
+   * so a scene-author can pin a higher rate per-game (pinball wants ~240).
+   * Only one PhysicsComponent's `simulationHz` is consulted — the first one
+   * encountered. Default 60.
+   */
+  simulationHz?: number;
 }
 
 export class PhysicsComponent extends Component {
@@ -74,6 +114,7 @@ export class PhysicsComponent extends Component {
   restitution: number;
   lockRotation: boolean;
   autoCreate: boolean;
+  simulationHz: number;
 
   /** Populated by the System once `physicsCreateBody` has run for this entity. */
   isCreated = false;
@@ -89,6 +130,7 @@ export class PhysicsComponent extends Component {
     this.restitution = data.restitution ?? 0.5;
     this.lockRotation = data.lockRotation ?? false;
     this.autoCreate = data.autoCreate ?? true;
+    this.simulationHz = data.simulationHz ?? 60;
   }
 
   toBodyOpts(): PhysicsBodyOpts {
@@ -111,6 +153,7 @@ export class PhysicsComponent extends Component {
       restitution: this.restitution,
       lockRotation: this.lockRotation,
       autoCreate: this.autoCreate,
+      simulationHz: this.simulationHz,
     };
   }
 }
@@ -124,10 +167,12 @@ export class PhysicsSystem extends System {
   /** Entities whose body has been requested — prevents duplicate creates. */
   private created = new Set<string>();
   private isPaused = false;
+  /** Initial Hz applied once during init from the first PhysicsComponent. */
+  private timeStepApplied = false;
+  protected query = { required: [PhysicsComponent] };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [PhysicsComponent] };
   }
 
   protected onInitialize(): void {
@@ -146,9 +191,32 @@ export class PhysicsSystem extends System {
         this.isPaused = false;
       }),
     );
+    this.unsubscribes.push(
+      this.eventBus.on(PhysicsInputEvents.SET_TIME_STEP, (e: PhysicsSetTimeStepEvent) => {
+        this.handleSetTimeStep(e);
+      }),
+    );
+    this.unsubscribes.push(
+      this.eventBus.on(PhysicsInputEvents.SET_GRAVITY, (e: PhysicsSetGravityEvent) => {
+        this.world?.renderer?.physicsSetGravity(e.x, e.y, e.z);
+      }),
+    );
+    this.unsubscribes.push(
+      this.eventBus.on(PhysicsInputEvents.SET_RESTITUTION, (e: PhysicsSetRestitutionEvent) => {
+        const comp = this.world?.getEntity(e.entityId)?.get(PhysicsComponent);
+        if (comp) comp.restitution = e.restitution; // mirror for serialize
+        this.world?.renderer?.physicsSetRestitution(e.entityId, e.restitution);
+      }),
+    );
+    this.unsubscribes.push(
+      this.eventBus.on(PhysicsInputEvents.SET_COLLIDERS_VISIBLE, (e: PhysicsSetCollidersVisibleEvent) => {
+        this.world?.renderer?.setCollidersVisible(e.visible);
+      }),
+    );
 
     // Try to attach any entities that already exist when the system initializes.
     for (const entity of this.entities) this.tryCreateBody(entity);
+    this.applyInitialTimeStep();
   }
 
   protected onShutdown(): void {
@@ -181,6 +249,7 @@ export class PhysicsSystem extends System {
     for (const entity of this.entities) {
       if (!this.created.has(entity.id)) this.tryCreateBody(entity);
     }
+    if (!this.timeStepApplied) this.applyInitialTimeStep();
     if (this.isPaused) return;
     this.world?.renderer?.physicsStep(dt);
   }
@@ -208,5 +277,30 @@ export class PhysicsSystem extends System {
   private handleSetVelocity(e: PhysicsSetVelocityEvent): void {
     if (!this.created.has(e.entityId)) return;
     this.world?.renderer?.physicsSetBodyVelocity(e.entityId, e.vx, e.vy, e.vz);
+  }
+
+  private handleSetTimeStep(e: PhysicsSetTimeStepEvent): void {
+    if (!Number.isFinite(e.hz) || e.hz <= 0) return;
+    // Mirror into the first PhysicsComponent so reloads / serialize() pick
+    // up the live value, then apply to the engine.
+    for (const entity of this.entities) {
+      const comp = entity.get(PhysicsComponent);
+      if (comp) {
+        comp.simulationHz = e.hz;
+        break;
+      }
+    }
+    this.world?.renderer?.physicsSetTimeStep(e.hz);
+  }
+
+  private applyInitialTimeStep(): void {
+    if (this.timeStepApplied) return;
+    for (const entity of this.entities) {
+      const comp = entity.get(PhysicsComponent);
+      if (!comp) continue;
+      this.world?.renderer?.physicsSetTimeStep(comp.simulationHz);
+      this.timeStepApplied = true;
+      return;
+    }
   }
 }

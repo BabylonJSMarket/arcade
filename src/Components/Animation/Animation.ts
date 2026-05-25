@@ -99,13 +99,13 @@ export class AnimationComponent extends Component {
 // ============================================
 
 export class AnimationSystem extends System {
+  protected query = { required: [AnimationComponent] };
   private entitySpeeds = new Map<string, number>();
   /** Entities we've already started playback on this session. */
   private started = new Set<string>();
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [AnimationComponent] };
   }
 
   protected onInitialize(): void {

@@ -99,6 +99,7 @@ interface GamepadSnapshot {
 }
 
 export class PlayerInputSystem extends System {
+  protected query = { required: [PlayerInputComponent] };
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private keyupHandler: ((e: KeyboardEvent) => void) | null = null;
   private unsubscribes: Array<() => void> = [];
@@ -109,7 +110,6 @@ export class PlayerInputSystem extends System {
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [PlayerInputComponent] };
     this._pauseable = false;
   }
 

@@ -12,7 +12,13 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { ArcCameraComponent, type ArcCameraInput } from './ArcCamera.core';
+import { MeshPrimitiveEvents, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import {
+  ArcCameraComponent,
+  type ArcCameraInput,
+  type ArcCameraRuntime,
+  getArcCameraRuntime,
+} from './ArcCamera.core';
 
 export { ArcCameraComponent, type ArcCameraInput };
 
@@ -25,6 +31,7 @@ export const ArcCameraEvents = {
 } as const;
 
 export class ArcCameraSystem extends System {
+  protected query = { required: [ArcCameraComponent] };
   private unsubscribes: Array<() => void> = [];
   private targetHandles = new Map<string, MeshHandle>();
   private idleTime = 0;
@@ -34,15 +41,18 @@ export class ArcCameraSystem extends System {
   private _tempMeshPos: Vec3 = [0, 0, 0];
   private _tempCamTarget: Vec3 = [0, 0, 0];
 
+  private getRuntime(comp: ArcCameraComponent): ArcCameraRuntime {
+    return getArcCameraRuntime(comp);
+  }
+
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ArcCameraComponent] };
     this._pauseable = false;
   }
 
   protected onInitialize(): void {
     this.unsubscribes.push(
-      this.eventBus.on('meshprimitive.created', (data: { entityId: string; handle: MeshHandle }) => {
+      this.eventBus.on(MeshPrimitiveEvents.CREATED, (data: { entityId: string; handle: MeshHandle }) => {
         if (data?.entityId && data.handle) {
           this.targetHandles.set(data.entityId, data.handle);
         }
@@ -77,25 +87,48 @@ export class ArcCameraSystem extends System {
 
     for (const entity of this.entities) {
       const arc = entity.get(ArcCameraComponent);
-      if (!arc?.handle || !arc.initialized) continue;
+      if (!arc) continue;
+      const rt = this.getRuntime(arc);
+      if (!rt.handle || !rt.initialized) continue;
 
-      if (arc.target) {
-        const targetHandle = this.targetHandles.get(arc.target);
-        if (targetHandle) {
-          r.getMeshWorldPosition(targetHandle, this._tempMeshPos);
-          r.getCameraTarget(arc.handle, this._tempCamTarget);
-          const tx = this._tempMeshPos[0] + arc.targetOffset[0];
-          const ty = this._tempMeshPos[1] + arc.targetOffset[1];
-          const tz = this._tempMeshPos[2] + arc.targetOffset[2];
-          const lerp = 0.1;
-          const nx = this._tempCamTarget[0] + (tx - this._tempCamTarget[0]) * lerp;
-          const ny = this._tempCamTarget[1] + (ty - this._tempCamTarget[1]) * lerp;
-          const nz = this._tempCamTarget[2] + (tz - this._tempCamTarget[2]) * lerp;
-          r.setCameraTarget(arc.handle, nx, ny, nz);
-        }
+      // Zoom: a locked camera (controls off — shooter, pinball) takes its
+      // radius from `distance` each frame, so the control panel owns the zoom
+      // and it can't drift. Free-orbit cameras keep their wheel radius.
+      if (!arc.controlsEnabled) {
+        r.setCameraRadius(rt.handle, arc.distance);
+        r.setCameraRadiusLimits(rt.handle, arc.distance, arc.distance);
       }
 
-      const angles = r.getCameraAngles(arc.handle);
+      // Centre point. follow → track `target`; otherwise centre `restTarget`
+      // (if set) or hold a captured free base. `targetOffset` always pans the
+      // view (an offset from whatever we're centred on) — leave it at 0 to keep
+      // the followed target dead-centre.
+      const activeName = arc.follow ? arc.target : arc.restTarget;
+      const activeHandle = activeName ? this.resolveTargetHandle(activeName) : undefined;
+      let base: Vec3 | undefined;
+      if (activeHandle) {
+        r.getMeshWorldPosition(activeHandle, this._tempMeshPos);
+        base = this._tempMeshPos;
+        rt.freeBase = undefined;
+      } else if (arc.target || arc.restTarget) {
+        // Free mode (or the active target's mesh isn't ready yet): hold the
+        // current look point so panning moves relative to it.
+        if (!rt.freeBase) {
+          r.getCameraTarget(rt.handle, this._tempCamTarget);
+          rt.freeBase = [this._tempCamTarget[0], this._tempCamTarget[1], this._tempCamTarget[2]];
+        }
+        base = rt.freeBase;
+      }
+      if (base) {
+        r.setCameraTarget(
+          rt.handle,
+          base[0] + arc.targetOffset[0],
+          base[1] + arc.targetOffset[1],
+          base[2] + arc.targetOffset[2],
+        );
+      }
+
+      const angles = r.getCameraAngles(rt.handle);
       const alphaDiff = Math.abs(angles.alpha - arc.lastAlpha);
       const betaDiff = Math.abs(angles.beta - arc.lastBeta);
       const radiusDiff = Math.abs(angles.radius - arc.lastRadius);
@@ -132,24 +165,40 @@ export class ArcCameraSystem extends System {
         } else {
           this.idleTime += deltaTime;
           if (this.idleTime > this.idleThreshold) {
-            r.nudgeCameraAlpha(arc.handle, arc.autoRotateSpeed * deltaTime);
-            arc.lastAlpha = r.getCameraAngles(arc.handle).alpha;
+            r.nudgeCameraAlpha(rt.handle, arc.autoRotateSpeed * deltaTime);
+            arc.lastAlpha = r.getCameraAngles(rt.handle).alpha;
           }
         }
       }
     }
   }
 
+  /**
+   * Live mesh handle of a target entity. Reads it straight off the target's
+   * MeshPrimitive (a getter backed by the system's runtime slot), so following
+   * never depends on having caught the `meshprimitive.created` event before the
+   * mesh was built — that ordering is not guaranteed. Falls back to the event
+   * map for any target that has no MeshPrimitive.
+   */
+  private resolveTargetHandle(name: string): MeshHandle | undefined {
+    const e = this.world?.getEntity(name);
+    return e?.get(MeshPrimitiveComponent)?.handle ?? this.targetHandles.get(name);
+  }
+
   private ensureCamera(entity: Entity): void {
     const arc = entity.get(ArcCameraComponent);
-    if (!arc || arc.initialized) return;
+    if (!arc) return;
+    const rt = this.getRuntime(arc);
+    if (rt.initialized) return;
     const r = this.world?.renderer;
     if (!r) return;
 
-    // Seed the camera target from a tracked mesh if available; otherwise origin.
+    // Seed the camera target from the active target's mesh if available
+    // (the followed target, or the rest target when not following); else origin.
     const seedTarget: Vec3 = [0, 0, 0];
-    if (arc.target) {
-      const h = this.targetHandles.get(arc.target);
+    const seedName = arc.follow ? arc.target : (arc.restTarget ?? arc.target);
+    if (seedName) {
+      const h = this.resolveTargetHandle(seedName);
       if (h) {
         r.getMeshWorldPosition(h, seedTarget);
         seedTarget[0] += arc.targetOffset[0];
@@ -160,9 +209,9 @@ export class ArcCameraSystem extends System {
     const spec = arc.toSpec();
     spec.target = seedTarget;
 
-    arc.handle = r.createArcCamera(entity.id, spec);
-    arc.initialized = true;
-    const angles = r.getCameraAngles(arc.handle);
+    rt.handle = r.createArcCamera(entity.id, spec);
+    rt.initialized = true;
+    const angles = r.getCameraAngles(rt.handle);
     arc.lastAlpha = angles.alpha;
     arc.lastBeta = angles.beta;
     arc.lastRadius = angles.radius;

@@ -71,7 +71,7 @@ export class HemisphericLightDebuggerComponent extends Component {
   constructor(data: HemisphericLightDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit7';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-left';
   }
 
@@ -150,20 +150,14 @@ const PANEL_ID = 'hemispheric-light-debugger';
  * - Handles keyboard shortcuts
  */
 export class HemisphericLightDebuggerSystem extends System {
+  protected query = { required: [HemisphericLightDebuggerComponent] };
   private component: HemisphericLightDebuggerComponent | null = null;
-
-  // Keyboard handler
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-
-  // Solid store for reactive params
-  private paramsStore: ReturnType<typeof createStore<HemisphericLightParams>> | null = null;
 
   // Local params reference for applying to lights
   private params: HemisphericLightParams = { ...DEFAULT_PARAMS };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [HemisphericLightDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -176,7 +170,6 @@ export class HemisphericLightDebuggerSystem extends System {
       }
     }
 
-    this.setupKeyboardListener();
     this.registerPanel();
   }
 
@@ -189,14 +182,15 @@ export class HemisphericLightDebuggerSystem extends System {
 
     // Create reactive store
     const [params, setParams] = createStore<HemisphericLightParams>({ ...this.params });
-    this.paramsStore = [params, setParams];
 
     // Register panel with VizRoot
     vizStore.registerPanel({
       id: PANEL_ID,
       title: 'Hemispheric Light Controls',
+      activationKey: this.component.activationKey,
       position: this.component.position,
       titleColor: '#ffcc00',
+      visible: this.component.visible,
       content: () => (
         <HemisphericLightPanel
           params={params}
@@ -216,32 +210,6 @@ export class HemisphericLightDebuggerSystem extends System {
         />
       ),
     });
-
-    // If component says visible, show the panel
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-      this.eventBus.emit(HemisphericLightDebuggerEvents.SHOWN, {});
-    }
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        const isVisible = vizStore.isVisible(PANEL_ID);
-        this.component.visible = isVisible;
-        if (isVisible) {
-          this.eventBus.emit(HemisphericLightDebuggerEvents.SHOWN, {});
-        } else {
-          this.eventBus.emit(HemisphericLightDebuggerEvents.HIDDEN, {});
-        }
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: any): void {
@@ -289,11 +257,6 @@ export class HemisphericLightDebuggerSystem extends System {
 
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
-    this.paramsStore = null;
   }
 
   protected onEntityRemoved(entity: any): void {

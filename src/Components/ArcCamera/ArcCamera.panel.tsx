@@ -1,139 +1,87 @@
 import { Component } from 'solid-js';
-import { Slider, ResetButton } from '../_shared/ui';
+import { Slider } from '../_shared/ui';
 
-export interface ArcCameraParams {
-  distance: number;
-  minDistance: number;
-  maxDistance: number;
-  alpha: number;
-  beta: number;
-  minBeta: number;
-  maxBeta: number;
-  inertia: number;
-  wheelPrecision: number;
-  angularSensibility: number;
-  speed: number;
-  autoRotateSpeed: number;
+/** Live, user-facing camera controls (zoom / pan / follow). */
+export interface CameraControlParams {
+  /** Camera distance (radius). */
+  zoom: number;
+  /** Pan offset along world X (shifts the framing; works while following too). */
+  panX: number;
+  /** Pan offset along world Z (shifts the framing; works while following too). */
+  panZ: number;
+  /** Keep the target (player / ball) centred. */
+  follow: boolean;
 }
 
-export interface ArcCameraPanelProps {
-  params: ArcCameraParams;
-  setParam: (key: keyof ArcCameraParams, value: number) => void;
-  onReset: () => void;
+export interface CameraControlPanelProps {
+  params: CameraControlParams;
+  setZoom: (v: number) => void;
+  setPanX: (v: number) => void;
+  setPanZ: (v: number) => void;
+  setFollow: (v: boolean) => void;
+  onCenter: () => void;
 }
 
-export const ArcCameraPanel: Component<ArcCameraPanelProps> = (props) => {
+const buttonStyle = {
+  width: '100%',
+  padding: '8px',
+  'margin-top': '8px',
+  border: '1px solid var(--viz-button-border, transparent)',
+  color: 'var(--viz-button-fg, white)',
+  'border-radius': 'var(--viz-radius-sm, 4px)',
+  cursor: 'pointer',
+  'font-family': 'var(--viz-font, monospace)',
+  'font-size': '11px',
+} as const;
+
+export const CameraControlPanel: Component<CameraControlPanelProps> = (props) => {
   return (
     <>
+      <button
+        onClick={() => props.setFollow(!props.params.follow)}
+        style={{
+          ...buttonStyle,
+          'margin-top': '0',
+          background: props.params.follow ? 'var(--viz-accent, #2a8f5a)' : '#555',
+        }}
+      >
+        {props.params.follow ? '● Following target' : '○ Free camera'}
+      </button>
+
       <Slider
-        label="Distance"
-        value={props.params.distance}
-        min={1}
-        max={100}
+        label="Zoom"
+        value={props.params.zoom}
+        min={5}
+        max={120}
         step={1}
         color="#66ccff"
-        onChange={(v) => props.setParam('distance', v)}
+        onChange={props.setZoom}
+      />
+
+      {/* Pan offsets the framing in both modes — following + pan = track the
+          target but off-centre; free + pan = slide the held view around. */}
+      <Slider
+        label="Pan X"
+        value={props.params.panX}
+        min={-40}
+        max={40}
+        step={0.5}
+        color="#66ccff"
+        onChange={props.setPanX}
       />
       <Slider
-        label="Min Distance"
-        value={props.params.minDistance}
-        min={1}
-        max={50}
-        step={1}
+        label="Pan Z"
+        value={props.params.panZ}
+        min={-40}
+        max={40}
+        step={0.5}
         color="#66ccff"
-        onChange={(v) => props.setParam('minDistance', v)}
+        onChange={props.setPanZ}
       />
-      <Slider
-        label="Max Distance"
-        value={props.params.maxDistance}
-        min={10}
-        max={200}
-        step={5}
-        color="#66ccff"
-        onChange={(v) => props.setParam('maxDistance', v)}
-      />
-      <Slider
-        label="Alpha (H)"
-        value={props.params.alpha}
-        min={0}
-        max={Math.PI * 2}
-        step={0.1}
-        color="#66ccff"
-        onChange={(v) => props.setParam('alpha', v)}
-      />
-      <Slider
-        label="Beta (V)"
-        value={props.params.beta}
-        min={0}
-        max={Math.PI}
-        step={0.05}
-        color="#66ccff"
-        onChange={(v) => props.setParam('beta', v)}
-      />
-      <Slider
-        label="Min Beta"
-        value={props.params.minBeta}
-        min={0}
-        max={Math.PI / 2}
-        step={0.05}
-        color="#66ccff"
-        onChange={(v) => props.setParam('minBeta', v)}
-      />
-      <Slider
-        label="Max Beta"
-        value={props.params.maxBeta}
-        min={0}
-        max={Math.PI}
-        step={0.05}
-        color="#66ccff"
-        onChange={(v) => props.setParam('maxBeta', v)}
-      />
-      <Slider
-        label="Inertia"
-        value={props.params.inertia}
-        min={0}
-        max={1}
-        step={0.05}
-        color="#66ccff"
-        onChange={(v) => props.setParam('inertia', v)}
-      />
-      <Slider
-        label="Wheel Prec"
-        value={props.params.wheelPrecision}
-        min={10}
-        max={200}
-        step={10}
-        color="#66ccff"
-        onChange={(v) => props.setParam('wheelPrecision', v)}
-      />
-      <Slider
-        label="Ang Sens"
-        value={props.params.angularSensibility}
-        min={100}
-        max={3000}
-        step={100}
-        color="#66ccff"
-        onChange={(v) => props.setParam('angularSensibility', v)}
-      />
-      <Slider
-        label="Speed"
-        value={props.params.speed}
-        min={0.1}
-        max={5}
-        step={0.1}
-        color="#66ccff"
-        onChange={(v) => props.setParam('speed', v)}
-      />
-      <Slider
-        label="Auto Rotate"
-        value={props.params.autoRotateSpeed}
-        min={0}
-        max={5}
-        step={0.1}
-        color="#66ccff"
-        onChange={(v) => props.setParam('autoRotateSpeed', v)}
-      />
-      <ResetButton onClick={props.onReset} />
+
+      <button onClick={props.onCenter} style={buttonStyle}>
+        Center pan
+      </button>
     </>
   );
 };

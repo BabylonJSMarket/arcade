@@ -1,5 +1,5 @@
 /**
- * Lazy resolver map for the 14 components in @babylonjsmarket/arcade.
+ * Lazy resolver map for the components in @babylonjsmarket/arcade.
  *
  * Each entry returns a Promise of the component module. ArcadeGame consults
  * this map when a scene references a component by name — only the components
@@ -23,9 +23,37 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Physics: () => import("./Components/Physics/Physics"),
   Score: () => import("./Components/Score/Score"),
   Scoreboard: () => import("./Components/Scoreboard/Scoreboard"),
+  Health: () => import("./Components/Health/Health"),
+  HealthBar: () => import("./Components/HealthBar/HealthBar"),
+  Flash: () => import("./Components/Flash/Flash"),
   Shadow: () => import("./Components/Shadow/Shadow"),
+  Skybox: () => import("./Components/Skybox/Skybox"),
+  EnvironmentTexture: () => import("./Components/EnvironmentTexture/EnvironmentTexture"),
   Animation: () => import("./Components/Animation/Animation"),
   Mesh: () => import("./Components/Mesh/Mesh"),
+  // Pinball — flipper-driven physics tables.
+  Plunger: () => import("./Components/Plunger/Plunger"),
+  PinballCamera: () => import("./Components/PinballCamera/PinballCamera"),
+  PinballLayout: () => import("./Components/PinballLayout/PinballLayout"),
+  PinballTable: () => import("./Components/PinballTable/PinballTable"),
+  PinballBuilder: () => import("./Components/PinballBuilder/PinballBuilder"),
+  PinballBuilderInput: () =>
+    import("./Components/PinballBuilderInput/PinballBuilderInput"),
+  Bumper: () => import("./Components/Bumper/Bumper"),
+  Flipper: () => import("./Components/Flipper/Flipper"),
+  MouseHole: () => import("./Components/MouseHole/MouseHole"),
+  Spinner: () => import("./Components/Spinner/Spinner"),
+  // Shooter — top-down arena, twin-stick, spawner, projectile.
+  BulletPool: () => import("./Components/BulletPool/BulletPool"),
+  Bullet: () => import("./Components/Bullet/Bullet"),
+  EntityPool: () => import("./Components/EntityPool/EntityPool"),
+  Enemy: () => import("./Components/Enemy/Enemy"),
+  SkeletonAnimator: () => import("./Components/SkeletonAnimator/SkeletonAnimator"),
+  EnemySpawner: () => import("./Components/EnemySpawner/EnemySpawner"),
+  ObstacleField: () => import("./Components/ObstacleField/ObstacleField"),
+  LineOfSight: () => import("./Components/LineOfSight/LineOfSight"),
+  TwinStickShooter: () =>
+    import("./Components/TwinStickShooter/TwinStickShooter"),
 };
 
 export const ARCADE_COMPONENT_NAMES = Object.keys(ARCADE_COMPONENT_REGISTRY);

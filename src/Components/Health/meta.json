@@ -1,0 +1,8 @@
+{
+  "name": "Health",
+  "description": "Hit-points + invulnerability windows + optional respawn. Decoupled from any one game: anything that should take damage emits `health.damage`, anything that heals emits `health.heal`. On 0 HP the system fires `health.died` and (if respawnPosition is set) snaps the entity back with full HP.",
+  "category": "gameplay",
+  "components": ["HealthComponent"],
+  "systems": ["HealthSystem"],
+  "dependencies": ["MeshPrimitive"]
+}

@@ -26,7 +26,7 @@ describe('ArcCameraDebuggerComponent', () => {
     it('should use defaults when no data provided', () => {
       const defaultComponent = new ArcCameraDebuggerComponent();
       expect(defaultComponent.visible).toBe(false);
-      expect(defaultComponent.activationKey).toBe('Digit8');
+      expect(defaultComponent.activationKey).toBe('');
       expect(defaultComponent.position).toBe('top-right');
     });
 
@@ -35,7 +35,7 @@ describe('ArcCameraDebuggerComponent', () => {
         visible: true,
       });
       expect(partialComponent.visible).toBe(true);
-      expect(partialComponent.activationKey).toBe('Digit8');
+      expect(partialComponent.activationKey).toBe('');
       expect(partialComponent.position).toBe('top-right');
     });
   });
@@ -78,9 +78,9 @@ describe('ArcCameraDebuggerComponent', () => {
       expect(comp.activationKey).toBe('Digit8');
     });
 
-    it('should default to Digit8', () => {
+    it("should default to '' (auto-assigned by the viz layer)", () => {
       const comp = new ArcCameraDebuggerComponent();
-      expect(comp.activationKey).toBe('Digit8');
+      expect(comp.activationKey).toBe('');
     });
 
     it('should allow changing activation key', () => {
@@ -141,7 +141,7 @@ describe('ArcCameraDebuggerComponent', () => {
       const defaultComp = new ArcCameraDebuggerComponent();
       const serialized = defaultComp.serialize();
       expect(serialized.visible).toBe(false);
-      expect(serialized.activationKey).toBe('Digit8');
+      expect(serialized.activationKey).toBe('');
       expect(serialized.position).toBe('top-right');
     });
 

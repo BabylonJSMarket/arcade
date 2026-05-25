@@ -19,8 +19,6 @@ describe('DirectionalLightComponent (core)', () => {
     expect(c.shadowEnabled).toBe(true);
     expect(c.shadowMapSize).toBe(1024);
     expect(c.autoCreate).toBe(true);
-    expect(c.initialized).toBe(false);
-    expect(c.handle).toBeUndefined();
   });
 
   it('normalizes direction when provided', () => {

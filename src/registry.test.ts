@@ -7,6 +7,7 @@ import {
 } from './registry';
 
 const EXPECTED_NAMES = [
+  // Core rendering / IO
   'MeshPrimitive',
   'Movement',
   'KeyboardMover',
@@ -18,19 +19,45 @@ const EXPECTED_NAMES = [
   'Physics',
   'Score',
   'Scoreboard',
+  'Health',
+  'HealthBar',
+  'Flash',
   'Shadow',
+  'Skybox',
+  'EnvironmentTexture',
   'Animation',
   'Mesh',
+  // Pinball
+  'Plunger',
+  'PinballCamera',
+  'PinballLayout',
+  'PinballTable',
+  'PinballBuilder',
+  'PinballBuilderInput',
+  'Bumper',
+  'Flipper',
+  'MouseHole',
+  'Spinner',
+  // Top-down shooter
+  'BulletPool',
+  'Bullet',
+  'EntityPool',
+  'Enemy',
+  'SkeletonAnimator',
+  'EnemySpawner',
+  'ObstacleField',
+  'LineOfSight',
+  'TwinStickShooter',
 ] as const;
 
 type ComponentClass = new (...args: never[]) => Component;
 type SystemClass = new (...args: never[]) => System;
 
 describe('ARCADE_COMPONENT_REGISTRY', () => {
-  it('has exactly the 14 expected keys', () => {
+  it('contains exactly the expected component names', () => {
     const keys = Object.keys(ARCADE_COMPONENT_REGISTRY).sort();
     expect(keys).toEqual([...EXPECTED_NAMES].sort());
-    expect(keys).toHaveLength(14);
+    expect(keys).toHaveLength(EXPECTED_NAMES.length);
   });
 
   it('exports ARCADE_COMPONENT_NAMES matching the registry keys', () => {
@@ -67,7 +94,9 @@ describe('ARCADE_COMPONENT_REGISTRY', () => {
       expect(typeof ComponentCtor).toBe('function');
       expect(ComponentCtor!.prototype).toBeInstanceOf(Component);
     }
-  });
+    // Bumped — 33 modules x dynamic import + Solid transform can exceed the
+    // default 5 s under parallel-suite contention.
+  }, 30_000);
 
   it('every resolved module exports <Name>System as a class extending System', async () => {
     for (const name of EXPECTED_NAMES) {
@@ -81,7 +110,7 @@ describe('ARCADE_COMPONENT_REGISTRY', () => {
       expect(typeof SystemCtor).toBe('function');
       expect(SystemCtor!.prototype).toBeInstanceOf(System);
     }
-  });
+  }, 30_000);
 
   it('caches the import so repeated resolver calls return the same module instance', async () => {
     const resolver = ARCADE_COMPONENT_REGISTRY.MeshPrimitive!;

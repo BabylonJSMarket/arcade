@@ -13,20 +13,18 @@ runMechanicContract({
     // mesh handle and light handle both exist — the full flow is covered by
     // Shadow.test.ts and the scene-level demo, not the generic contract.
   },
-  setup({ world, renderer }) {
-    // Shadow needs a DirectionalLight already in the world to find the
-    // shadow-caster attachment target.
+  setup({ world }) {
+    // Shadow needs a DirectionalLight present so it has a shadow-caster
+    // attachment target. The light handle now lives in DirectionalLightSystem's
+    // runtime (not on the Component) and reaches Shadow via the CREATED event;
+    // the generic contract only exercises Shadow's input plumbing, not its
+    // caster output, so simply having the component in the world is enough.
     const lightEntity = world.createEntity();
-    const light = new DirectionalLightComponent({
-      shadowEnabled: true,
-      direction: [-1, -2, -1],
-    });
-    light.handle = renderer.createDirectionalLight(lightEntity.id, {
-      direction: [-1, -2, -1],
-      intensity: 1,
-      diffuse: [1, 1, 1],
-      specular: [1, 1, 1],
-    });
-    lightEntity.add(light);
+    lightEntity.add(
+      new DirectionalLightComponent({
+        shadowEnabled: true,
+        direction: [-1, -2, -1],
+      }),
+    );
   },
 });

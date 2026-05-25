@@ -71,7 +71,7 @@ export class MeshPrimitiveDebuggerComponent extends Component {
   constructor(data: MeshPrimitiveDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit9';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-left';
   }
 
@@ -142,18 +142,12 @@ const PANEL_ID = 'mesh-primitive-debugger';
 export class MeshPrimitiveDebuggerSystem extends System {
   private component: MeshPrimitiveDebuggerComponent | null = null;
 
-  // Keyboard handler
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-
-  // Solid store for reactive params
-  private paramsStore: ReturnType<typeof createStore<MeshPrimitiveParams>> | null = null;
-
   // Local params reference for applying to meshes
   private params: MeshPrimitiveParams = { ...DEFAULT_PARAMS };
+  protected query = { required: [MeshPrimitiveDebuggerComponent] };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [MeshPrimitiveDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -166,7 +160,6 @@ export class MeshPrimitiveDebuggerSystem extends System {
       }
     }
 
-    this.setupKeyboardListener();
     this.registerPanel();
   }
 
@@ -179,7 +172,6 @@ export class MeshPrimitiveDebuggerSystem extends System {
 
     // Create reactive store
     const [params, setParams] = createStore<MeshPrimitiveParams>({ ...this.params });
-    this.paramsStore = [params, setParams];
 
     // Register panel with VizRoot
     vizStore.registerPanel({
@@ -187,6 +179,8 @@ export class MeshPrimitiveDebuggerSystem extends System {
       title: 'Mesh Primitive Controls',
       position: this.component.position,
       titleColor: '#9f4aff',
+      activationKey: this.component.activationKey,
+      visible: this.component.visible,
       content: () => (
         <MeshPrimitivePanel
           params={params}
@@ -206,32 +200,6 @@ export class MeshPrimitiveDebuggerSystem extends System {
         />
       ),
     });
-
-    // If component says visible, show the panel
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-      this.eventBus.emit(MeshPrimitiveDebuggerEvents.SHOWN, {});
-    }
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        const isVisible = vizStore.isVisible(PANEL_ID);
-        this.component.visible = isVisible;
-        if (isVisible) {
-          this.eventBus.emit(MeshPrimitiveDebuggerEvents.SHOWN, {});
-        } else {
-          this.eventBus.emit(MeshPrimitiveDebuggerEvents.HIDDEN, {});
-        }
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: any): void {
@@ -268,11 +236,6 @@ export class MeshPrimitiveDebuggerSystem extends System {
 
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
-    this.paramsStore = null;
   }
 
   protected onEntityRemoved(entity: any): void {

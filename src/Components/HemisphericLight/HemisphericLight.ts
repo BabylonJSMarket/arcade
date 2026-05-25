@@ -6,6 +6,7 @@
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
+import type { LightHandle } from '@babylonjsmarket/ecs/renderer-types';
 import { HemisphericLightComponent, type HemisphericLightInput } from './HemisphericLight.core';
 
 export { HemisphericLightComponent, type HemisphericLightInput };
@@ -15,12 +16,27 @@ export const HemisphericLightEvents = {
   INTENSITY_CHANGED: 'hemisphericlight.intensity.changed',
 } as const;
 
+interface HemisphericLightRuntime {
+  handle?: LightHandle;
+  initialized: boolean;
+}
+
 export class HemisphericLightSystem extends System {
+  protected query = { required: [HemisphericLightComponent] };
   private lastIntensities = new WeakMap<HemisphericLightComponent, number>();
+  private runtime = new WeakMap<HemisphericLightComponent, HemisphericLightRuntime>();
+
+  private getRuntime(comp: HemisphericLightComponent): HemisphericLightRuntime {
+    let rt = this.runtime.get(comp);
+    if (!rt) {
+      rt = { initialized: false };
+      this.runtime.set(comp, rt);
+    }
+    return rt;
+  }
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [HemisphericLightComponent] };
   }
 
   protected onInitialize(): void {
@@ -35,10 +51,12 @@ export class HemisphericLightSystem extends System {
 
   protected onEntityRemoved(entity: Entity): void {
     const comp = entity.get(HemisphericLightComponent);
-    if (comp?.handle) {
-      this.world?.renderer?.disposeLight(comp.handle);
-      comp.handle = undefined;
-      comp.initialized = false;
+    if (!comp) return;
+    const rt = this.getRuntime(comp);
+    if (rt.handle) {
+      this.world?.renderer?.disposeLight(rt.handle);
+      rt.handle = undefined;
+      rt.initialized = false;
     }
   }
 
@@ -47,10 +65,12 @@ export class HemisphericLightSystem extends System {
     // push them to the adapter.
     for (const entity of this.entities) {
       const comp = entity.get(HemisphericLightComponent);
-      if (!comp?.initialized || !comp.handle) continue;
+      if (!comp) continue;
+      const rt = this.getRuntime(comp);
+      if (!rt.initialized || !rt.handle) continue;
       const prev = this.lastIntensities.get(comp);
       if (prev === undefined || Math.abs(prev - comp.intensity) > 0.001) {
-        this.world?.renderer?.updateLightIntensity(comp.handle, comp.intensity);
+        this.world?.renderer?.updateLightIntensity(rt.handle, comp.intensity);
         this.lastIntensities.set(comp, comp.intensity);
         if (prev !== undefined) {
           this.eventBus.emit(HemisphericLightEvents.INTENSITY_CHANGED, {
@@ -64,12 +84,14 @@ export class HemisphericLightSystem extends System {
 
   private ensureLight(entity: Entity): void {
     const comp = entity.get(HemisphericLightComponent);
-    if (!comp || comp.initialized) return;
+    if (!comp) return;
+    const rt = this.getRuntime(comp);
+    if (rt.initialized) return;
     const r = this.world?.renderer;
     if (!r) return;
 
-    comp.handle = r.createHemisphericLight(entity.id, comp.toSpec());
-    comp.initialized = true;
+    rt.handle = r.createHemisphericLight(entity.id, comp.toSpec());
+    rt.initialized = true;
     this.lastIntensities.set(comp, comp.intensity);
 
     this.eventBus.emit(HemisphericLightEvents.CREATED, {

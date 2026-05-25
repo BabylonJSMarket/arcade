@@ -25,9 +25,9 @@ class StubComponent extends Component {
 }
 
 class StubSystem extends System {
+  protected query = { required: [StubComponent] };
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [StubComponent] };
   }
   onUpdate(_deltaTime: number): void {
     // no-op

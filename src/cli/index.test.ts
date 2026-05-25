@@ -74,12 +74,11 @@ describe("arcade CLI", () => {
       expect(stdout).toContain("Usage: arcade init");
     });
 
-    it("mentions all four templates in the help output", async () => {
+    it("lists every shipped template", async () => {
       const { stdout } = await runCli(["--help"], tmpDir);
       expect(stdout).toContain("empty-3d");
-      expect(stdout).toContain("ThirdPerson");
-      expect(stdout).toContain("FirstPerson");
-      expect(stdout).toContain("json-scene");
+      expect(stdout).toContain("top-down-shooter");
+      expect(stdout).toContain("pinball");
     });
 
     it("documents the @babylonjsmarket/ecs + arcade stack", async () => {
@@ -89,42 +88,49 @@ describe("arcade CLI", () => {
     });
   });
 
-  describe("empty-3d template", () => {
-    it("creates the expected files in the target directory", async () => {
-      const { code } = await runCli(
-        ["my-project", "-t", "empty-3d", "--overwrite"],
-        tmpDir,
-      );
-      expect(code).toBe(0);
+  // Every template now scaffolds the same three-file game module:
+  //   src/main.ts     — shared tiny boot
+  //   src/scene.ts    — per-template entity/component definition
+  //   src/registry.ts — per-template HUD panel + custom-component resolvers
+  // Plus the standard package.json/vite.config.js/tsconfig.json/index.html/README/.gitignore.
+  const COMMON_FILES = [
+    "package.json",
+    "vite.config.js",
+    "tsconfig.json",
+    "index.html",
+    "src/main.ts",
+    "src/scene.ts",
+    "src/registry.ts",
+    "README.md",
+    ".gitignore",
+  ];
 
-      const projectRoot = path.join(tmpDir, "my-project");
-      const expectedFiles = [
-        "package.json",
-        "vite.config.js",
-        "tsconfig.json",
-        "index.html",
-        "src/main.ts",
-        "README.md",
-        ".gitignore",
-      ];
-      for (const file of expectedFiles) {
+  describe.each([
+    { template: "empty-3d", dir: "my-empty" },
+    { template: "top-down-shooter", dir: "my-shooter" },
+    { template: "pinball", dir: "my-pinball" },
+  ])("$template template", ({ template, dir }) => {
+    it("creates every expected file", async () => {
+      const { code } = await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+      expect(code).toBe(0);
+      const projectRoot = path.join(tmpDir, dir);
+      for (const file of COMMON_FILES) {
         expect(
           fs.existsSync(path.join(projectRoot, file)),
-          `expected ${file} to exist`,
+          `expected ${file} to exist in ${template} scaffold`,
         ).toBe(true);
       }
+      // No legacy locations the old CLI used:
+      expect(fs.existsSync(path.join(projectRoot, "public", "scenes", "level1.json"))).toBe(false);
+      expect(fs.existsSync(path.join(projectRoot, "src", "components"))).toBe(false);
     }, 60_000);
 
     it("generates a package.json with the expected name, type, and dependencies", async () => {
-      await runCli(
-        ["my-project", "-t", "empty-3d", "--overwrite"],
-        tmpDir,
-      );
-      const projectRoot = path.join(tmpDir, "my-project");
+      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
       const pkg = JSON.parse(
-        fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"),
+        fs.readFileSync(path.join(tmpDir, dir, "package.json"), "utf-8"),
       );
-      expect(pkg.name).toBe("my-project");
+      expect(pkg.name).toBe(dir);
       expect(pkg.type).toBe("module");
       expect(pkg.scripts.dev).toBe("vite");
       expect(pkg.scripts.build).toContain("vite build");
@@ -133,92 +139,98 @@ describe("arcade CLI", () => {
         "@babylonjsmarket/ecs": expect.any(String),
         "@babylonjsmarket/arcade": expect.any(String),
         "@babylonjs/core": expect.any(String),
-        "@babylonjs/loaders": expect.any(String),
-        "@babylonjs/havok": expect.any(String),
       });
     }, 60_000);
 
-    it("generates src/main.ts that imports from the published ecs+arcade packages, not local folders", async () => {
-      await runCli(
-        ["my-project", "-t", "empty-3d", "--overwrite"],
-        tmpDir,
-      );
+    it("ships the shared tiny main.ts (no per-template branches)", async () => {
+      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
       const mainTs = fs.readFileSync(
-        path.join(tmpDir, "my-project", "src", "main.ts"),
+        path.join(tmpDir, dir, "src", "main.ts"),
         "utf-8",
       );
-      expect(mainTs).toContain('from "@babylonjsmarket/ecs/babylon"');
-      expect(mainTs).toContain('from "@babylonjsmarket/arcade"');
-      expect(mainTs).not.toMatch(/from\s+["']\.\/lib/);
-      expect(mainTs).not.toMatch(/from\s+["']\.\/ECS/);
-      expect(mainTs).not.toMatch(/from\s+["']\.\.\/lib/);
-      expect(mainTs).not.toMatch(/from\s+["']\.\.\/ECS/);
+      expect(mainTs).toContain("from '@babylonjsmarket/arcade'");
+      expect(mainTs).toContain("from '@babylonjsmarket/ecs/babylon'");
+      expect(mainTs).toContain("mountArcadeViz");
+      expect(mainTs).toContain("from './scene'");
+      expect(mainTs).toContain("from './registry'");
+      expect(mainTs).toContain("loadScene(SCENE)");
+      // Boot is template-agnostic — no per-game switch statements.
+      expect(mainTs).not.toContain("new BulletSystem");
+      expect(mainTs).not.toContain("new EnemySystem");
+    }, 60_000);
+
+    it("ships a scene.ts that exports SCENE with at least one entity", async () => {
+      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+      const sceneTs = fs.readFileSync(
+        path.join(tmpDir, dir, "src", "scene.ts"),
+        "utf-8",
+      );
+      expect(sceneTs).toContain("export const SCENE");
+      expect(sceneTs).toMatch(/entities\s*:/);
+    }, 60_000);
+
+    it("ships a registry.ts that exports REGISTRY", async () => {
+      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+      const registryTs = fs.readFileSync(
+        path.join(tmpDir, dir, "src", "registry.ts"),
+        "utf-8",
+      );
+      expect(registryTs).toContain("export const REGISTRY");
     }, 60_000);
   });
 
-  describe("ThirdPerson template", () => {
-    it("imports KeyboardMover, Movement, and ArcCamera components", async () => {
-      const { code } = await runCli(
-        ["tp-project", "-t", "ThirdPerson", "--overwrite"],
-        tmpDir,
-      );
-      expect(code).toBe(0);
-      const mainTs = fs.readFileSync(
-        path.join(tmpDir, "tp-project", "src", "main.ts"),
+  describe("empty-3d scene content", () => {
+    it("includes a Skybox, sun w/ shadows, hero, ground, and ArcCamera", async () => {
+      await runCli(["my-empty", "-t", "empty-3d", "--overwrite"], tmpDir);
+      const sceneTs = fs.readFileSync(
+        path.join(tmpDir, "my-empty", "src", "scene.ts"),
         "utf-8",
       );
-      expect(mainTs).toContain("KeyboardMoverComponent");
-      expect(mainTs).toContain("MovementComponent");
-      expect(mainTs).toContain("ArcCameraComponent");
+      expect(sceneTs).toContain("Skybox");
+      expect(sceneTs).toContain("DirectionalLight");
+      expect(sceneTs).toContain("shadowEnabled: true");
+      expect(sceneTs).toContain("Hero");
+      expect(sceneTs).toContain("ArcCamera");
+      expect(sceneTs).toContain("target: 'Hero'");
     }, 60_000);
   });
 
-  describe("FirstPerson template", () => {
-    it("wires a UniversalCamera with pointer-lock and crosshair UI", async () => {
-      const { code } = await runCli(
-        ["fp-project", "-t", "FirstPerson", "--overwrite"],
-        tmpDir,
-      );
-      expect(code).toBe(0);
-      const mainTs = fs.readFileSync(
-        path.join(tmpDir, "fp-project", "src", "main.ts"),
+  describe("top-down-shooter scene content", () => {
+    it("includes a Player, four corner Spawners, arena walls, and Bullet/Enemy markers on a World entity", async () => {
+      await runCli(["my-shooter", "-t", "top-down-shooter", "--overwrite"], tmpDir);
+      const sceneTs = fs.readFileSync(
+        path.join(tmpDir, "my-shooter", "src", "scene.ts"),
         "utf-8",
       );
-      // First-person needs the actual mouse-look camera, not ECS movement.
-      expect(mainTs).toContain("UniversalCamera");
-      expect(mainTs).toContain("requestPointerLock");
-      expect(mainTs).toContain("addCrosshair");
+      expect(sceneTs).toContain("Player");
+      expect(sceneTs).toContain("TwinStickShooter");
+      for (const corner of ["Spawner_NW", "Spawner_NE", "Spawner_SW", "Spawner_SE"]) {
+        expect(sceneTs).toContain(corner);
+      }
+      for (const wall of ["Wall_N", "Wall_S", "Wall_E", "Wall_W"]) {
+        expect(sceneTs).toContain(wall);
+      }
+      // Runtime-only systems wired via the singleton World marker entity.
+      expect(sceneTs).toContain("Bullet: {}");
+      expect(sceneTs).toContain("Enemy: {}");
+      expect(sceneTs).toContain("target: 'Player'");
     }, 60_000);
   });
 
-  describe("json-scene template", () => {
-    it("creates public/scenes/level1.json with the expected entity shape", async () => {
-      const { code } = await runCli(
-        ["json-project", "-t", "json-scene", "--overwrite"],
-        tmpDir,
+  describe("pinball scene content", () => {
+    it("includes a Playfield, flippers, bumpers, plunger, and table dims", async () => {
+      await runCli(["my-pinball", "-t", "pinball", "--overwrite"], tmpDir);
+      const sceneTs = fs.readFileSync(
+        path.join(tmpDir, "my-pinball", "src", "scene.ts"),
+        "utf-8",
       );
-      expect(code).toBe(0);
-
-      const scenePath = path.join(
-        tmpDir,
-        "json-project",
-        "public",
-        "scenes",
-        "level1.json",
-      );
-      expect(fs.existsSync(scenePath)).toBe(true);
-
-      const scene = JSON.parse(fs.readFileSync(scenePath, "utf-8"));
-      expect(scene.entities).toBeDefined();
-      expect(scene.entities.Player).toBeDefined();
-      expect(scene.entities.Camera).toBeDefined();
-      expect(scene.entities.Sun).toBeDefined();
-      expect(scene.entities.Sky).toBeDefined();
-      expect(scene.entities.Ground).toBeDefined();
-      expect(scene.entities.Player.tags).toContain("player");
-      expect(scene.entities.Player.components.MeshPrimitive.primitive).toBe(
-        "capsule",
-      );
+      expect(sceneTs).toContain("Playfield");
+      expect(sceneTs).toContain("Flipper_Left");
+      expect(sceneTs).toContain("Flipper_Right");
+      expect(sceneTs).toContain("Bumper_Center");
+      expect(sceneTs).toContain("Plunger");
+      expect(sceneTs).toContain("PinballTable");
+      expect(sceneTs).toContain("PinballCamera");
     }, 60_000);
   });
 
@@ -231,30 +243,18 @@ describe("arcade CLI", () => {
       expect(code).toBe(0);
       const projectRoot = path.join(tmpDir, "my-project2");
       expect(fs.existsSync(path.join(projectRoot, "package.json"))).toBe(true);
-      expect(fs.existsSync(path.join(projectRoot, "src", "main.ts"))).toBe(
-        true,
-      );
+      expect(fs.existsSync(path.join(projectRoot, "src", "main.ts"))).toBe(true);
     }, 60_000);
   });
 
   describe("package name sanitization", () => {
     it("sanitizes a directory name with spaces into a valid package.json name", async () => {
-      // The CLI prompts for a package name when the target dir basename is
-      // not a valid npm name. The placeholder is the sanitized version, so
-      // we just hit return (`\r`) to accept the default.
       const proc = spawn(
         process.execPath,
-        [
-          CLI_PATH,
-          "Invalid Name",
-          "-t",
-          "empty-3d",
-          "--overwrite",
-        ],
+        [CLI_PATH, "Invalid Name", "-t", "empty-3d", "--overwrite"],
         { cwd: tmpDir, env: { ...process.env, CI: "true" } },
       );
       const exitCode = await new Promise<number>((resolve) => {
-        // Swallow output so the buffer never blocks.
         proc.stdout.on("data", () => {});
         proc.stderr.on("data", () => {});
         setTimeout(() => proc.stdin.write("\r"), 500);
@@ -267,7 +267,6 @@ describe("arcade CLI", () => {
       const pkg = JSON.parse(
         fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"),
       );
-      // npm package names: lowercase, no spaces.
       expect(pkg.name).toMatch(/^[a-z0-9][a-z0-9\-._~]*$/);
       expect(pkg.name).not.toContain(" ");
       expect(pkg.name).not.toMatch(/[A-Z]/);

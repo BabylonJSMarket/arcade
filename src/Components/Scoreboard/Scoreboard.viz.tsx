@@ -15,6 +15,7 @@ import {
   ScoreboardComponent,
   ScoreboardInputEvents,
 } from './Scoreboard';
+import { ScoreInputEvents } from '../Score/Score';
 import type { ScoreboardInstance } from './Scoreboard.core';
 
 export interface ScoreboardDebuggerInput {
@@ -31,7 +32,7 @@ export class ScoreboardDebuggerComponent extends Component {
   constructor(data: ScoreboardDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit1';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
   }
 
@@ -47,13 +48,12 @@ export class ScoreboardDebuggerComponent extends Component {
 const PANEL_ID = 'scoreboard-debugger';
 
 export class ScoreboardDebuggerSystem extends System {
+  protected query = { required: [ScoreboardDebuggerComponent] };
   private component: ScoreboardDebuggerComponent | null = null;
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private panelRegistered = false;
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ScoreboardDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -65,7 +65,6 @@ export class ScoreboardDebuggerSystem extends System {
         break;
       }
     }
-    this.setupKeyboardListener();
     this.tryRegisterPanel();
   }
 
@@ -84,13 +83,15 @@ export class ScoreboardDebuggerSystem extends System {
       title: 'Scoreboard',
       position: this.component.position,
       titleColor: '#a78bfa',
+      activationKey: this.component.activationKey,
+      visible: this.component.visible,
       content: () => (
         <ScoreboardPanel
           core={core}
           onAddScore={(entityId, points) =>
             // Emits the same public Score event that a goal/scoring system
             // would — the Score system owns state mutation; we just request it.
-            this.eventBus.emit('score.add', { ownerEntity: entityId, points })
+            this.eventBus.emit(ScoreInputEvents.ADD, { ownerEntity: entityId, points })
           }
           onReset={() => this.eventBus.emit(ScoreboardInputEvents.SCORE_RESET, {})}
         />
@@ -98,9 +99,6 @@ export class ScoreboardDebuggerSystem extends System {
     });
 
     this.panelRegistered = true;
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-    }
   }
 
   private findCoreInstance(): ScoreboardInstance | null {
@@ -110,19 +108,6 @@ export class ScoreboardDebuggerSystem extends System {
       if (comp?.instance) return comp.instance;
     }
     return null;
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        this.component.visible = vizStore.isVisible(PANEL_ID);
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: Entity): void {
@@ -136,9 +121,5 @@ export class ScoreboardDebuggerSystem extends System {
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
     this.panelRegistered = false;
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
   }
 }

@@ -16,6 +16,30 @@ import type {
 
 export type PrimitiveType = PrimitiveSpec['kind'];
 
+/**
+ * Runtime (non-serializable) state for a MeshPrimitive. The renderer handle is
+ * a live engine reference and must NOT live on the pure-data Component (it can't
+ * survive a serialize → JSON → deserialize round-trip). It is keyed by the
+ * Component instance in a module-level WeakMap; because pooled entities reuse
+ * the SAME Component instance across release/acquire, the handle is preserved
+ * across parking exactly as if it were a field.
+ */
+export interface MeshPrimitiveRuntime {
+  handle?: MeshHandle;
+}
+
+const runtimeByComponent = new WeakMap<MeshPrimitiveComponent, MeshPrimitiveRuntime>();
+
+/** Lazily create + return the runtime slot for a component. */
+export function getMeshPrimitiveRuntime(comp: MeshPrimitiveComponent): MeshPrimitiveRuntime {
+  let rt = runtimeByComponent.get(comp);
+  if (!rt) {
+    rt = {};
+    runtimeByComponent.set(comp, rt);
+  }
+  return rt;
+}
+
 /** Input shape accepted by the component constructor (and the scene JSON). */
 export interface MeshPrimitiveInput {
   primitive?: PrimitiveType;
@@ -100,10 +124,22 @@ export class MeshPrimitiveComponent extends Component {
 
   visible: boolean;
 
-  /** Opaque handle returned by the renderer once the mesh is created. */
-  handle?: MeshHandle;
   /** True after the system has called renderer.createMesh. */
   isCreated = false;
+
+  /**
+   * Opaque handle returned by the renderer once the mesh is created. This is
+   * runtime-only state: it is stored in a System-side WeakMap (see
+   * {@link getMeshPrimitiveRuntime}) rather than as a serializable field. The
+   * getter/setter keep the historical `comp.handle` access shape working for
+   * the many consumers (Movement, Physics, Shadow, pools, …) that read it.
+   */
+  get handle(): MeshHandle | undefined {
+    return getMeshPrimitiveRuntime(this).handle;
+  }
+  set handle(value: MeshHandle | undefined) {
+    getMeshPrimitiveRuntime(this).handle = value;
+  }
 
   constructor(data: MeshPrimitiveInput = {}) {
     super();

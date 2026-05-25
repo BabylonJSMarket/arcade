@@ -99,11 +99,11 @@ export class ScoreComponent extends Component {
 // ============================================
 
 export class ScoreSystem extends System {
+  protected query = { required: [ScoreComponent] };
   private unsubscribes: Array<() => void> = [];
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ScoreComponent] };
   }
 
   protected onInitialize(): void {

@@ -1,79 +1,54 @@
 /**
- * ArcCamera.viz.tsx - Visual Debugger for ArcCamera
+ * ArcCamera.viz.tsx — runtime Camera Controls panel.
  *
- * This module provides a real-time visual debugger that displays arc camera
- * parameters and allows live adjustment of angles, distances, and sensitivity.
+ * A small on-screen panel (toggled by an activation key) that drives the live
+ * ArcCamera via its component fields — the ArcCameraSystem is the authority
+ * that pushes those fields to the renderer each frame, so the panel only edits
+ * data:
+ *   • Zoom    → ArcCameraComponent.distance (radius)
+ *   • Pan X/Z → ArcCameraComponent.targetOffset (applied only when not following)
+ *   • Follow  → ArcCameraComponent.follow (keep the target centred)
  *
- * Features:
- * - Slider controls for all camera parameters
- * - Live updates to all arc cameras in scene
- * - Reset to defaults button
- * - Keyboard shortcut (Digit8 by default) to toggle
+ * Until the user touches a control the sliders mirror the live camera (so they
+ * show pinball's auto-fit zoom, etc.); after that the panel owns the values and
+ * they persist (localStorage, keyed by scene).
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import { EventBus } from '@babylonjsmarket/ecs';
+import type { Entity } from '@babylonjsmarket/ecs';
 import { ArcCameraComponent } from './ArcCamera';
 import { vizStore } from '../_shared/viz';
 import { createStore } from 'solid-js/store';
-import { ArcCameraPanel, ArcCameraParams } from './ArcCamera.panel';
+import { CameraControlPanel, type CameraControlParams } from './ArcCamera.panel';
 
-// ============================================
-// Events emitted by ArcCameraDebugger
-// ============================================
-
-/**
- * Events emitted by the debugger itself.
- */
 export const ArcCameraDebuggerEvents = {
   SHOWN: 'arccameradebugger.shown',
   HIDDEN: 'arccameradebugger.hidden',
 } as const;
 
-// ============================================
-// Input interface
-// ============================================
-
-/**
- * Configuration options for the ArcCamera debugger.
- */
 export interface ArcCameraDebuggerInput {
   /** Start visible? (default: false) */
   visible?: boolean;
-  /** Keyboard key to toggle (default: "Digit8") */
+  /** Keyboard key to toggle (default: ""—none) */
   activationKey?: string;
   /** Panel position (default: "top-right") */
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 }
 
-// ============================================
-// ArcCameraDebuggerComponent
-// ============================================
-
-/**
- * Component that stores the debugger's state and configuration.
- *
- * Add this to an entity to enable the ArcCamera debugger panel.
- */
 export class ArcCameraDebuggerComponent extends Component {
-  /** Whether the debug panel is currently visible */
   visible: boolean;
-
-  /** Keyboard key to toggle visibility */
   activationKey: string;
-
-  /** Panel position */
   position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
   constructor(data: ArcCameraDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit8';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
   }
 
-  /** Serialize configuration for saving */
   serialize(): ArcCameraDebuggerInput {
     return {
       visible: this.visible,
@@ -84,82 +59,44 @@ export class ArcCameraDebuggerComponent extends Component {
 }
 
 // ============================================
-// Storage helpers for debugger params
+// Persistence (scene-keyed)
 // ============================================
 
-const STORAGE_KEY = 'arc-camera-debugger-params';
+const STORAGE_KEY = 'camera-controls';
 
-function loadParamsFromStorage(): Partial<ArcCameraParams> {
+function loadParams(): Partial<CameraControlParams> | null {
   try {
-    const sceneName = vizStore.sceneName;
-    const saved = localStorage.getItem(`${STORAGE_KEY}-${sceneName}`);
-    if (saved) {
-      return JSON.parse(saved);
-    }
+    const saved = localStorage.getItem(`${STORAGE_KEY}-${vizStore.sceneName}`);
+    return saved ? (JSON.parse(saved) as Partial<CameraControlParams>) : null;
   } catch {
-    // Ignore storage errors
-  }
-  return {};
-}
-
-function saveParamToStorage(params: ArcCameraParams): void {
-  try {
-    const sceneName = vizStore.sceneName;
-    localStorage.setItem(`${STORAGE_KEY}-${sceneName}`, JSON.stringify(params));
-  } catch {
-    // Ignore storage errors
+    return null;
   }
 }
 
-// ============================================
-// Default values
-// ============================================
+function saveParams(params: CameraControlParams): void {
+  try {
+    localStorage.setItem(`${STORAGE_KEY}-${vizStore.sceneName}`, JSON.stringify(params));
+  } catch {
+    // ignore storage errors
+  }
+}
 
-const DEFAULT_PARAMS: ArcCameraParams = {
-  distance: 15,
-  minDistance: 5,
-  maxDistance: 50,
-  alpha: Math.PI / 2,
-  beta: Math.PI / 3,
-  minBeta: 0.1,
-  maxBeta: Math.PI / 2 - 0.1,
-  inertia: 0.9,
-  wheelPrecision: 50,
-  angularSensibility: 1000,
-  speed: 1,
-  autoRotateSpeed: 0.5,
-};
+const DEFAULT_PARAMS: CameraControlParams = { zoom: 30, panX: 0, panZ: 0, follow: true };
 
-// ============================================
-// ArcCameraDebuggerSystem
-// ============================================
+const PANEL_ID = 'camera-controls';
 
-const PANEL_ID = 'arc-camera-debugger';
-
-/**
- * System that manages the ArcCamera debugger UI.
- *
- * This system:
- * - Registers a panel with the VizRoot
- * - Provides slider controls for camera parameters
- * - Updates all arc cameras in the scene
- * - Handles keyboard shortcuts
- */
 export class ArcCameraDebuggerSystem extends System {
+  protected query = { required: [ArcCameraDebuggerComponent] };
   private component: ArcCameraDebuggerComponent | null = null;
 
-  // Keyboard handler
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-
-  // Solid store for reactive params
-  private paramsStore: ReturnType<typeof createStore<ArcCameraParams>> | null = null;
-
-  // Local params reference for applying to cameras
-  private params: ArcCameraParams = { ...DEFAULT_PARAMS };
+  private params: CameraControlParams = { ...DEFAULT_PARAMS };
+  private setParams!: (key: keyof CameraControlParams, value: number | boolean) => void;
+  // Until the user touches a control, mirror the live camera into the sliders
+  // (shows the scene/auto-fit values). Once touched, the panel owns the values.
+  private touched = false;
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ArcCameraDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -171,76 +108,10 @@ export class ArcCameraDebuggerSystem extends System {
         break;
       }
     }
-
-    this.setupKeyboardListener();
     this.registerPanel();
   }
 
-  private registerPanel(): void {
-    if (!this.component) return;
-
-    // Load saved params
-    const savedParams = loadParamsFromStorage();
-    this.params = { ...DEFAULT_PARAMS, ...savedParams };
-
-    // Create reactive store
-    const [params, setParams] = createStore<ArcCameraParams>({ ...this.params });
-    this.paramsStore = [params, setParams];
-
-    // Register panel with VizRoot
-    vizStore.registerPanel({
-      id: PANEL_ID,
-      title: 'Arc Camera Controls',
-      position: this.component.position,
-      titleColor: '#66ccff',
-      content: () => (
-        <ArcCameraPanel
-          params={params}
-          setParam={(key, value) => {
-            setParams(key, value);
-            this.params[key] = value;
-            saveParamToStorage(this.params);
-          }}
-          onReset={() => {
-            const defaults = { ...DEFAULT_PARAMS };
-            Object.entries(defaults).forEach(([key, value]) => {
-              setParams(key as keyof ArcCameraParams, value);
-            });
-            this.params = { ...defaults };
-            saveParamToStorage(this.params);
-          }}
-        />
-      ),
-    });
-
-    // If component says visible, show the panel
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-      this.eventBus.emit(ArcCameraDebuggerEvents.SHOWN, {});
-    }
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        const isVisible = vizStore.isVisible(PANEL_ID);
-        this.component.visible = isVisible;
-        if (isVisible) {
-          this.eventBus.emit(ArcCameraDebuggerEvents.SHOWN, {});
-        } else {
-          this.eventBus.emit(ArcCameraDebuggerEvents.HIDDEN, {});
-        }
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
-  }
-
-  protected onEntityAdded(entity: any): void {
+  protected onEntityAdded(entity: Entity): void {
     const comp = entity.get(ArcCameraDebuggerComponent);
     if (comp && !this.component) {
       this.component = comp;
@@ -248,52 +119,111 @@ export class ArcCameraDebuggerSystem extends System {
     }
   }
 
-  protected onUpdate(_deltaTime: number): void {
-    if (!this.component || !this.world) return;
-
-    // Sync visibility state
-    const panelVisible = vizStore.isVisible(PANEL_ID);
-    if (panelVisible !== this.component.visible) {
-      this.component.visible = panelVisible;
-    }
-
-    // Apply params to all arc camera components. The ArcCameraSystem detects
-    // angle/radius changes via the renderer adapter and emits events. For live
-    // limit/inertia changes, the System re-seeds the camera (not yet wired up).
-    if (panelVisible) {
-      for (const entity of this.world.getEntities()) {
-        const arcCamera = entity.get(ArcCameraComponent);
-        if (!arcCamera) continue;
-        arcCamera.distance = this.params.distance;
-        arcCamera.minDistance = this.params.minDistance;
-        arcCamera.maxDistance = this.params.maxDistance;
-        arcCamera.alpha = this.params.alpha;
-        arcCamera.beta = this.params.beta;
-        arcCamera.minBeta = this.params.minBeta;
-        arcCamera.maxBeta = this.params.maxBeta;
-        arcCamera.inertia = this.params.inertia;
-        arcCamera.wheelPrecision = this.params.wheelPrecision;
-        arcCamera.angularSensibility = this.params.angularSensibility;
-        arcCamera.speed = this.params.speed;
-        arcCamera.autoRotateSpeed = this.params.autoRotateSpeed;
-      }
+  protected onEntityRemoved(entity: Entity): void {
+    if (entity.get(ArcCameraDebuggerComponent) === this.component) {
+      vizStore.unregisterPanel(PANEL_ID);
+      this.component = null;
     }
   }
 
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
-    this.paramsStore = null;
   }
 
-  protected onEntityRemoved(entity: any): void {
-    const comp = entity.get(ArcCameraDebuggerComponent);
-    if (comp === this.component) {
-      vizStore.unregisterPanel(PANEL_ID);
-      this.component = null;
+  private registerPanel(): void {
+    if (!this.component) return;
+
+    const saved = loadParams();
+    if (saved) {
+      this.params = { ...DEFAULT_PARAMS, ...saved };
+      this.touched = true; // restore tuned values over the scene defaults
+    }
+    const [params, setParams] = createStore<CameraControlParams>({ ...this.params });
+    this.setParams = (key, value) => setParams(key as keyof CameraControlParams, value as never);
+
+    const commit = () => {
+      this.touched = true;
+      saveParams(this.params);
+      this.applyToCameras();
+    };
+
+    vizStore.registerPanel({
+      id: PANEL_ID,
+      title: 'Camera',
+      position: this.component.position,
+      titleColor: '#66ccff',
+      activationKey: this.component.activationKey,
+      visible: this.component.visible,
+      content: () => (
+        <CameraControlPanel
+          params={params}
+          setZoom={(v) => { this.params.zoom = v; setParams('zoom', v); commit(); }}
+          setPanX={(v) => { this.params.panX = v; setParams('panX', v); commit(); }}
+          setPanZ={(v) => { this.params.panZ = v; setParams('panZ', v); commit(); }}
+          setFollow={(v) => {
+            this.params.follow = v;
+            setParams('follow', v);
+            if (v) { this.params.panX = 0; this.params.panZ = 0; setParams('panX', 0); setParams('panZ', 0); }
+            commit();
+          }}
+          onCenter={() => {
+            this.params.panX = 0; this.params.panZ = 0;
+            setParams('panX', 0); setParams('panZ', 0);
+            commit();
+          }}
+        />
+      ),
+    });
+  }
+
+  /** First ArcCamera in the world (the one the panel reads/seeds from). */
+  private firstArcCamera(): ArcCameraComponent | null {
+    if (!this.world) return null;
+    for (const entity of this.world.getEntities()) {
+      const arc = entity.get(ArcCameraComponent);
+      if (arc) return arc;
+    }
+    return null;
+  }
+
+  /** Push the panel's values onto every ArcCamera (the System applies them). */
+  private applyToCameras(): void {
+    if (!this.world) return;
+    for (const entity of this.world.getEntities()) {
+      const arc = entity.get(ArcCameraComponent);
+      if (!arc) continue;
+      arc.distance = this.params.zoom;
+      arc.follow = this.params.follow;
+      arc.targetOffset = [this.params.panX, arc.targetOffset[1], this.params.panZ];
+    }
+  }
+
+  /** Mirror the live camera into the sliders (used before the user takes over). */
+  private syncFromCamera(): void {
+    const arc = this.firstArcCamera();
+    if (!arc) return;
+    this.params.zoom = arc.distance;
+    this.params.follow = arc.follow;
+    this.params.panX = arc.targetOffset[0];
+    this.params.panZ = arc.targetOffset[2];
+    this.setParams('zoom', arc.distance);
+    this.setParams('follow', arc.follow);
+    this.setParams('panX', arc.targetOffset[0]);
+    this.setParams('panZ', arc.targetOffset[2]);
+  }
+
+  protected onUpdate(_deltaTime: number): void {
+    if (!this.component) return;
+
+    const panelVisible = vizStore.isVisible(PANEL_ID);
+    if (panelVisible !== this.component.visible) {
+      this.component.visible = panelVisible;
+    }
+
+    if (this.touched) {
+      this.applyToCameras();
+    } else {
+      this.syncFromCamera();
     }
   }
 }

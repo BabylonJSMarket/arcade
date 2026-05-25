@@ -26,6 +26,37 @@ export interface MeshParams {
   autoLoad: boolean;
   /** Prepended to `src` when constructing the final URL. Defaults to "". */
   assetServerUrl: string;
+  /**
+   * When true, load via `loadModelTemplate` + `instantiateModel` (one shared
+   * template per url, cheap per-entity clones) instead of `loadMesh`. Use for
+   * pools of identical animated characters. Default false.
+   */
+  instanced: boolean;
+  /**
+   * When true, each frame copy the sibling `MeshPrimitiveComponent.position`
+   * X/Z onto the mesh (the mesh's own Y stays `position[1]`, used as a
+   * ground/feet offset) and yaw the mesh toward its movement direction.
+   * Default false.
+   */
+  follow: boolean;
+  /**
+   * How the followed mesh decides its yaw:
+   *   • 'velocity' (default) — face the proxy's travel direction (movement).
+   *   • 'proxy' — copy the sibling MeshPrimitive's own yaw (rotation[1]). Use
+   *     when a gameplay system already orients the proxy, e.g. a twin-stick
+   *     player that faces its aim/fire direction rather than where it walks.
+   */
+  faceMode: 'velocity' | 'proxy';
+  /** Added (radians) to the facing yaw in follow mode. Default 0. */
+  yawOffset: number;
+  /**
+   * Strip baked horizontal root motion from the model's animations so every
+   * clip plays "in place" at the entity's position (gameplay drives position
+   * via the follow proxy). Without this, clips authored with root translation
+   * — e.g. a "blown back" death — slide/teleport the character away. Vertical
+   * motion is kept. Default false.
+   */
+  lockRootMotion: boolean;
 }
 
 export interface MeshOutputs {
@@ -63,6 +94,11 @@ export const DEFAULT_MESH_PARAMS: MeshParams = {
   scale: 1,
   autoLoad: true,
   assetServerUrl: '',
+  instanced: false,
+  follow: false,
+  faceMode: 'velocity',
+  yawOffset: 0,
+  lockRootMotion: false,
 };
 
 export function createMesh(params: Partial<MeshParams> = {}): MeshInstance {

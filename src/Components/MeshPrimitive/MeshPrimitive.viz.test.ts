@@ -26,7 +26,7 @@ describe('MeshPrimitiveDebuggerComponent', () => {
     it('should use defaults when no data provided', () => {
       const defaultComponent = new MeshPrimitiveDebuggerComponent();
       expect(defaultComponent.visible).toBe(false);
-      expect(defaultComponent.activationKey).toBe('Digit9');
+      expect(defaultComponent.activationKey).toBe('');
       expect(defaultComponent.position).toBe('top-left');
     });
 
@@ -35,7 +35,7 @@ describe('MeshPrimitiveDebuggerComponent', () => {
         visible: true,
       });
       expect(partialComponent.visible).toBe(true);
-      expect(partialComponent.activationKey).toBe('Digit9');
+      expect(partialComponent.activationKey).toBe('');
       expect(partialComponent.position).toBe('top-left');
     });
   });
@@ -78,9 +78,9 @@ describe('MeshPrimitiveDebuggerComponent', () => {
       expect(comp.activationKey).toBe('Digit9');
     });
 
-    it('should default to Digit9', () => {
+    it("should default to '' (auto-assigned by the viz layer)", () => {
       const comp = new MeshPrimitiveDebuggerComponent();
-      expect(comp.activationKey).toBe('Digit9');
+      expect(comp.activationKey).toBe('');
     });
 
     it('should allow changing activation key', () => {
@@ -141,7 +141,7 @@ describe('MeshPrimitiveDebuggerComponent', () => {
       const defaultComp = new MeshPrimitiveDebuggerComponent();
       const serialized = defaultComp.serialize();
       expect(serialized.visible).toBe(false);
-      expect(serialized.activationKey).toBe('Digit9');
+      expect(serialized.activationKey).toBe('');
       expect(serialized.position).toBe('top-left');
     });
 

@@ -34,7 +34,7 @@ export class AnimationDebuggerComponent extends Component {
   constructor(data: AnimationDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit1';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
     this.targetEntityId = data.targetEntityId ?? null;
   }
@@ -52,13 +52,12 @@ export class AnimationDebuggerComponent extends Component {
 const PANEL_ID = 'animation-debugger';
 
 export class AnimationDebuggerSystem extends System {
+  protected query = { required: [AnimationDebuggerComponent] };
   private component: AnimationDebuggerComponent | null = null;
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private panelRegistered = false;
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [AnimationDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -70,7 +69,6 @@ export class AnimationDebuggerSystem extends System {
         break;
       }
     }
-    this.setupKeyboardListener();
     this.tryRegisterPanel();
   }
 
@@ -88,8 +86,10 @@ export class AnimationDebuggerSystem extends System {
     vizStore.registerPanel({
       id: PANEL_ID,
       title: 'Animation',
+      activationKey: this.component.activationKey,
       position: this.component.position,
       titleColor: '#66cc55',
+      visible: this.component.visible,
       content: () => (
         <AnimationPanel
           core={core}
@@ -101,9 +101,6 @@ export class AnimationDebuggerSystem extends System {
     });
 
     this.panelRegistered = true;
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-    }
   }
 
   private findTarget(): { entityId: string; core: AnimationInstance } | null {
@@ -129,19 +126,6 @@ export class AnimationDebuggerSystem extends System {
     return null;
   }
 
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        this.component.visible = vizStore.isVisible(PANEL_ID);
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
-  }
-
   protected onEntityAdded(entity: Entity): void {
     const comp = entity.get(AnimationDebuggerComponent);
     if (comp && !this.component) {
@@ -153,9 +137,5 @@ export class AnimationDebuggerSystem extends System {
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
     this.panelRegistered = false;
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
   }
 }

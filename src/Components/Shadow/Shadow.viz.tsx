@@ -16,7 +16,6 @@ import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import { EventBus } from '@babylonjsmarket/ecs';
 // Adapter-driven: no Babylon imports needed in the viz wrapper.
-import { ShadowComponent } from './Shadow';
 import { vizStore } from '../_shared/viz';
 import { createStore } from 'solid-js/store';
 import { ShadowPanel, ShadowParams } from './Shadow.panel';
@@ -71,7 +70,7 @@ export class ShadowDebuggerComponent extends Component {
   constructor(data: ShadowDebuggerInput = {}) {
     super();
     this.visible = data.visible ?? false;
-    this.activationKey = data.activationKey ?? 'Digit8';
+    this.activationKey = data.activationKey ?? '';
     this.position = data.position ?? 'top-right';
   }
 
@@ -142,20 +141,14 @@ const PANEL_ID = 'shadow-debugger';
  * - Handles keyboard shortcuts
  */
 export class ShadowDebuggerSystem extends System {
+  protected query = { required: [ShadowDebuggerComponent] };
   private component: ShadowDebuggerComponent | null = null;
-
-  // Keyboard handler
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-
-  // Solid store for reactive params
-  private paramsStore: ReturnType<typeof createStore<ShadowParams>> | null = null;
 
   // Local params reference for applying to shadow generator
   private params: ShadowParams = { ...DEFAULT_PARAMS };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    this.query = { required: [ShadowDebuggerComponent] };
     this._pauseable = false;
   }
 
@@ -168,7 +161,6 @@ export class ShadowDebuggerSystem extends System {
       }
     }
 
-    this.setupKeyboardListener();
     this.registerPanel();
   }
 
@@ -181,7 +173,6 @@ export class ShadowDebuggerSystem extends System {
 
     // Create reactive store
     const [params, setParams] = createStore<ShadowParams>({ ...this.params });
-    this.paramsStore = [params, setParams];
 
     // Register panel with VizRoot
     vizStore.registerPanel({
@@ -189,6 +180,8 @@ export class ShadowDebuggerSystem extends System {
       title: 'Shadow Controls',
       position: this.component.position,
       titleColor: '#ffa500',
+      activationKey: this.component.activationKey,
+      visible: this.component.visible,
       content: () => (
         <ShadowPanel
           params={params}
@@ -208,32 +201,6 @@ export class ShadowDebuggerSystem extends System {
         />
       ),
     });
-
-    // If component says visible, show the panel
-    if (this.component.visible) {
-      vizStore.showPanel(PANEL_ID);
-      this.eventBus.emit(ShadowDebuggerEvents.SHOWN, {});
-    }
-  }
-
-  private setupKeyboardListener(): void {
-    if (this.keydownHandler) return;
-
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (!this.component) return;
-      if (e.code === this.component.activationKey) {
-        e.preventDefault();
-        vizStore.togglePanel(PANEL_ID);
-        const isVisible = vizStore.isVisible(PANEL_ID);
-        this.component.visible = isVisible;
-        if (isVisible) {
-          this.eventBus.emit(ShadowDebuggerEvents.SHOWN, {});
-        } else {
-          this.eventBus.emit(ShadowDebuggerEvents.HIDDEN, {});
-        }
-      }
-    };
-    window.addEventListener('keydown', this.keydownHandler);
   }
 
   protected onEntityAdded(entity: any): void {
@@ -262,11 +229,6 @@ export class ShadowDebuggerSystem extends System {
 
   protected onShutdown(): void {
     vizStore.unregisterPanel(PANEL_ID);
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
-    this.paramsStore = null;
   }
 
   protected onEntityRemoved(entity: any): void {
