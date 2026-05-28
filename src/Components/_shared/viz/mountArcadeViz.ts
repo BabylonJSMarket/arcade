@@ -79,7 +79,14 @@ export function mountArcadeViz(
   const [rows, setRows] = createSignal<EntityListRow[]>(snapshot(world));
   const [name, setName] = createSignal(sceneName);
 
-  const refresh = () => setRows(snapshot(world));
+  // Skip the snapshot when the panel is hidden — at thousands of entities
+  // the world.getEntities() iteration + per-entity getTags/getComponentTypes
+  // + Solid signal cascade shows up as periodic FPS jitter (especially the
+  // 750ms safety-net interval below). Visibility IS the toggle.
+  const refresh = () => {
+    if (!vizStore.isVisible(panelId)) return;
+    setRows(snapshot(world));
+  };
 
   const unsubCreated = world.getEventBus().on(WorldEvents.ENTITY_CREATED, refresh);
   const unsubRemoved = world.getEventBus().on(WorldEvents.ENTITY_REMOVED, refresh);
