@@ -415,6 +415,14 @@ export class EnemySystem extends System {
         ai.facingX = ai.wanderX
         ai.facingZ = ai.wanderZ
       }
+
+      // Aim the model: write the AI's facing (player-ward while chasing, the
+      // heading while wandering) onto the proxy's rotation. The follow mesh
+      // (faceMode:'proxy') copies it, so a planted, crowded robot keeps facing
+      // the player instead of spinning toward separation nudges.
+      if (Math.hypot(ai.facingX, ai.facingZ) > 1e-4) {
+        m.rotation[1] = Math.atan2(ai.facingX, ai.facingZ)
+      }
     }
 
     // SEPARATION — pairwise push apart over every body that occupies space:

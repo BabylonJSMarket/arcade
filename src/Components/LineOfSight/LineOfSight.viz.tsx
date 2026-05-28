@@ -1,5 +1,7 @@
 /**
- * LineOfSight debug panel (viz-pro). Sliders tune every LineOfSightComponent in
+ * LineOfSight debug panel. Builds a declarative spec and EMITS it via the free
+ * PanelHost base (ecs/viz) — no viz-pro import, so arcade stays decoupled from
+ * the (private, dev-only) renderer. Sliders tune every LineOfSightComponent in
  * the scene live (read first, write all — pooled enemies included), so you can
  * dial FOV / range / ray count / block radius / check interval to find the
  * sweet spot. The "show rays" toggle emits `lineofsight.debugrays.set`, which
@@ -8,17 +10,17 @@
 import type { World, EventBus } from '@babylonjsmarket/ecs'
 import {
   definePanel,
-  PanelDebuggerComponent,
-  PanelDebuggerSystem,
-  type PanelDebuggerInput,
+  PanelHostComponent,
+  PanelHostSystem,
+  type PanelHostInput,
   type PanelSpec,
-} from '@babylonjsmarket/viz-pro'
+} from '@babylonjsmarket/ecs/viz'
 import { LineOfSightComponent, LineOfSightInputEvents } from './LineOfSight.core'
 
 const PANEL_ID = 'line-of-sight'
 
-export class LineOfSightDebuggerComponent extends PanelDebuggerComponent {
-  constructor(data: PanelDebuggerInput = {}) {
+export class LineOfSightDebuggerComponent extends PanelHostComponent {
+  constructor(data: PanelHostInput = {}) {
     super({
       panelId: PANEL_ID,
       activationKey: data.activationKey,
@@ -28,7 +30,7 @@ export class LineOfSightDebuggerComponent extends PanelDebuggerComponent {
   }
 }
 
-export class LineOfSightDebuggerSystem extends PanelDebuggerSystem<LineOfSightDebuggerComponent> {
+export class LineOfSightDebuggerSystem extends PanelHostSystem<LineOfSightDebuggerComponent> {
   private drawRays = false
 
   constructor(eventBus: EventBus) {

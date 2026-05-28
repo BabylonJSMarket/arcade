@@ -149,14 +149,18 @@ export const SCENE = {
           color: [0.35, 0.95, 0.5],
           hideAtFullHp: false,
         },
-        // Visible player model. instanced:false — the player is a single
-        // persistent entity, so it loads via loadMesh (no pool / no clones).
+        // Visible player model. instanced:true so the model loads via the
+        // template path (loadModelTemplate) — the ONLY path that applies
+        // lockRootMotion. The plain loadMesh path (instanced:false) silently
+        // drops it, which let Run_and_Shoot's baked root motion slide the player.
+        // This is NOT pooling (no EntityPool) — it's a single, persistent
+        // template+clone, same load path the enemy uses for its locked clips.
         // follow:true tracks the capsule proxy's XZ; faceMode:'proxy' copies the
         // proxy's yaw (TwinStickShooter points it at the aim/fire direction)
-        // instead of turning toward travel; lockRootMotion plays Walking in place.
+        // instead of turning toward travel; lockRootMotion plays clips in place.
         Mesh: {
           src: '/shooter/Commando-shooter.glb',
-          instanced: false,
+          instanced: true,
           follow: true,
           faceMode: 'proxy',
           scale: 1,
@@ -168,10 +172,11 @@ export const SCENE = {
         // Clip state machine for the model. The loop is driven by
         // PlayerWalkAnimator (gated on movement), so no defaultLoopClip here.
         SkeletonAnimator: {},
-        // Plays 'Walking' while moving, freezes when stopped (the GLB has no
-        // idle clip). Lives in this game folder — the arcade package has no
-        // PlayerSystem, so this is the player's equivalent of EnemySystem.
-        PlayerWalkAnimator: { walkClip: 'Walking' },
+        // Plays 'Run_and_Shoot' while moving, freezes when stopped (the GLB has
+        // no idle clip), and fires 'Fall_Forward' once on death. Lives in this
+        // game folder — the arcade package has no PlayerSystem, so this is the
+        // player's equivalent of EnemySystem.
+        PlayerWalkAnimator: { walkClip: 'Run_and_Shoot', deathClip: 'Fall_Forward' },
       },
     },
     Spawner_NW: {
