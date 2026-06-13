@@ -36,7 +36,6 @@ interface ShadowRuntime {
 }
 
 export class ShadowSystem extends System {
-  private unsubscribes: Array<() => void> = [];
   /** Cached mesh handles keyed by entity id, populated from meshprimitive.created. */
   private meshHandles = new Map<string, MeshHandle>();
   /**
@@ -64,26 +63,22 @@ export class ShadowSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(MeshPrimitiveEvents.CREATED, (data: { entityId: string; handle: MeshHandle }) => {
-        if (!data?.handle) return;
-        this.meshHandles.set(data.entityId, data.handle);
-        const entity = this.world?.getEntity(data.entityId);
-        if (entity) this.apply(entity);
-      }),
-    );
+    this.listen(MeshPrimitiveEvents.CREATED, (data: { entityId: string; handle: MeshHandle }) => {
+      if (!data?.handle) return;
+      this.meshHandles.set(data.entityId, data.handle);
+      const entity = this.world?.getEntity(data.entityId);
+      if (entity) this.apply(entity);
+    });
 
-    this.unsubscribes.push(
-      this.eventBus.on(
-        DirectionalLightEvents.CREATED,
-        (data: { entityId: string; handle?: LightHandle }) => {
-          if (!data?.handle) return;
-          this.lightHandles.set(data.entityId, data.handle);
-          // A light may come up after a shadow-casting mesh already exists —
-          // re-apply so those entities attach now that a target exists.
-          for (const entity of this.entities) this.apply(entity);
-        },
-      ),
+    this.listen(
+      DirectionalLightEvents.CREATED,
+      (data: { entityId: string; handle?: LightHandle }) => {
+        if (!data?.handle) return;
+        this.lightHandles.set(data.entityId, data.handle);
+        // A light may come up after a shadow-casting mesh already exists —
+        // re-apply so those entities attach now that a target exists.
+        for (const entity of this.entities) this.apply(entity);
+      },
     );
 
     // MeshPrimitive creates its meshes during addSystem → onEntityAdded (before
@@ -100,8 +95,6 @@ export class ShadowSystem extends System {
   }
 
   protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
     this.meshHandles.clear();
     this.lightHandles.clear();
   }

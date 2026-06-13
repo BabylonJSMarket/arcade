@@ -32,7 +32,6 @@ export const ArcCameraEvents = {
 
 export class ArcCameraSystem extends System {
   protected query = { required: [ArcCameraComponent] };
-  private unsubscribes: Array<() => void> = [];
   private targetHandles = new Map<string, MeshHandle>();
   private idleTime = 0;
   private idleThreshold = 3;
@@ -51,13 +50,11 @@ export class ArcCameraSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(MeshPrimitiveEvents.CREATED, (data: { entityId: string; handle: MeshHandle }) => {
-        if (data?.entityId && data.handle) {
-          this.targetHandles.set(data.entityId, data.handle);
-        }
-      }),
-    );
+    this.listen(MeshPrimitiveEvents.CREATED, (data: { entityId: string; handle: MeshHandle }) => {
+      if (data?.entityId && data.handle) {
+        this.targetHandles.set(data.entityId, data.handle);
+      }
+    });
 
     for (const entity of this.entities) {
       this.ensureCamera(entity);
@@ -65,8 +62,6 @@ export class ArcCameraSystem extends System {
   }
 
   protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
     this.targetHandles.clear();
   }
 

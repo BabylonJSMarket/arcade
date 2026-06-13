@@ -45,7 +45,6 @@ const DEGENERATE: Vec3[][] = [[[0, 0, 0], [0, 0, 0]]]
 
 export class LineOfSightSystem extends System {
   protected query = { required: [LineOfSightComponent, MeshPrimitiveComponent], excludedTags: ['dying'] }
-  private unsubs: Array<() => void> = []
   // Per-entity facing derived from committed-position delta (= visual yaw).
   private facing = new Map<string, { x: number; z: number; px: number; pz: number }>()
   // Last emitted visibility per entity, so events fire only on a change.
@@ -59,17 +58,13 @@ export class LineOfSightSystem extends System {
   private blockedLines?: LineHandle
 
   protected onInitialize(): void {
-    this.unsubs.push(
-      this.eventBus.on(LineOfSightInputEvents.SET_DEBUG_RAYS, (d: { enabled?: boolean }) => {
-        this.drawRays = !!d.enabled
-        if (!this.drawRays) this.disposeLines()
-      }),
-    )
+    this.listen(LineOfSightInputEvents.SET_DEBUG_RAYS, (d: { enabled?: boolean }) => {
+      this.drawRays = !!d.enabled
+      if (!this.drawRays) this.disposeLines()
+    })
   }
 
   protected onShutdown(): void {
-    this.unsubs.forEach((u) => u())
-    this.unsubs = []
     this.disposeLines()
     this.facing.clear()
     this.visible.clear()

@@ -22,26 +22,18 @@ import {
 
 export class HealthSystem extends System {
   protected query = { required: [HealthComponent] }
-  private unsubs: Array<() => void> = []
 
   constructor(eventBus: EventBus) {
     super(eventBus)
   }
 
   protected onInitialize(): void {
-    this.unsubs.push(
-      this.eventBus.on(HealthInputEvents.DAMAGE, (req: HealthDamageRequest) => {
-        this.applyDamage(req)
-      }),
-      this.eventBus.on(HealthInputEvents.HEAL, (req: HealthHealRequest) => {
-        this.applyHeal(req)
-      }),
-    )
-  }
-
-  protected onShutdown(): void {
-    this.unsubs.forEach((u) => u())
-    this.unsubs = []
+    this.listen(HealthInputEvents.DAMAGE, (req: HealthDamageRequest) => {
+      this.applyDamage(req)
+    })
+    this.listen(HealthInputEvents.HEAL, (req: HealthHealRequest) => {
+      this.applyHeal(req)
+    })
   }
 
   protected onUpdate(_dt: number): void {

@@ -53,7 +53,6 @@ export class CameraFollowComponent extends Component {
 
 export class CameraFollowSystem extends System {
   protected query = { required: [CameraFollowComponent] };
-  private unsubscribes: Array<() => void> = [];
   private targetHandles = new Map<string, MeshHandle>();
   private primed = new Set<string>();
   private _tmpPos: Vec3 = [0, 0, 0];
@@ -64,15 +63,13 @@ export class CameraFollowSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(
-        MeshPrimitiveEvents.CREATED,
-        (data: { entityId: string; handle: MeshHandle }) => {
-          if (data?.entityId && data.handle) {
-            this.targetHandles.set(data.entityId, data.handle);
-          }
-        },
-      ),
+    this.listen(
+      MeshPrimitiveEvents.CREATED,
+      (data: { entityId: string; handle: MeshHandle }) => {
+        if (data?.entityId && data.handle) {
+          this.targetHandles.set(data.entityId, data.handle);
+        }
+      },
     );
 
     // MeshPrimitiveSystem.onEntityAdded runs during world.addSystem and can
@@ -93,8 +90,6 @@ export class CameraFollowSystem extends System {
   }
 
   protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
     this.targetHandles.clear();
     this.primed.clear();
   }

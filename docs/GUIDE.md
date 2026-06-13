@@ -309,8 +309,11 @@ export class MyComponentSystem extends System {
 
   constructor(eventBus: EventBus) {
     super(eventBus);
-    eventBus.on(MyComponentInputEvents.ACTIVATE, (data) => {
-      // handle input
+  }
+
+  onInitialize() {
+    this.listen(MyComponentInputEvents.ACTIVATE, (data) => {
+      // handle input — listen() auto-unsubscribes on System shutdown
     });
   }
 

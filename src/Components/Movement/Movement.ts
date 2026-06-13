@@ -116,7 +116,6 @@ export class MovementComponent extends Component {
 // ============================================
 
 export class MovementSystem extends System {
-  private unsubscribes: Array<() => void> = [];
   /** Reusable tuple for get/set adapter calls — avoids per-frame allocation. */
   private _tmp: Vec3 = [0, 0, 0];
   protected query = { required: [MovementComponent] };
@@ -126,21 +125,14 @@ export class MovementSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(MovementInputEvents.SET_MOVEMENT_VECTOR, (e: MovementSetVectorEvent) => {
-        this.handleSetVector(e);
-      }),
-      this.eventBus.on(MovementInputEvents.JUMP_REQUESTED, (e: MovementJumpEvent) => {
-        this.handleJump(e);
-      }),
-    );
+    this.listen(MovementInputEvents.SET_MOVEMENT_VECTOR, (e: MovementSetVectorEvent) => {
+      this.handleSetVector(e);
+    });
+    this.listen(MovementInputEvents.JUMP_REQUESTED, (e: MovementJumpEvent) => {
+      this.handleJump(e);
+    });
 
     for (const entity of this.entities) this.ensureInstance(entity);
-  }
-
-  protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
   }
 
   protected onEntityAdded(entity: Entity): void {

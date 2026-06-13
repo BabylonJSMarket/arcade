@@ -65,7 +65,6 @@ export class EnemySystem extends System {
   // pool re-parks it) is excluded so it stops chasing / dealing contact damage
   // while the corpse falls.
   protected query = { required: [EnemyComponent, MeshPrimitiveComponent], excludedTags: ['dying'] }
-  private unsubs: Array<() => void> = []
   // Enemies that (re)entered the query this frame — e.g. a pooled enemy
   // un-parked by EntityPool. MeshPrimitiveSystem repositions their mesh on that
   // same frame; committing a position here too would make two systems write the
@@ -134,142 +133,138 @@ export class EnemySystem extends System {
     // `entityPool.release` — immediately for a plain enemy, or after the death
     // clip finishes for an animated one. HealthSystem listens for
     // `health.damage` events emitted by BulletSystem.
-    this.unsubs.push(
-      // Perception lives in LineOfSightSystem; we just track the latest result
-      // per enemy and let it drive chase vs wander.
-      this.eventBus.on(LineOfSightEvents.ACQUIRED, (data: { entityId: string }) => {
-        this.canSee.set(data.entityId, true)
-      }),
-      this.eventBus.on(LineOfSightEvents.LOST, (data: { entityId: string }) => {
-        this.canSee.set(data.entityId, false)
-        // Re-path immediately instead of coasting on a stale wander heading.
-        const ai = this.ai.get(data.entityId)
-        if (ai) ai.wanderTimer = 0
-      }),
-      // Record each shot's heading so a fatal hit can fling the corpse the way
-      // the bullet was travelling. Fires for every hit; the latest wins.
-      this.eventBus.on(
-        BulletEvents.HIT,
-        (data: { entityId: string; dirX?: number; dirZ?: number }) => {
-          if (typeof data.dirX !== 'number' || typeof data.dirZ !== 'number') return
-          const len = Math.hypot(data.dirX, data.dirZ)
-          if (len < 1e-4) return
-          this.lastHitDir.set(data.entityId, { x: data.dirX / len, z: data.dirZ / len })
-        },
-      ),
-      this.eventBus.on(HealthEvents.DIED, (data: { entityId: string }) => {
-        const w = this.world
-        if (!w) return
-        const ent = w.getEntity(data.entityId)
-        const e = ent?.get(EnemyComponent)
-        // Only fire enemy-specific cleanup for entities that actually
-        // had an EnemyComponent — Player death goes through Health's
-        // respawn path and shouldn't trigger score/killed events here.
-        if (!ent || !e) return
-        this.eventBus.emit(EnemyEvents.KILLED, {
-          entityId: data.entityId,
-          spawnerId: e.spawnerId,
-        })
-        this.eventBus.emit(ScoreInputEvents.ADD, {
-          ownerEntity: 'Player',
-          points: e.pointsOnKill,
-        })
-        // Animated enemies fall before recycling: tag `dying` (which drops them
-        // from this system's query, stopping chase/contact) and play a death clip
-        // once, holding its last frame (no resume to walk). When that clip
-        // finishes (`completed` below) the corpse fades out, then the slot
-        // re-parks. A plain (non-animated) enemy has no death clips, so recycle
-        // its slot immediately.
-        if (allDeathClips(e.deathClips, e.fallBackClips, e.fallForwardClips).length > 0) {
-          ent.addTag('dying')
-          // Blow the corpse back along the killing shot. It keeps separating
-          // (heavier, in onUpdate) so it knocks into the living swarm. No
-          // recorded direction (e.g. died to contact) → just fall in place.
-          const dir = this.lastHitDir.get(data.entityId)
-          if (e.knockbackSpeed > 0 && dir) {
-            this.knockback.set(data.entityId, {
-              vx: dir.x * e.knockbackSpeed,
-              vz: dir.z * e.knockbackSpeed,
-            })
-          }
-          // Pick the fall direction from the shot angle: dot of the robot's
-          // facing with the bullet's travel direction. < 0 → shot in the front
-          // (faces the shooter) → fall back; >= 0 → shot in the back → fall
-          // forward. null (no shot dir or facing) → random over deathClips.
-          const ai = this.ai.get(data.entityId)
-          let dot: number | null = null
-          if (dir && ai && Math.hypot(ai.facingX, ai.facingZ) > 1e-3) {
-            dot = ai.facingX * dir.x + ai.facingZ * dir.z
-          }
-          this.lastHitDir.delete(data.entityId)
-          const clip = chooseDeathClip(
-            e.deathClips,
-            e.fallBackClips,
-            e.fallForwardClips,
-            dot,
-            Math.random(),
-          )
-          if (clip) {
-            this.eventBus.emit(SkeletonAnimatorInputEvents.PLAY_ONCE, {
-              entityId: data.entityId,
-              clip,
-              hold: true,
-            })
-          }
-        } else {
-          this.eventBus.emit(EntityPoolInputEvents.RELEASE, { entityId: data.entityId })
+    // Perception lives in LineOfSightSystem; we just track the latest result
+    // per enemy and let it drive chase vs wander.
+    this.listen(LineOfSightEvents.ACQUIRED, (data: { entityId: string }) => {
+      this.canSee.set(data.entityId, true)
+    })
+    this.listen(LineOfSightEvents.LOST, (data: { entityId: string }) => {
+      this.canSee.set(data.entityId, false)
+      // Re-path immediately instead of coasting on a stale wander heading.
+      const ai = this.ai.get(data.entityId)
+      if (ai) ai.wanderTimer = 0
+    })
+    // Record each shot's heading so a fatal hit can fling the corpse the way
+    // the bullet was travelling. Fires for every hit; the latest wins.
+    this.listen(
+      BulletEvents.HIT,
+      (data: { entityId: string; dirX?: number; dirZ?: number }) => {
+        if (typeof data.dirX !== 'number' || typeof data.dirZ !== 'number') return
+        const len = Math.hypot(data.dirX, data.dirZ)
+        if (len < 1e-4) return
+        this.lastHitDir.set(data.entityId, { x: data.dirX / len, z: data.dirZ / len })
+      },
+    )
+    this.listen(HealthEvents.DIED, (data: { entityId: string }) => {
+      const w = this.world
+      if (!w) return
+      const ent = w.getEntity(data.entityId)
+      const e = ent?.get(EnemyComponent)
+      // Only fire enemy-specific cleanup for entities that actually
+      // had an EnemyComponent — Player death goes through Health's
+      // respawn path and shouldn't trigger score/killed events here.
+      if (!ent || !e) return
+      this.eventBus.emit(EnemyEvents.KILLED, {
+        entityId: data.entityId,
+        spawnerId: e.spawnerId,
+      })
+      this.eventBus.emit(ScoreInputEvents.ADD, {
+        ownerEntity: 'Player',
+        points: e.pointsOnKill,
+      })
+      // Animated enemies fall before recycling: tag `dying` (which drops them
+      // from this system's query, stopping chase/contact) and play a death clip
+      // once, holding its last frame (no resume to walk). When that clip
+      // finishes (`completed` below) the corpse fades out, then the slot
+      // re-parks. A plain (non-animated) enemy has no death clips, so recycle
+      // its slot immediately.
+      if (allDeathClips(e.deathClips, e.fallBackClips, e.fallForwardClips).length > 0) {
+        ent.addTag('dying')
+        // Blow the corpse back along the killing shot. It keeps separating
+        // (heavier, in onUpdate) so it knocks into the living swarm. No
+        // recorded direction (e.g. died to contact) → just fall in place.
+        const dir = this.lastHitDir.get(data.entityId)
+        if (e.knockbackSpeed > 0 && dir) {
+          this.knockback.set(data.entityId, {
+            vx: dir.x * e.knockbackSpeed,
+            vz: dir.z * e.knockbackSpeed,
+          })
         }
-      }),
-      // One-shot finished. A death clip → fade the corpse out (driven in
-      // onUpdate) then re-park, or recycle now if no fade. A punch clip → the
-      // swing lands NOW: damage the target if it's still in contact, then free
-      // the slot for the next swing. Pacing the hit to the punch's completion is
-      // what keeps the attack rate in step with the animation.
-      this.eventBus.on(
-        SkeletonAnimatorEvents.COMPLETED,
-        (data: { entityId: string; clip: string }) => {
-          const w = this.world
-          const ent = w?.getEntity(data.entityId)
-          const e = ent?.get(EnemyComponent)
-          if (!w || !ent || !e) return
+        // Pick the fall direction from the shot angle: dot of the robot's
+        // facing with the bullet's travel direction. < 0 → shot in the front
+        // (faces the shooter) → fall back; >= 0 → shot in the back → fall
+        // forward. null (no shot dir or facing) → random over deathClips.
+        const ai = this.ai.get(data.entityId)
+        let dot: number | null = null
+        if (dir && ai && Math.hypot(ai.facingX, ai.facingZ) > 1e-3) {
+          dot = ai.facingX * dir.x + ai.facingZ * dir.z
+        }
+        this.lastHitDir.delete(data.entityId)
+        const clip = chooseDeathClip(
+          e.deathClips,
+          e.fallBackClips,
+          e.fallForwardClips,
+          dot,
+          Math.random(),
+        )
+        if (clip) {
+          this.eventBus.emit(SkeletonAnimatorInputEvents.PLAY_ONCE, {
+            entityId: data.entityId,
+            clip,
+            hold: true,
+          })
+        }
+      } else {
+        this.eventBus.emit(EntityPoolInputEvents.RELEASE, { entityId: data.entityId })
+      }
+    })
+    // One-shot finished. A death clip → fade the corpse out (driven in
+    // onUpdate) then re-park, or recycle now if no fade. A punch clip → the
+    // swing lands NOW: damage the target if it's still in contact, then free
+    // the slot for the next swing. Pacing the hit to the punch's completion is
+    // what keeps the attack rate in step with the animation.
+    this.listen(
+      SkeletonAnimatorEvents.COMPLETED,
+      (data: { entityId: string; clip: string }) => {
+        const w = this.world
+        const ent = w?.getEntity(data.entityId)
+        const e = ent?.get(EnemyComponent)
+        if (!w || !ent || !e) return
 
-          if (allDeathClips(e.deathClips, e.fallBackClips, e.fallForwardClips).includes(data.clip)) {
-            if (e.deathFadeSeconds > 0) {
-              this.fading.set(data.entityId, { t: e.deathFadeSeconds, total: e.deathFadeSeconds })
-            } else {
-              this.eventBus.emit(EntityPoolInputEvents.RELEASE, { entityId: data.entityId })
-            }
-            return
+        if (allDeathClips(e.deathClips, e.fallBackClips, e.fallForwardClips).includes(data.clip)) {
+          if (e.deathFadeSeconds > 0) {
+            this.fading.set(data.entityId, { t: e.deathFadeSeconds, total: e.deathFadeSeconds })
+          } else {
+            this.eventBus.emit(EntityPoolInputEvents.RELEASE, { entityId: data.entityId })
           }
+          return
+        }
 
-          if (e.attackClip && data.clip === e.attackClip) {
-            this.punching.delete(data.entityId)
-            // Don't connect if the enemy started dying mid-swing (the death clip
-            // overrides the punch and excludes it from the query).
-            if (ent.hasTag('dying')) return
-            const m = ent.get(MeshPrimitiveComponent)
-            const target = w.getEntitiesByTag(e.targetTag)[0]
-            const tm = target?.get(MeshPrimitiveComponent)
-            if (m && target && tm) {
-              const cx = tm.position[0] - m.position[0]
-              const cz = tm.position[2] - m.position[2]
-              if (cx * cx + cz * cz <= e.contactRange * e.contactRange) {
-                this.eventBus.emit(HealthInputEvents.DAMAGE, {
-                  entityId: target.id,
-                  damage: e.contactDamage,
-                  source: data.entityId,
-                })
-              }
+        if (e.attackClip && data.clip === e.attackClip) {
+          this.punching.delete(data.entityId)
+          // Don't connect if the enemy started dying mid-swing (the death clip
+          // overrides the punch and excludes it from the query).
+          if (ent.hasTag('dying')) return
+          const m = ent.get(MeshPrimitiveComponent)
+          const target = w.getEntitiesByTag(e.targetTag)[0]
+          const tm = target?.get(MeshPrimitiveComponent)
+          if (m && target && tm) {
+            const cx = tm.position[0] - m.position[0]
+            const cz = tm.position[2] - m.position[2]
+            if (cx * cx + cz * cz <= e.contactRange * e.contactRange) {
+              this.eventBus.emit(HealthInputEvents.DAMAGE, {
+                entityId: target.id,
+                damage: e.contactDamage,
+                source: data.entityId,
+              })
             }
           }
-        },
-      ),
+        }
+      },
     )
   }
 
   protected onShutdown(): void {
-    this.unsubs.forEach((u) => u())
-    this.unsubs = []
     this.animState.clear()
     this.punching.clear()
     this.prevPos.clear()

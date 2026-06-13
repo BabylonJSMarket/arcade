@@ -110,7 +110,7 @@ this.eventBus.emit('animation.play', {
   loop: false,
 });
 
-this.eventBus.on('animation.clip.completed', ({ entityId, clip }) => {
+this.listen('animation.clip.completed', ({ entityId, clip }) => {
   if (entityId === enemy.id && clip === 'attack') {
     // attack animation done — return to idle
     this.eventBus.emit('animation.play', { entityId, clip: 'idle', loop: true });

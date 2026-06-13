@@ -102,7 +102,6 @@ export class PlayerInputSystem extends System {
   protected query = { required: [PlayerInputComponent] };
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private keyupHandler: ((e: KeyboardEvent) => void) | null = null;
-  private unsubscribes: Array<() => void> = [];
   private lastSources: Map<string, InputSource> = new Map();
   private lastMoveX: Map<string, number> = new Map();
   private lastMoveZ: Map<string, number> = new Map();
@@ -123,17 +122,15 @@ export class PlayerInputSystem extends System {
       window.addEventListener('keyup', this.keyupHandler);
     }
 
-    this.unsubscribes.push(
-      this.eventBus.on(PlayerInputInputEvents.SET_ENABLED, (e: PlayerInputSetEnabledEvent) => {
-        for (const entity of this.entities) {
-          const comp = entity.get(PlayerInputComponent);
-          if (comp) {
-            comp.enabled = e.enabled;
-            if (!e.enabled) comp.instance?.reset();
-          }
+    this.listen(PlayerInputInputEvents.SET_ENABLED, (e: PlayerInputSetEnabledEvent) => {
+      for (const entity of this.entities) {
+        const comp = entity.get(PlayerInputComponent);
+        if (comp) {
+          comp.enabled = e.enabled;
+          if (!e.enabled) comp.instance?.reset();
         }
-      }),
-    );
+      }
+    });
   }
 
   protected onShutdown(): void {
@@ -143,8 +140,6 @@ export class PlayerInputSystem extends System {
     }
     this.keydownHandler = null;
     this.keyupHandler = null;
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
     this.lastSources.clear();
     this.lastMoveX.clear();
     this.lastMoveZ.clear();

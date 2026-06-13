@@ -31,24 +31,16 @@ export {
 
 export class EntityPoolSystem extends System {
   protected query = { required: [EntityPoolComponent] }
-  private unsubs: Array<() => void> = []
   /** Pool names already registered (idempotent across ticks). */
   private registered = new Set<string>()
   /** entityId → pool name, so RELEASE can name the pool on its event. */
   private poolOf = new Map<string, string>()
 
   protected onInitialize(): void {
-    this.unsubs.push(
-      this.eventBus.on(EntityPoolInputEvents.SPAWN, (e: EntityPoolSpawnEvent) => this.handleSpawn(e)),
-      this.eventBus.on(EntityPoolInputEvents.RELEASE, (e: EntityPoolReleaseEvent) =>
-        this.release(e.entityId),
-      ),
+    this.listen(EntityPoolInputEvents.SPAWN, (e: EntityPoolSpawnEvent) => this.handleSpawn(e))
+    this.listen(EntityPoolInputEvents.RELEASE, (e: EntityPoolReleaseEvent) =>
+      this.release(e.entityId),
     )
-  }
-
-  protected onShutdown(): void {
-    this.unsubs.forEach((u) => u())
-    this.unsubs = []
   }
 
   protected onUpdate(): void {

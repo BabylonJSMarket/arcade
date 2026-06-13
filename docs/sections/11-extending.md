@@ -80,8 +80,8 @@ export class MyThingSystem extends System {
   }
 
   onInitialize() {
-    this.eventBus.on(MyThingInputEvents.ACTIVATE, (data) => {
-      // handle input event
+    this.listen(MyThingInputEvents.ACTIVATE, (data) => {
+      // handle input event — listen() auto-unsubscribes on System shutdown
     });
   }
 

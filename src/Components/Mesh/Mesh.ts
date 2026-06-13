@@ -158,7 +158,7 @@ export class MeshSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.eventBus.on(MeshInputEvents.LOAD, (e: MeshLoadRequest) => {
+    this.listen(MeshInputEvents.LOAD, (e: MeshLoadRequest) => {
       this.handleLoadRequest(e);
     });
 

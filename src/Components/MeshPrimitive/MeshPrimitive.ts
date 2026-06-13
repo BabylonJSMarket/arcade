@@ -41,8 +41,6 @@ interface BabylonMeshExposer {
 }
 
 export class MeshPrimitiveSystem extends System {
-  private unsubscribes: Array<() => void> = [];
-
   /**
    * Per-component runtime state (the renderer handle). The Component is pure
    * data, so the live handle lives here, keyed by the Component instance.
@@ -66,26 +64,24 @@ export class MeshPrimitiveSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(MeshPrimitiveInputEvents.CREATE, (data: { entityId: string } & Partial<MeshPrimitiveInput>) => {
-        this.handleCreateRequest(data.entityId, data);
-      }),
-      this.eventBus.on(MeshPrimitiveInputEvents.SET_POSITION, (data: { entityId: string; x: number; y: number; z: number }) => {
-        this.handleSetPosition(data.entityId, data.x, data.y, data.z);
-      }),
-      this.eventBus.on(MeshPrimitiveInputEvents.SET_SCALE, (data: { entityId: string; x: number; y: number; z: number }) => {
-        this.handleSetScale(data.entityId, data.x, data.y, data.z);
-      }),
-      this.eventBus.on(MeshPrimitiveInputEvents.SET_COLOR, (data: { entityId: string; r: number; g: number; b: number }) => {
-        this.handleSetColor(data.entityId, data.r, data.g, data.b);
-      }),
-      this.eventBus.on(MeshPrimitiveInputEvents.SET_VISIBLE, (data: { entityId: string; visible: boolean }) => {
-        this.handleSetVisible(data.entityId, data.visible);
-      }),
-      this.eventBus.on(MeshPrimitiveInputEvents.DISPOSE, (data: { entityId: string }) => {
-        this.handleDispose(data.entityId);
-      }),
-    );
+    this.listen(MeshPrimitiveInputEvents.CREATE, (data: { entityId: string } & Partial<MeshPrimitiveInput>) => {
+      this.handleCreateRequest(data.entityId, data);
+    });
+    this.listen(MeshPrimitiveInputEvents.SET_POSITION, (data: { entityId: string; x: number; y: number; z: number }) => {
+      this.handleSetPosition(data.entityId, data.x, data.y, data.z);
+    });
+    this.listen(MeshPrimitiveInputEvents.SET_SCALE, (data: { entityId: string; x: number; y: number; z: number }) => {
+      this.handleSetScale(data.entityId, data.x, data.y, data.z);
+    });
+    this.listen(MeshPrimitiveInputEvents.SET_COLOR, (data: { entityId: string; r: number; g: number; b: number }) => {
+      this.handleSetColor(data.entityId, data.r, data.g, data.b);
+    });
+    this.listen(MeshPrimitiveInputEvents.SET_VISIBLE, (data: { entityId: string; visible: boolean }) => {
+      this.handleSetVisible(data.entityId, data.visible);
+    });
+    this.listen(MeshPrimitiveInputEvents.DISPOSE, (data: { entityId: string }) => {
+      this.handleDispose(data.entityId);
+    });
 
     for (const entity of this.entities) {
       const comp = entity.get(MeshPrimitiveComponent);
@@ -93,11 +89,6 @@ export class MeshPrimitiveSystem extends System {
         this.createPrimitive(entity, comp);
       }
     }
-  }
-
-  protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
   }
 
   protected onEntityAdded(entity: Entity): void {

@@ -88,7 +88,7 @@ The component is just an event listener + DOM writer — you can absolutely buil
 ### Game over on threshold
 
 ```ts
-this.eventBus.on('score.changed', ({ playerId, value }) => {
+this.listen('score.changed', ({ playerId, value }) => {
   if (value >= 100) {
     this.eventBus.emit('game.over', { winnerId: playerId });
   }

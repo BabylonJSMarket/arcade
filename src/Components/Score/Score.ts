@@ -100,27 +100,19 @@ export class ScoreComponent extends Component {
 
 export class ScoreSystem extends System {
   protected query = { required: [ScoreComponent] };
-  private unsubscribes: Array<() => void> = [];
 
   constructor(eventBus: EventBus) {
     super(eventBus);
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(ScoreInputEvents.ADD, (e: ScoreAddRequest) => this.handleAdd(e)),
-      this.eventBus.on(ScoreInputEvents.RESET, () => this.handleReset()),
-      this.eventBus.on(ScoreInputEvents.GOAL_SCORED, (e: GoalScoredPayload) =>
-        this.handleGoalScored(e),
-      ),
+    this.listen(ScoreInputEvents.ADD, (e: ScoreAddRequest) => this.handleAdd(e));
+    this.listen(ScoreInputEvents.RESET, () => this.handleReset());
+    this.listen(ScoreInputEvents.GOAL_SCORED, (e: GoalScoredPayload) =>
+      this.handleGoalScored(e),
     );
 
     for (const entity of this.entities) this.ensureInstance(entity);
-  }
-
-  protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
   }
 
   protected onEntityAdded(entity: Entity): void {

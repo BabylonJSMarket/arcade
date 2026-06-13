@@ -48,7 +48,6 @@ export class KeyboardMoverSystem extends System {
   private back = 0;
   private left = 0;
   private right = 0;
-  private unsubscribes: Array<() => void> = [];
   private currentYaw = 0;
   private _fwdTmp: Vec3 = [0, 0, 0];
   private _rightTmp: Vec3 = [0, 0, 0];
@@ -61,10 +60,8 @@ export class KeyboardMoverSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(KeyboardInputEvents.KEYDOWN, (e: { code: string }) => this.setKey(e.code, 1)),
-      this.eventBus.on(KeyboardInputEvents.KEYUP, (e: { code: string }) => this.setKey(e.code, 0)),
-    );
+    this.listen(KeyboardInputEvents.KEYDOWN, (e: { code: string }) => this.setKey(e.code, 1));
+    this.listen(KeyboardInputEvents.KEYUP, (e: { code: string }) => this.setKey(e.code, 0));
 
     // Bridge DOM keyboard events to the bus so scaffolded projects work
     // out of the box without needing a separate input-source system.
@@ -86,8 +83,6 @@ export class KeyboardMoverSystem extends System {
     }
     this.keydownHandler = null;
     this.keyupHandler = null;
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
   }
 
   private setKey(code: string, value: 0 | 1): void {

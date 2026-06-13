@@ -86,7 +86,6 @@ const BULLET_POOL = 'bullet'
 
 export class BulletPoolSystem extends System {
   protected query = { required: [BulletPoolComponent] }
-  private unsubs: Array<() => void> = []
   private registered = false
 
   constructor(eventBus: EventBus) {
@@ -94,16 +93,9 @@ export class BulletPoolSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubs.push(
-      this.eventBus.on(BulletPoolInputEvents.FIRE, (e: BulletPoolFireEvent) =>
-        this.handleFire(e),
-      ),
+    this.listen(BulletPoolInputEvents.FIRE, (e: BulletPoolFireEvent) =>
+      this.handleFire(e),
     )
-  }
-
-  protected onShutdown(): void {
-    this.unsubs.forEach((u) => u())
-    this.unsubs = []
   }
 
   protected onUpdate(): void {

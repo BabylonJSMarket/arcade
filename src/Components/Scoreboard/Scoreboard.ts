@@ -97,7 +97,6 @@ export class ScoreboardComponent extends Component {
 
 export class ScoreboardSystem extends System {
   protected query = { required: [ScoreboardComponent] };
-  private unsubscribes: Array<() => void> = [];
 
   constructor(eventBus: EventBus) {
     super(eventBus);
@@ -105,23 +104,16 @@ export class ScoreboardSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(
-        ScoreboardInputEvents.SCORE_CHANGED,
-        (e: ScoreboardScoreUpdateEvent) => this.handleScoreChanged(e),
-      ),
-      this.eventBus.on(
-        ScoreboardInputEvents.SCORE_RESET,
-        (e: ScoreboardScoreResetEvent) => this.handleScoreReset(e),
-      ),
+    this.listen(
+      ScoreboardInputEvents.SCORE_CHANGED,
+      (e: ScoreboardScoreUpdateEvent) => this.handleScoreChanged(e),
+    );
+    this.listen(
+      ScoreboardInputEvents.SCORE_RESET,
+      (e: ScoreboardScoreResetEvent) => this.handleScoreReset(e),
     );
 
     for (const entity of this.entities) this.ensureInstance(entity);
-  }
-
-  protected onShutdown(): void {
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
   }
 
   protected onEntityAdded(entity: Entity): void {

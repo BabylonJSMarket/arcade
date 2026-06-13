@@ -163,7 +163,6 @@ export class PhysicsComponent extends Component {
 // ============================================
 
 export class PhysicsSystem extends System {
-  private unsubscribes: Array<() => void> = [];
   /** Entities whose body has been requested — prevents duplicate creates. */
   private created = new Set<string>();
   private isPaused = false;
@@ -176,43 +175,29 @@ export class PhysicsSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.SET_VELOCITY, (e: PhysicsSetVelocityEvent) => {
-        this.handleSetVelocity(e);
-      }),
-    );
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.PAUSE, () => {
-        this.isPaused = true;
-      }),
-    );
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.RESUME, () => {
-        this.isPaused = false;
-      }),
-    );
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.SET_TIME_STEP, (e: PhysicsSetTimeStepEvent) => {
-        this.handleSetTimeStep(e);
-      }),
-    );
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.SET_GRAVITY, (e: PhysicsSetGravityEvent) => {
-        this.world?.renderer?.physicsSetGravity(e.x, e.y, e.z);
-      }),
-    );
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.SET_RESTITUTION, (e: PhysicsSetRestitutionEvent) => {
-        const comp = this.world?.getEntity(e.entityId)?.get(PhysicsComponent);
-        if (comp) comp.restitution = e.restitution; // mirror for serialize
-        this.world?.renderer?.physicsSetRestitution(e.entityId, e.restitution);
-      }),
-    );
-    this.unsubscribes.push(
-      this.eventBus.on(PhysicsInputEvents.SET_COLLIDERS_VISIBLE, (e: PhysicsSetCollidersVisibleEvent) => {
-        this.world?.renderer?.setCollidersVisible(e.visible);
-      }),
-    );
+    this.listen(PhysicsInputEvents.SET_VELOCITY, (e: PhysicsSetVelocityEvent) => {
+      this.handleSetVelocity(e);
+    });
+    this.listen(PhysicsInputEvents.PAUSE, () => {
+      this.isPaused = true;
+    });
+    this.listen(PhysicsInputEvents.RESUME, () => {
+      this.isPaused = false;
+    });
+    this.listen(PhysicsInputEvents.SET_TIME_STEP, (e: PhysicsSetTimeStepEvent) => {
+      this.handleSetTimeStep(e);
+    });
+    this.listen(PhysicsInputEvents.SET_GRAVITY, (e: PhysicsSetGravityEvent) => {
+      this.world?.renderer?.physicsSetGravity(e.x, e.y, e.z);
+    });
+    this.listen(PhysicsInputEvents.SET_RESTITUTION, (e: PhysicsSetRestitutionEvent) => {
+      const comp = this.world?.getEntity(e.entityId)?.get(PhysicsComponent);
+      if (comp) comp.restitution = e.restitution; // mirror for serialize
+      this.world?.renderer?.physicsSetRestitution(e.entityId, e.restitution);
+    });
+    this.listen(PhysicsInputEvents.SET_COLLIDERS_VISIBLE, (e: PhysicsSetCollidersVisibleEvent) => {
+      this.world?.renderer?.setCollidersVisible(e.visible);
+    });
 
     // Try to attach any entities that already exist when the system initializes.
     for (const entity of this.entities) this.tryCreateBody(entity);
@@ -225,8 +210,6 @@ export class PhysicsSystem extends System {
       for (const id of this.created) r.physicsDestroyBody(id);
     }
     this.created.clear();
-    this.unsubscribes.forEach((u) => u());
-    this.unsubscribes = [];
   }
 
   protected onEntityAdded(entity: Entity): void {

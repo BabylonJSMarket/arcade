@@ -109,7 +109,7 @@ export class AnimationSystem extends System {
   }
 
   protected onInitialize(): void {
-    this.eventBus.on(AnimationInputEvents.SET_SPEED, (e: AnimationSetSpeedRequest) => {
+    this.listen(AnimationInputEvents.SET_SPEED, (e: AnimationSetSpeedRequest) => {
       this.entitySpeeds.set(e.entityId, e.speed);
     });
 
