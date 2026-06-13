@@ -1,6 +1,6 @@
 /**
  * LineOfSight debug panel. Builds a declarative spec and EMITS it via the free
- * PanelHost base (ecs/viz) — no viz-pro import, so arcade stays decoupled from
+ * PanelHost base (@babylonjsmarket/viz) — no viz/solid import, so arcade stays decoupled from
  * the (private, dev-only) renderer. Sliders tune every LineOfSightComponent in
  * the scene live (read first, write all — pooled enemies included), so you can
  * dial FOV / range / ray count / block radius / check interval to find the
@@ -14,7 +14,7 @@ import {
   PanelHostSystem,
   type PanelHostInput,
   type PanelSpec,
-} from '@babylonjsmarket/ecs/viz'
+} from '@babylonjsmarket/viz'
 import { LineOfSightComponent, LineOfSightInputEvents } from './LineOfSight.core'
 
 const PANEL_ID = 'line-of-sight'

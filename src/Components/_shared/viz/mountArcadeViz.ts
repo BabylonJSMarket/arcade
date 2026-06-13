@@ -25,7 +25,7 @@ import {
   unmountVizRoot,
   EventBusDebuggerComponent,
   EventBusDebuggerSystem,
-} from '@babylonjsmarket/ecs/viz';
+} from '@babylonjsmarket/viz';
 import { EntityListPanel, type EntityListRow } from './EntityListPanel';
 import { mountFpsOverlay, type FpsOverlayHandle } from './FpsOverlay';
 

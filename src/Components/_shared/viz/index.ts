@@ -1,6 +1,6 @@
 /**
  * Re-exports of the generic viz infrastructure that now lives in
- * `@babylonjsmarket/ecs/viz`. Kept here so existing arcade .viz.tsx files
+ * `@babylonjsmarket/viz`. Kept here so existing arcade .viz.tsx files
  * can keep importing from '../_shared/viz' without churn.
  */
 export {
@@ -13,7 +13,7 @@ export {
   EventBusDebuggerSystem,
   EventBusDebuggerEvents,
   EventBusDebuggerPanel,
-} from '@babylonjsmarket/ecs/viz';
+} from '@babylonjsmarket/viz';
 export type {
   PanelState,
   PanelConfig,
@@ -22,7 +22,7 @@ export type {
   EventBusDebuggerPanelProps,
   EventEntry,
   EntityGroup,
-} from '@babylonjsmarket/ecs/viz';
+} from '@babylonjsmarket/viz';
 export { EntityListPanel, type EntityListPanelProps, type EntityListRow } from './EntityListPanel';
 export { mountFpsOverlay, type FpsOverlayHandle } from './FpsOverlay';
 export {

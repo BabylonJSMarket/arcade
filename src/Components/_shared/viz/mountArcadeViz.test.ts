@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { World, EventBus, MockRendererAdapter } from '@babylonjsmarket/ecs';
 import { mountArcadeViz } from './mountArcadeViz';
-import { vizStore } from '@babylonjsmarket/ecs/viz';
+import { vizStore } from '@babylonjsmarket/viz';
 
 describe('mountArcadeViz', () => {
   let world: World;

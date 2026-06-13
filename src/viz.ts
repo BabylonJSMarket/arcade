@@ -1,6 +1,6 @@
 /**
  * `@babylonjsmarket/arcade/viz` — arcade-specific viz helpers + re-exports
- * of the generic viz infrastructure from `@babylonjsmarket/ecs/viz`.
+ * of the generic viz infrastructure from `@babylonjsmarket/viz`.
  *
  * Apps import `mountArcadeViz` from here (one-line app boot that mounts the
  * Entities panel + the EventBus debugger). The other viz/panel files are
@@ -26,7 +26,7 @@ export {
   EventBusDebuggerSystem,
   EventBusDebuggerEvents,
   type EventBusDebuggerInput,
-} from '@babylonjsmarket/ecs/viz';
+} from '@babylonjsmarket/viz';
 
 // Per-component panels shipped as source.
 export * from './Components/MeshPrimitive/MeshPrimitive.viz';
