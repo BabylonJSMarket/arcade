@@ -1,6 +1,6 @@
 {
   "name": "@babylonjsmarket/arcade",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "type": "module",
   "license": "MIT",
   "description": "Reusable arcade-style components (mesh, camera, lights, input, physics, scoring, animation) for the @babylonjsmarket/ecs framework",
@@ -10,7 +10,7 @@
   },
   "author": "BabylonJS Market",
   "bin": {
-    "arcade": "./dist/cli/index.js"
+    "arcade": "dist/cli/index.js"
   },
   "exports": {
     ".": {
