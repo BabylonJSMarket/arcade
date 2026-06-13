@@ -357,18 +357,6 @@ Each component is its own dist file, so this gives bundlers the cleanest possibl
 
 ---
 
-## What's Not in This Package (Yet)
-
-These live in the full BabylonJS Market catalog and may ship as future packages:
-
-- **AI behaviors** — AISeek, AIShoot, AIGoalSeek, AISteering, AIAvoidance, AICoach, AIBrakeNearBall, AIKick, AIZone, CoverSeek
-- **Combat** — Bullet, BulletPool, Hitscan, BlastRadius, Health, FloatingDamageNumbers, Shooter, AimIndicator, Stamina
-- **Camera polish** — CameraShake, AutoDollyCamera, SnapOrbitCamera, SpectatorCamera, OrbitMover, Stride
-- **Game directors** — PongDirector, MissileCommand3DDirector, PuckBouncer, BallPossession, BallReset, Goal, TeamSpawner, PillarSpawner
-- **Debug** — BehaviorInspector, CollisionDebugger, PlaybackControl
-
----
-
 ## Where to Go Next
 
 - **[@babylonjsmarket/ecs](/tools/bjs-ecs)** — The framework underneath this package. Read it to understand what components, systems, and the World do at a deeper level.

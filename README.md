@@ -163,18 +163,6 @@ These panels ship as **TypeScript source**, not pre-compiled JS, because Solid's
 
 The plain `@babylonjsmarket/arcade` entry has **no Solid dependency** and is pre-built JS — it works in any ESM bundler.
 
-## What's not in this package (yet)
-
-The full BJSM component library has more. These are intentionally out of v0.1:
-
-- **AI behaviors** — `AISeek`, `AIShoot`, `AIGoalSeek`, `AISteering`, `AIAvoidance`, `AICoach`, `AIBrakeNearBall`, `AIKick`, `AIZone`, `CoverSeek`
-- **Combat** — `Bullet`, `BulletPool`, `Hitscan`, `BlastRadius`, `Health`, `FloatingDamageNumbers`, `Shooter`, `AimIndicator`, `Stamina`
-- **Camera polish** — `CameraShake`, `AutoDollyCamera`, `SnapOrbitCamera`, `SpectatorCamera`, `OrbitMover`, `Stride`
-- **Game directors** — `PongDirector`, `MissileCommand3DDirector`, `PuckBouncer`, `BallPossession`, `BallReset`, `Goal`, `TeamSpawner`, `PillarSpawner`
-- **Debug** — `BehaviorInspector`, `CollisionDebugger`, `PlaybackControl`
-
-These live in the broader [BabylonJS Market](https://babylonjsmarket.com) catalog and may ship as additional npm packages (`@babylonjsmarket/arcade-ai`, etc.) in future releases.
-
 ## See also
 
 - **[@babylonjsmarket/ecs](https://www.npmjs.com/package/@babylonjsmarket/ecs)** — The ECS framework this package is built on.
