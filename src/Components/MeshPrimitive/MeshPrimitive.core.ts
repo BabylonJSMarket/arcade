@@ -77,6 +77,19 @@ export interface MeshPrimitiveInput {
     emissiveColor?: [number, number, number];
     ambientColor?: [number, number, number];
     alpha?: number;
+    /**
+     * Texture-map URLs. Any one of these flips the renderer to a PBR material
+     * (e.g. a tiled carpet floor). `uScale`/`vScale` tile the maps across the
+     * surface; `metallic`/`roughness` are PBR scalars.
+     */
+    albedoTexture?: string;
+    normalTexture?: string;
+    roughnessTexture?: string;
+    ambientTexture?: string;
+    metallic?: number;
+    roughness?: number;
+    uScale?: number;
+    vScale?: number;
   };
 
   visible?: boolean;
@@ -178,6 +191,14 @@ export class MeshPrimitiveComponent extends Component {
         specular: m.specularColor,
         emissive: m.emissiveColor,
         alpha: m.alpha,
+        albedoTexture: m.albedoTexture,
+        normalTexture: m.normalTexture,
+        roughnessTexture: m.roughnessTexture,
+        ambientTexture: m.ambientTexture,
+        metallic: m.metallic,
+        roughness: m.roughness,
+        uScale: m.uScale,
+        vScale: m.vScale,
       };
       void m.ambientColor; // legacy key ignored; ambient is driven by scene lights now
     }
@@ -210,6 +231,14 @@ export class MeshPrimitiveComponent extends Component {
           specularColor: this.material.specular,
           emissiveColor: this.material.emissive,
           alpha: this.material.alpha,
+          albedoTexture: this.material.albedoTexture,
+          normalTexture: this.material.normalTexture,
+          roughnessTexture: this.material.roughnessTexture,
+          ambientTexture: this.material.ambientTexture,
+          metallic: this.material.metallic,
+          roughness: this.material.roughness,
+          uScale: this.material.uScale,
+          vScale: this.material.vScale,
         }
       : undefined;
     return {

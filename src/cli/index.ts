@@ -5,9 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import mri from "mri";
 import * as prompts from "@clack/prompts";
-import colors from "picocolors";
-import SETUP_OPTIONS from "./setup-options.js";
 import { eject } from "./eject.js";
+
 
 // Templates live as real .ts files under packages/arcade/templates/. We
 // resolve to them via import.meta.url so the CLI works whether it's run
@@ -70,8 +69,6 @@ const ARCADE_VERSION = (
 const ECS_VERSION = installedVersion("@babylonjsmarket/ecs", "latest");
 const ESLINT_PLUGIN_VERSION = installedVersion("@babylonjsmarket/eslint-plugin", "latest");
 
-const { cyan } = colors;
-
 // Allow `arcade init <name>` as well as the npm-create-style bare `arcade <name>`.
 // We strip a leading "init" subcommand here so positional parsing stays simple.
 const rawArgs = process.argv.slice(2);
@@ -79,13 +76,11 @@ const argsAfterSubcommand =
   rawArgs[0] === "init" ? rawArgs.slice(1) : rawArgs;
 
 const argv = mri<{
-  template?: string;
   help?: boolean;
   overwrite?: boolean;
 }>(argsAfterSubcommand, {
-  alias: { h: "help", t: "template" },
+  alias: { h: "help" },
   boolean: ["help", "overwrite"],
-  string: ["template"],
 });
 const cwd = process.cwd();
 
@@ -93,24 +88,22 @@ const helpMessage = `\
 Usage: arcade init [OPTION]... [DIRECTORY]
    or: npm create @babylonjsmarket/arcade [DIRECTORY]
 
-Create a new BabylonJS game powered by @babylonjsmarket/ecs and @babylonjsmarket/arcade.
+Create a new multigame BabylonJS arcade powered by @babylonjsmarket/ecs and
+@babylonjsmarket/arcade.
 
-Every template ships the SAME tiny src/main.ts boot. Scenes are TS modules
-(src/scene.ts) that declare entities + their components by name; arcade
-lazy-imports each named component the first time it appears. Custom
-components go under src/components/ and are wired up via src/registry.ts.
+The scaffold ships a single starter "arcade room" scene — a carpeted room with
+a row of cabinets — that you grow into a full arcade. Scenes are TS modules
+under src/scenes/ that declare entities + their components by name; arcade
+lazy-imports each named component the first time it appears. Each cabinet can
+point a player at another scene (a subdirectory game) registered in
+src/scenes/index.ts. Custom components go under src/components/ and are wired
+up via src/registry.ts.
 
 With no arguments, start the CLI in interactive mode.
 
 Options:
-  -t, --template NAME        use a specific template (skip the prompt)
   -h, --help                 print this help message
-      --overwrite            replace any existing files in the target directory
-
-Available templates:
-${SETUP_OPTIONS.map((o) => `  ${cyan(o.name)}${" ".repeat(Math.max(1, 14 - o.name.length))}${o.hint}`).join("\n")}`;
-
-const TEMPLATES = SETUP_OPTIONS.map((option) => option.name);
+      --overwrite            replace any existing files in the target directory`;
 
 const defaultTargetDir = "babylonjs-arcade";
 
@@ -118,7 +111,6 @@ async function init() {
   const argTargetDir = argv._[0]
     ? formatTargetDir(String(argv._[0]))
     : undefined;
-  const argTemplate = argv.template;
   const argOverwrite = argv.overwrite;
 
   const help = argv.help;
@@ -186,27 +178,7 @@ async function init() {
     packageName = packageNameResult;
   }
 
-  // 4. Choose a template
-  let template = argTemplate;
-  let hasInvalidArgTemplate = false;
-  if (argTemplate && !TEMPLATES.includes(argTemplate)) {
-    template = undefined;
-    hasInvalidArgTemplate = true;
-  }
-  if (!template) {
-    const framework = await prompts.select({
-      message: hasInvalidArgTemplate
-        ? `"${argTemplate}" isn't a valid template. Please choose from below: `
-        : "Select a template:",
-      options: SETUP_OPTIONS.map((opt) => ({
-        label: opt.color(opt.display || opt.name),
-        value: opt,
-        hint: opt.hint,
-      })),
-    });
-    if (prompts.isCancel(framework)) return cancel();
-    template = framework.name;
-  }
+  // There is no template choice — every scaffold is the multigame arcade.
 
   const root = path.isAbsolute(targetDir) ? targetDir : path.join(cwd, targetDir);
   fs.mkdirSync(root, { recursive: true });
@@ -366,18 +338,18 @@ export default [
 `,
   );
 
-  // Tiny boot, identical for every template — imports SCENE + REGISTRY and
-  // starts the game. Users rarely edit this file.
-  write("src/main.ts", generateMainTs());
+  // Tiny boot — imports the scene map + REGISTRY and starts the game. Users
+  // rarely edit this file.
+  write("src/main.ts", readTemplate("main.ts"));
 
-  // The actual game definition. Pure data: entities + components by name.
-  // Every component name appearing here is resolved either by arcade's
-  // default registry or by src/registry.ts (HUD panels and any custom
-  // components the user authors locally).
-  write("src/scene.ts", generateSceneTs(template!));
+  // The scene map (the "multigame" seam) + the starter arcade-room scene. Pure
+  // data: entities + components by name. Every component name is resolved
+  // either by arcade's default registry or by src/registry.ts (custom comps).
+  write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
+  write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
 
-  // HUD-panel resolvers and any user-supplied custom components.
-  write("src/registry.ts", generateRegistryTs(template!));
+  // Shared component resolver map (HUD panels + any custom components).
+  write("src/registry.ts", readTemplate("arcade-room.registry.ts"));
 
   // .gitignore
   write(
@@ -413,16 +385,19 @@ dist-ssr
     "README.md",
     `# ${packageName}
 
-A data-driven BabylonJS game built with the @babylonjsmarket/ecs framework
-and the @babylonjsmarket/arcade component library.
+A data-driven, multigame BabylonJS arcade built with the @babylonjsmarket/ecs
+framework and the @babylonjsmarket/arcade component library.
 
-The whole game is three small TS files:
+You start with one scene — the **arcade room** (a carpeted room with a row of
+cabinets) — and grow it into a full arcade by adding more scenes and pointing
+cabinets at them.
 
 | File | What's in it |
 |---|---|
-| \`src/scene.ts\` | Entities + components — the game itself, as pure data |
-| \`src/registry.ts\` | HUD panel resolvers (Scoreboard, etc.) and any custom components |
-| \`src/main.ts\` | Three-line boot: BabylonAdapter → ArcadeGame → loadScene → start |
+| \`src/scenes/arcade-room.ts\` | The starter room — entities + components, as pure data |
+| \`src/scenes/index.ts\` | The scene map: every scene the arcade can load (the multigame seam) |
+| \`src/registry.ts\` | Resolvers for HUD panels and any custom components |
+| \`src/main.ts\` | Boot: BabylonAdapter → ArcadeGame → loadScene → start |
 
 ## Getting Started
 
@@ -431,16 +406,30 @@ npm install
 npm run dev      # http://localhost:3000
 \`\`\`
 
+The room streams its carpet textures and cabinet model from the public
+BabylonJS Games asset host, so a fresh scaffold runs with no local assets. To
+serve your own, drop optimized copies under \`public/arcade/\` and set
+\`ASSET_BASE = ''\` in \`src/scenes/arcade-room.ts\`.
+
 ## How it works
 
 \`src/main.ts\` boots the renderer, mounts the viz panels (press \`\\\`\` for
 the Entities panel, \`F4\` for the EventBus debugger), then calls
-\`game.loadScene(SCENE)\` — that's it.
+\`game.loadScene(...)\` with the default scene — that's it.
 
-Everything else — meshes, lights, cameras, gameplay logic — is declared in
-\`src/scene.ts\` as entities + named components. The arcade package's
-default registry maps every named component to its module; bundlers
-tree-shake any component a scene doesn't use.
+Everything else — meshes, lights, cameras, gameplay logic — is declared in the
+scene modules as entities + named components. The arcade package's default
+registry maps every named component to its module; bundlers tree-shake any
+component a scene doesn't use.
+
+## Filling the arcade
+
+Each cabinet is meant to launch its own game. To add one:
+
+1. Author a scene under \`src/scenes/<my-game>.ts\` (copy \`arcade-room.ts\`).
+2. Import it in \`src/scenes/index.ts\` and add it under a new key.
+3. Switch to it at runtime: \`game.loadScene(SCENES['<my-game>'])\` — e.g. when
+   the player activates the matching cabinet.
 
 To add a custom component, drop a file under \`src/components/MyThing.ts\`
 exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`), then add
@@ -520,29 +509,6 @@ function pkgFromUserAgent(userAgent: string | undefined): PkgInfo | undefined {
   const pkgSpec = userAgent.split(" ")[0];
   const pkgSpecArr = pkgSpec.split("/");
   return { name: pkgSpecArr[0], version: pkgSpecArr[1] };
-}
-
-/**
- * Template generators — read the .ts source for each template's main.ts,
- * scene.ts, and registry.ts from packages/arcade/templates/ and return its
- * contents. `main.ts` is shared across every template; `scene.ts` and
- * `registry.ts` are per-template.
- *
- * The CLI ships these files unchanged into the scaffolded project: no
- * String.raw blobs, no per-template branches in this file. Adding a new
- * template means dropping a `{name}.scene.ts` + `{name}.registry.ts` pair
- * into templates/ and listing the name in setup-options.ts.
- */
-function generateMainTs(): string {
-  return readTemplate("main.ts");
-}
-
-function generateSceneTs(template: string): string {
-  return readTemplate(`${template}.scene.ts`);
-}
-
-function generateRegistryTs(template: string): string {
-  return readTemplate(`${template}.registry.ts`);
 }
 
 async function main() {

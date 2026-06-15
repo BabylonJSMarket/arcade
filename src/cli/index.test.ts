@@ -74,11 +74,10 @@ describe("arcade CLI", () => {
       expect(stdout).toContain("Usage: arcade init");
     });
 
-    it("lists every shipped template", async () => {
+    it("describes the multigame arcade scaffold (no template choice)", async () => {
       const { stdout } = await runCli(["--help"], tmpDir);
-      expect(stdout).toContain("empty-3d");
-      expect(stdout).toContain("top-down-shooter");
-      expect(stdout).toContain("pinball");
+      expect(stdout).toContain("arcade room");
+      expect(stdout).not.toContain("--template");
     });
 
     it("documents the @babylonjsmarket/ecs + arcade stack", async () => {
@@ -88,10 +87,11 @@ describe("arcade CLI", () => {
     });
   });
 
-  // Every template now scaffolds the same three-file game module:
-  //   src/main.ts     — shared tiny boot
-  //   src/scene.ts    — per-template entity/component definition
-  //   src/registry.ts — per-template HUD panel + custom-component resolvers
+  // The scaffold is a single multigame arcade — no template flag. It ships:
+  //   src/main.ts             — tiny boot (loads the default scene)
+  //   src/scenes/index.ts     — the scene map (the multigame seam)
+  //   src/scenes/arcade-room.ts — the starter room scene (pure data)
+  //   src/registry.ts         — shared component resolvers
   // Plus the standard package.json/vite.config.js/tsconfig.json/index.html/README/.gitignore.
   const COMMON_FILES = [
     "package.json",
@@ -99,34 +99,33 @@ describe("arcade CLI", () => {
     "tsconfig.json",
     "index.html",
     "src/main.ts",
-    "src/scene.ts",
+    "src/scenes/index.ts",
+    "src/scenes/arcade-room.ts",
     "src/registry.ts",
     "README.md",
     ".gitignore",
   ];
 
-  describe.each([
-    { template: "empty-3d", dir: "my-empty" },
-    { template: "top-down-shooter", dir: "my-shooter" },
-    { template: "pinball", dir: "my-pinball" },
-  ])("$template template", ({ template, dir }) => {
+  describe("scaffold", () => {
+    const dir = "my-arcade";
+
     it("creates every expected file", async () => {
-      const { code } = await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+      const { code } = await runCli([dir, "--overwrite"], tmpDir);
       expect(code).toBe(0);
       const projectRoot = path.join(tmpDir, dir);
       for (const file of COMMON_FILES) {
         expect(
           fs.existsSync(path.join(projectRoot, file)),
-          `expected ${file} to exist in ${template} scaffold`,
+          `expected ${file} to exist in the arcade scaffold`,
         ).toBe(true);
       }
-      // No legacy locations the old CLI used:
-      expect(fs.existsSync(path.join(projectRoot, "public", "scenes", "level1.json"))).toBe(false);
+      // No legacy single-scene layout the old CLI used.
+      expect(fs.existsSync(path.join(projectRoot, "src", "scene.ts"))).toBe(false);
       expect(fs.existsSync(path.join(projectRoot, "src", "components"))).toBe(false);
     }, 60_000);
 
     it("generates a package.json with the expected name, type, and dependencies", async () => {
-      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+      await runCli([dir, "--overwrite"], tmpDir);
       const pkg = JSON.parse(
         fs.readFileSync(path.join(tmpDir, dir, "package.json"), "utf-8"),
       );
@@ -142,8 +141,8 @@ describe("arcade CLI", () => {
       });
     }, 60_000);
 
-    it("ships the shared tiny main.ts (no per-template branches)", async () => {
-      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+    it("ships a tiny main.ts that loads the default scene", async () => {
+      await runCli([dir, "--overwrite"], tmpDir);
       const mainTs = fs.readFileSync(
         path.join(tmpDir, dir, "src", "main.ts"),
         "utf-8",
@@ -151,26 +150,25 @@ describe("arcade CLI", () => {
       expect(mainTs).toContain("from '@babylonjsmarket/arcade'");
       expect(mainTs).toContain("from '@babylonjsmarket/ecs/babylon'");
       expect(mainTs).toContain("mountArcadeViz");
-      expect(mainTs).toContain("from './scene'");
+      expect(mainTs).toContain("from './scenes'");
       expect(mainTs).toContain("from './registry'");
-      expect(mainTs).toContain("loadScene(SCENE)");
-      // Boot is template-agnostic — no per-game switch statements.
-      expect(mainTs).not.toContain("new BulletSystem");
-      expect(mainTs).not.toContain("new EnemySystem");
+      expect(mainTs).toContain("loadScene(scene)");
     }, 60_000);
 
-    it("ships a scene.ts that exports SCENE with at least one entity", async () => {
-      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
-      const sceneTs = fs.readFileSync(
-        path.join(tmpDir, dir, "src", "scene.ts"),
+    it("ships a scenes/index.ts exposing the scene map (multigame seam)", async () => {
+      await runCli([dir, "--overwrite"], tmpDir);
+      const indexTs = fs.readFileSync(
+        path.join(tmpDir, dir, "src", "scenes", "index.ts"),
         "utf-8",
       );
-      expect(sceneTs).toContain("export const SCENE");
-      expect(sceneTs).toMatch(/entities\s*:/);
+      expect(indexTs).toContain("export const SCENES");
+      expect(indexTs).toContain("DEFAULT_SCENE");
+      expect(indexTs).toContain("'arcade-room'");
+      expect(indexTs).toContain("from './arcade-room'");
     }, 60_000);
 
     it("ships a registry.ts that exports REGISTRY", async () => {
-      await runCli([dir, "-t", template, "--overwrite"], tmpDir);
+      await runCli([dir, "--overwrite"], tmpDir);
       const registryTs = fs.readFileSync(
         path.join(tmpDir, dir, "src", "registry.ts"),
         "utf-8",
@@ -179,65 +177,33 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
-  describe("empty-3d scene content", () => {
-    it("includes a Skybox, sun w/ shadows, hero, ground, and ArcCamera", async () => {
-      await runCli(["my-empty", "-t", "empty-3d", "--overwrite"], tmpDir);
+  describe("arcade-room scene content", () => {
+    it("includes a textured carpet floor, walls, cabinets, lighting, and a camera", async () => {
+      await runCli(["my-arcade", "--overwrite"], tmpDir);
       const sceneTs = fs.readFileSync(
-        path.join(tmpDir, "my-empty", "src", "scene.ts"),
+        path.join(tmpDir, "my-arcade", "src", "scenes", "arcade-room.ts"),
         "utf-8",
       );
-      expect(sceneTs).toContain("Skybox");
-      expect(sceneTs).toContain("DirectionalLight");
-      expect(sceneTs).toContain("shadowEnabled: true");
-      expect(sceneTs).toContain("Hero");
-      expect(sceneTs).toContain("ArcCamera");
-      expect(sceneTs).toContain("target: 'Hero'");
-    }, 60_000);
-  });
-
-  describe("top-down-shooter scene content", () => {
-    it("includes a Player, four corner Spawners, arena walls, and Bullet/Enemy markers on a World entity", async () => {
-      await runCli(["my-shooter", "-t", "top-down-shooter", "--overwrite"], tmpDir);
-      const sceneTs = fs.readFileSync(
-        path.join(tmpDir, "my-shooter", "src", "scene.ts"),
-        "utf-8",
-      );
-      expect(sceneTs).toContain("Player");
-      expect(sceneTs).toContain("TwinStickShooter");
-      for (const corner of ["Spawner_NW", "Spawner_NE", "Spawner_SW", "Spawner_SE"]) {
-        expect(sceneTs).toContain(corner);
-      }
+      expect(sceneTs).toContain("export const ARCADE_ROOM");
+      expect(sceneTs).toMatch(/entities\s*:/);
+      // Textured PBR floor — the capability the arcade package adds.
+      expect(sceneTs).toContain("Floor");
+      expect(sceneTs).toContain("albedoTexture");
+      // Remote assets stream from the public BabylonJS Games host.
+      expect(sceneTs).toContain("babylonjsgames.com");
+      // Room shell + cabinets + camera.
       for (const wall of ["Wall_N", "Wall_S", "Wall_E", "Wall_W"]) {
         expect(sceneTs).toContain(wall);
       }
-      // Runtime-only systems wired via the singleton World marker entity.
-      expect(sceneTs).toContain("Bullet: {}");
-      expect(sceneTs).toContain("Enemy: {}");
-      expect(sceneTs).toContain("target: 'Player'");
-    }, 60_000);
-  });
-
-  describe("pinball scene content", () => {
-    it("includes a Playfield, flippers, bumpers, plunger, and table dims", async () => {
-      await runCli(["my-pinball", "-t", "pinball", "--overwrite"], tmpDir);
-      const sceneTs = fs.readFileSync(
-        path.join(tmpDir, "my-pinball", "src", "scene.ts"),
-        "utf-8",
-      );
-      expect(sceneTs).toContain("Playfield");
-      expect(sceneTs).toContain("Flipper_Left");
-      expect(sceneTs).toContain("Flipper_Right");
-      expect(sceneTs).toContain("Bumper_Center");
-      expect(sceneTs).toContain("Plunger");
-      expect(sceneTs).toContain("PinballTable");
-      expect(sceneTs).toContain("PinballCamera");
+      expect(sceneTs).toContain("Cabinet_1");
+      expect(sceneTs).toContain("ArcCamera");
     }, 60_000);
   });
 
   describe("init subcommand", () => {
     it("accepts `init <name>` as a synonym for the bare positional form", async () => {
       const { code } = await runCli(
-        ["init", "my-project2", "-t", "empty-3d", "--overwrite"],
+        ["init", "my-project2", "--overwrite"],
         tmpDir,
       );
       expect(code).toBe(0);
@@ -251,7 +217,7 @@ describe("arcade CLI", () => {
     it("sanitizes a directory name with spaces into a valid package.json name", async () => {
       const proc = spawn(
         process.execPath,
-        [CLI_PATH, "Invalid Name", "-t", "empty-3d", "--overwrite"],
+        [CLI_PATH, "Invalid Name", "--overwrite"],
         { cwd: tmpDir, env: { ...process.env, CI: "true" } },
       );
       const exitCode = await new Promise<number>((resolve) => {

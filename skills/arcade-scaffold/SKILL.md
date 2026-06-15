@@ -11,15 +11,15 @@ When the user wants to spin up a new arcade game powered by `@babylonjsmarket/ar
    ```bash
    npx @babylonjsmarket/arcade init <project-name>
    ```
-2. The CLI presents four templates (basic, first-person, top-down, side-scroller). Pick the one matching the user's request, or ask if ambiguous.
+2. There is **no template choice** — every scaffold is a single multigame arcade. It ships one starter scene, the **arcade room** (a carpeted room with a row of cabinets, defined in `src/scenes/arcade-room.ts`), plus the multigame structure to grow it:
+   - `src/scenes/index.ts` — the scene map (`SCENES` + `DEFAULT_SCENE`); this is the seam where you register more scenes.
+   - `src/registry.ts` — shared component resolvers across all scenes.
+   - `src/main.ts` — tiny boot that loads the default scene.
+   Assets (carpet textures, cabinet GLB) stream from `https://babylonjsgames.com/arcade/...`, so a fresh scaffold runs with no local files.
 3. After scaffolding:
    - `cd <project-name> && npm install && npm run dev`
    - Open the printed URL.
-4. To add a component to an existing arcade project:
-   ```bash
-   npx @babylonjsmarket/arcade add <ComponentName>
-   ```
-   Components ship in `@babylonjsmarket/arcade` and resolve by name from the scene. Categories:
+4. To **fill the arcade**, add a scene under `src/scenes/<my-game>.ts` (copy `arcade-room.ts`), register it in `src/scenes/index.ts`, and switch to it at runtime with `game.loadScene(SCENES['<my-game>'])` (e.g. when the player activates a cabinet). Components resolve by name from the scene — every built-in below is auto-registered by `@babylonjsmarket/arcade`; only custom components need an entry in `src/registry.ts`. Categories:
    - **Rendering**: MeshPrimitive, Mesh, ArcCamera, CameraFollow, DirectionalLight, HemisphericLight, Skybox, EnvironmentTexture, Shadow, Animation.
    - **Input/movement**: PlayerInput, KeyboardMover, Movement.
    - **Physics**: Physics.
@@ -105,11 +105,16 @@ Declare the panel component in scene JSON:
 "PinballPanel": { "visible": false, "activationKey": "Digit5", "position": "top-left" }
 ```
 
-### Game-local panels that don't ship in the CLI template
+### Game-local panels and template sync
 
-If a panel is still a playground prototype, keep it out of the
-scaffolded template using `@sync-skip` markers in the games-side
-`scene.ts` and `registry.ts`:
+The current scaffold (the arcade room) is authored directly in
+`packages/arcade/templates/` — there is no live game it mirrors, so the
+template-sync machinery (`scripts/sync-templates.js`, `PAIRS`) is dormant.
+
+If you later add a CLI template that DOES track a live game under
+`games/src/games/arcade/<game>/{scene,registry}.ts`, add a pair to `PAIRS`
+and use `@sync-skip` markers to keep playground-only panels out of the
+scaffolded template:
 
 ```ts
 // scene.ts

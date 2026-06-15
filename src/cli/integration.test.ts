@@ -1,7 +1,6 @@
 /**
- * End-to-end CLI integration: scaffold every shipped template and prove
- * the result typechecks against the live @babylonjsmarket/{ecs,arcade}
- * source.
+ * End-to-end CLI integration: scaffold the arcade and prove the result
+ * typechecks against the live @babylonjsmarket/{ecs,arcade} source.
  *
  * NO npm install, NO vite bundle. The scaffolded project's `node_modules`
  * is fabricated by symlinking the monorepo's root `node_modules` and
@@ -43,8 +42,6 @@ const ROOT_NODE_MODULES = path.join(REPO_ROOT, 'node_modules')
 const TSC_BIN = path.join(ROOT_NODE_MODULES, '.bin', 'tsc')
 const CLI_PATH = path.join(ARCADE_ROOT, 'dist', 'cli', 'index.js')
 
-const TEMPLATES = ['empty-3d', 'top-down-shooter', 'pinball'] as const
-
 const SHOULD_RUN = process.env.ARCADE_SKIP_INTEGRATION !== '1'
 
 describe.skipIf(!SHOULD_RUN)('CLI integration — scaffolded projects build', () => {
@@ -73,18 +70,15 @@ describe.skipIf(!SHOULD_RUN)('CLI integration — scaffolded projects build', ()
     }
   })
 
-  it.each(TEMPLATES.map((template) => ({ template })))(
-    '$template — scaffolded project typechecks against live arcade source',
-    async ({ template }) => {
-      const projectDir = path.join(scaffoldRoot, `app-${template}`)
+  it(
+    'arcade — scaffolded project typechecks against live arcade source',
+    async () => {
+      const projectDir = path.join(scaffoldRoot, 'app-arcade')
 
       // Scaffold.
-      const scaffold = await execCli(
-        [`app-${template}`, '-t', template, '--overwrite'],
-        scaffoldRoot,
-      )
+      const scaffold = await execCli(['app-arcade', '--overwrite'], scaffoldRoot)
       if (scaffold.code !== 0) {
-        throw new Error(`scaffold ${template} failed:\n${scaffold.stderr}`)
+        throw new Error(`scaffold failed:\n${scaffold.stderr}`)
       }
 
       // Fabricate node_modules from the monorepo root, overriding the two
@@ -93,11 +87,12 @@ describe.skipIf(!SHOULD_RUN)('CLI integration — scaffolded projects build', ()
 
       // tsc resolves @babylonjsmarket/{ecs,arcade} through the fabricated
       // node_modules → live source → catches every breaking change a real
-      // user would hit on the next `npm install`.
+      // user would hit on the next `npm install` (including the scene's use
+      // of the new textured-material fields on MeshPrimitive).
       const tsc = await runNode([TSC_BIN, '--noEmit'], projectDir, 60_000)
       if (tsc.code !== 0) {
         throw new Error(
-          `tsc failed for "${template}" (code ${tsc.code}):\n` +
+          `tsc failed (code ${tsc.code}):\n` +
             `--- stdout ---\n${tsc.stdout}\n--- stderr ---\n${tsc.stderr}`,
         )
       }

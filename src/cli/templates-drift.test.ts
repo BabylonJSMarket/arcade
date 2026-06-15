@@ -20,6 +20,9 @@ interface SyncPair {
 }
 
 describe('CLI templates stay in sync with the live games', () => {
+  it('exposes a PAIRS array (sync machinery is wired up)', () => {
+    expect(Array.isArray(PAIRS)).toBe(true)
+  })
   for (const pair of PAIRS as SyncPair[]) {
     it(`${pair.label} matches ${pair.game}`, () => {
       const r = inspectPair(pair)

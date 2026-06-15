@@ -1,6 +1,6 @@
 {
   "name": "@babylonjsmarket/arcade",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "type": "module",
   "license": "MIT",
   "description": "Reusable arcade-style components (mesh, camera, lights, input, physics, scoring, animation) for the @babylonjsmarket/ecs framework",
@@ -84,6 +84,7 @@
     "lint": "eslint src",
     "sync-templates": "node scripts/sync-templates.js",
     "sync-templates:check": "node scripts/sync-templates.js --check",
+    "try:scaffold": "node scripts/try-scaffold.mjs",
     "validate:scenes": "tsx scripts/validate-example-scenes.ts",
     "prepublishOnly": "npm run build && npm run test"
   },

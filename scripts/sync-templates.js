@@ -11,11 +11,17 @@
  * `projected` + `PAIRS` from here, so a forgotten sync turns into a failing
  * test before it reaches main.
  *
- * The games at `games/src/games/arcade/{pinball,shooter}/{scene,registry}.ts`
- * are the live playground (run in the browser, hot-reload, viz panels). The
- * templates in `packages/arcade/templates/` are what the CLI scaffolds into
- * a fresh user project — clean code, prosier comments. The transform here
- * is intentionally narrow:
+ * NOTE: the current scaffold (the multigame "arcade room") is authored
+ * directly in `packages/arcade/templates/` — there is no game-side source to
+ * mirror, so `PAIRS` is empty and this script is a no-op. The machinery is
+ * kept for any future template that DOES want to track a live game under
+ * `games/src/games/arcade/<game>/{scene,registry}.ts`: add a pair below and
+ * the transform projects the game source into the template.
+ *
+ * When a pair is configured, the live game is the playground (runs in the
+ * browser, hot-reload, viz panels) and the template is what the CLI scaffolds
+ * into a fresh user project — clean code, prosier comments. The transform is
+ * intentionally narrow:
  *
  *   1. drop the first JSDoc block of the game file (the games-side
  *      "loaded by X.tsx" comment isn't useful in a scaffolded project);
@@ -35,36 +41,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const PACKAGE_ROOT = path.resolve(HERE, '..')
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, '..', '..')
 
-export const PAIRS = [
-  {
-    label: 'pinball / scene',
-    game: 'games/src/games/arcade/pinball/scene.ts',
-    template: 'packages/arcade/templates/pinball.scene.ts',
-    renameFrom: 'PINBALL_SCENE',
-    renameTo: 'SCENE',
-  },
-  {
-    label: 'pinball / registry',
-    game: 'games/src/games/arcade/pinball/registry.ts',
-    template: 'packages/arcade/templates/pinball.registry.ts',
-    renameFrom: 'PINBALL_REGISTRY',
-    renameTo: 'REGISTRY',
-  },
-  {
-    label: 'top-down-shooter / scene',
-    game: 'games/src/games/arcade/shooter/scene.ts',
-    template: 'packages/arcade/templates/top-down-shooter.scene.ts',
-    renameFrom: 'SHOOTER_SCENE',
-    renameTo: 'SCENE',
-  },
-  {
-    label: 'top-down-shooter / registry',
-    game: 'games/src/games/arcade/shooter/registry.ts',
-    template: 'packages/arcade/templates/top-down-shooter.registry.ts',
-    renameFrom: 'SHOOTER_REGISTRY',
-    renameTo: 'REGISTRY',
-  },
-]
+export const PAIRS = []
 
 // Match a /** ... */ at the very start of the file, plus any trailing blank
 // lines. Lazy so we only strip the FIRST block — later JSDoc on entities
