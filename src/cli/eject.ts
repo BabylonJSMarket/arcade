@@ -19,12 +19,12 @@ const PAYLOAD_SRC = path.resolve(
   "babylonjsmarket",
 );
 
-/** The component universe = top-level folders under src/Components (minus _shared). */
+/** The component universe = top-level folders under src/Components. */
 function arcadeComponentNames(): string[] {
   if (!fs.existsSync(COMPONENTS_SRC)) return [];
   return fs
     .readdirSync(COMPONENTS_SRC, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && e.name !== "_shared")
+    .filter((e) => e.isDirectory())
     .map((e) => e.name);
 }
 
@@ -98,25 +98,37 @@ function resolveClosure(seed: Set<string>, allNames: string[]): Set<string> {
 }
 
 /**
- * Rewrite sibling imports in a copied file: `../Sibling/...` where Sibling was
- * NOT ejected becomes the package subpath `@babylonjsmarket/arcade/Sibling`.
- * Siblings that WERE ejected keep their relative path (it still resolves under
- * src/components/). ecs/arcade/_shared/babylon/solid imports are left alone.
+ * Rewrite imports in a copied file so they resolve from `src/components/Name/`:
+ *
+ *  - `../Sibling/...` where Sibling was NOT ejected → the package subpath
+ *    `@babylonjsmarket/arcade/Sibling`. Co-ejected siblings keep their relative
+ *    path (it still resolves under src/components/).
+ *  - `../../inputEvents` (arcade-core constants, two levels up to the package
+ *    root in the source tree) → the package root `@babylonjsmarket/arcade`,
+ *    which re-exports them. Otherwise the copied path would dangle.
+ *
+ * ecs/arcade/viz/solid/babylon package imports are left alone — they resolve
+ * from node_modules in the ejected project.
  */
 function rewriteImports(
   src: string,
   ejected: Set<string>,
   allNames: Set<string>,
 ): string {
-  return src.replace(
-    /(['"])(\.\.\/([A-Z][A-Za-z0-9_]*)\/[^'"]*)\1/g,
-    (whole, quote, _spec, sibling) => {
-      if (allNames.has(sibling) && !ejected.has(sibling)) {
-        return `${quote}@babylonjsmarket/arcade/${sibling}${quote}`;
-      }
-      return whole;
-    },
-  );
+  return src
+    .replace(
+      /(['"])\.\.\/\.\.\/inputEvents\1/g,
+      (_whole, quote) => `${quote}@babylonjsmarket/arcade${quote}`,
+    )
+    .replace(
+      /(['"])(\.\.\/([A-Z][A-Za-z0-9_]*)\/[^'"]*)\1/g,
+      (whole, quote, _spec, sibling) => {
+        if (allNames.has(sibling) && !ejected.has(sibling)) {
+          return `${quote}@babylonjsmarket/arcade/${sibling}${quote}`;
+        }
+        return whole;
+      },
+    );
 }
 
 function copyDir(src: string, dest: string) {
@@ -167,7 +179,6 @@ function patchRegistry(
 
 interface EjectPlan {
   components: string[];
-  needsShared: boolean;
 }
 
 function buildPlan(args: string[], projectDir: string): EjectPlan {
@@ -203,12 +214,7 @@ function buildPlan(args: string[], projectDir: string): EjectPlan {
   }
 
   const components = [...resolveClosure(seed, names)].sort();
-  const needsShared = components.some((name) =>
-    componentFiles(name).some((f) =>
-      /['"]\.\.\/_shared\//.test(fs.readFileSync(f, "utf8")),
-    ),
-  );
-  return { components, needsShared };
+  return { components };
 }
 
 export async function eject(args: string[]): Promise<void> {
@@ -243,30 +249,18 @@ export async function eject(args: string[]): Promise<void> {
     console.log(green(`  + src/components/${name}/`));
   }
 
-  // 2. Copy _shared infra if any ejected file imports it — minus its
-  //    package-internal tests, which reference arbitrary components.
-  if (plan.needsShared) {
-    if (!dryRun) {
-      fs.cpSync(
-        path.join(COMPONENTS_SRC, "_shared"),
-        path.join(componentsDir, "_shared"),
-        { recursive: true, filter: (src) => !/\.test\.tsx?$/.test(src) },
-      );
-    }
-    console.log(green("  + src/components/_shared/"));
-  }
-
-  // 3. Rewrite sibling imports across everything copied: a `../X/` whose X was
-  //    NOT ejected becomes `@babylonjsmarket/arcade/X`; ejected siblings keep
-  //    their still-valid relative path; ecs/arcade/_shared imports untouched.
+  // 2. Rewrite imports across everything copied: a `../X/` whose X was NOT
+  //    ejected becomes `@babylonjsmarket/arcade/X`; ejected siblings keep their
+  //    still-valid relative path; `../../inputEvents` becomes the package root.
+  //    ecs/arcade/viz package imports are untouched (resolve from node_modules).
   if (!dryRun) rewriteTree(componentsDir, ejectedSet, allNames);
 
-  // 4. Patch the project registry so local copies override the package.
+  // 3. Patch the project registry so local copies override the package.
   for (const line of patchRegistry(projectDir, plan.components, dryRun)) {
     console.log(line.startsWith("!") ? yellow(line) : dim(line));
   }
 
-  // 5. Drop the babylonjsmarket Claude skill into the project.
+  // 4. Drop the babylonjsmarket Claude skill into the project.
   const skillDest = path.join(projectDir, ".claude", "skills", "babylonjsmarket");
   if (fs.existsSync(PAYLOAD_SRC)) {
     if (!dryRun) copyDir(PAYLOAD_SRC, skillDest);

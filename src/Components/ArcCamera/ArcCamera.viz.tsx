@@ -19,7 +19,7 @@ import { System } from '@babylonjsmarket/ecs';
 import { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import { ArcCameraComponent } from './ArcCamera';
-import { vizStore } from '../_shared/viz';
+import { vizStore } from '@babylonjsmarket/viz';
 import { createStore } from 'solid-js/store';
 import { CameraControlPanel, type CameraControlParams } from './ArcCamera.panel';
 

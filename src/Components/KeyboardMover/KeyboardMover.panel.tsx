@@ -4,7 +4,7 @@
  */
 
 import { Component as SolidComponent, createSignal, onCleanup, onMount } from 'solid-js';
-import { Slider, ResetButton, Section } from '../_shared/ui';
+import { Slider, ResetButton, Section } from '@babylonjsmarket/viz';
 import { KeyboardMoverComponent } from './KeyboardMover';
 
 export interface KeyboardMoverPanelProps {

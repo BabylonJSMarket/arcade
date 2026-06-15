@@ -1,0 +1,12 @@
+{
+  "name": "Score",
+  "description": "Per-player point tracking, decoupled from any one game. The system listens for `score.add` (direct point awards) and `goal.scored` (so Goal-mechanic scenes work out of the box), pipes the points through a clamped, deterministic core, and rebroadcasts every change as `score.changed`. A `score.resetRequest` clears every bucket and fires `score.reset`. Data-only — no rendering; scoreboard HUDs and celebration VFX live in sibling systems that subscribe to its events.",
+  "category": "core",
+  "components": [
+    "ScoreComponent"
+  ],
+  "systems": [
+    "ScoreSystem"
+  ],
+  "dependencies": []
+}

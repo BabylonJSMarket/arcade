@@ -27,6 +27,49 @@ function readTemplate(file: string): string {
   return fs.readFileSync(path.join(TEMPLATES_DIR, file), "utf8");
 }
 
+// ── Dependency versions for the scaffold ────────────────────────────────────
+// Never hardcode these — pinned literals silently drift out of sync with what's
+// actually published every release. Instead resolve them live: arcade from our
+// OWN package.json (this CLI ships inside @babylonjsmarket/arcade), and ecs /
+// eslint-plugin from whatever is installed alongside us. So a fresh scaffold
+// always pins the matching published set, with zero manual upkeep.
+/**
+ * Find `<name>`'s installed version by walking `node_modules` up from HERE.
+ * A filesystem lookup (not `require.resolve`) so it works regardless of the
+ * package's `exports` conditions — ecs/arcade ship import-only `exports`, which
+ * makes CJS `require.resolve` throw. Returns `fallback` if not installed (e.g.
+ * eslint-plugin is arcade's devDep, absent when arcade is consumed via npx).
+ */
+function installedVersion(name: string, fallback: string): string {
+  const segs = name.split("/");
+  let dir = HERE;
+  for (;;) {
+    const pj = path.join(dir, "node_modules", ...segs, "package.json");
+    if (fs.existsSync(pj)) {
+      try {
+        const v = (JSON.parse(fs.readFileSync(pj, "utf8")) as { version?: string }).version;
+        if (v) return v;
+      } catch {
+        /* malformed — keep walking */
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return fallback;
+    dir = parent;
+  }
+}
+
+/** `^x.y.z` for a concrete version; pass `latest` through verbatim. */
+const range = (v: string): string => (v === "latest" ? "latest" : `^${v}`);
+
+const ARCADE_VERSION = (
+  JSON.parse(
+    fs.readFileSync(path.resolve(HERE, "..", "..", "package.json"), "utf8"),
+  ) as { version: string }
+).version;
+const ECS_VERSION = installedVersion("@babylonjsmarket/ecs", "latest");
+const ESLINT_PLUGIN_VERSION = installedVersion("@babylonjsmarket/eslint-plugin", "latest");
+
 const { cyan } = colors;
 
 // Allow `arcade init <name>` as well as the npm-create-style bare `arcade <name>`.
@@ -193,8 +236,8 @@ async function init() {
       lint: "eslint src",
     },
     dependencies: {
-      "@babylonjsmarket/ecs": "^0.1.0",
-      "@babylonjsmarket/arcade": "^0.1.0",
+      "@babylonjsmarket/ecs": range(ECS_VERSION),
+      "@babylonjsmarket/arcade": range(ARCADE_VERSION),
       "@babylonjs/core": "^9.0.0",
       "@babylonjs/loaders": "^9.0.0",
       "@babylonjs/havok": "^1.3.0",
@@ -206,7 +249,7 @@ async function init() {
       "solid-js": "^1.9.0",
       eslint: "^9.0.0",
       "@typescript-eslint/parser": "^8.0.0",
-      "@babylonjsmarket/eslint-plugin": "^0.1.0",
+      "@babylonjsmarket/eslint-plugin": range(ESLINT_PLUGIN_VERSION),
     },
   };
   write("package.json", JSON.stringify(pkg, null, 2) + "\n");
@@ -229,8 +272,23 @@ export default defineConfig({
   server: { port: 3000 },
   build: { target: 'esnext' },
   esbuild: { target: 'esnext' },
+  // Force ONE copy of the engine packages. When the framework packages are
+  // linked from a workspace (file: deps), the app and the linked packages can
+  // otherwise each resolve their own @babylonjs/core — two Babylon instances in
+  // one bundle hard-crash physics/rendering (e.g. pinball + Havok hangs the tab).
+  resolve: {
+    dedupe: [
+      '@babylonjs/core',
+      '@babylonjs/loaders',
+      '@babylonjs/havok',
+      '@babylonjsmarket/ecs',
+      '@babylonjsmarket/arcade',
+    ],
+  },
   optimizeDeps: {
-    exclude: ['@babylonjsmarket/arcade'],
+    // arcade excluded so esbuild doesn't pre-bundle its .tsx with the default
+    // React JSX transform; havok excluded so Vite doesn't rewrite its wasm URL.
+    exclude: ['@babylonjsmarket/arcade', '@babylonjs/havok'],
     include: ['@babylonjs/core', '@babylonjs/loaders']
   }
 });

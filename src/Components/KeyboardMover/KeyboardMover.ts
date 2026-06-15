@@ -14,7 +14,7 @@ import type { EventBus } from '@babylonjsmarket/ecs';
 import type { CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
-import { KeyboardInputEvents } from '../_shared/inputEvents';
+import { KeyboardInputEvents } from '../../inputEvents';
 
 export interface KeyboardMoverInput {
   /** World units per second at full input. */

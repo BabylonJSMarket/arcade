@@ -7,7 +7,7 @@
 import { Component as SolidComponent, createSignal, onCleanup, onMount } from 'solid-js';
 import { For } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { Slider, ResetButton, Section } from '../_shared/ui';
+import { Slider, ResetButton, Section } from '@babylonjsmarket/viz';
 import {
   DEFAULT_MESH_PARAMS,
   type MeshInstance,

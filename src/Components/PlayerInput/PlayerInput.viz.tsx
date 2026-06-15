@@ -7,7 +7,7 @@ import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
-import { vizStore } from '../_shared/viz';
+import { vizStore } from '@babylonjsmarket/viz';
 import { PlayerInputPanel } from './PlayerInput.panel';
 import { PlayerInputComponent } from './PlayerInput';
 import type { PlayerInputInstance } from './PlayerInput.core';

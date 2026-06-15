@@ -223,6 +223,13 @@ export const SCENE = {
           minBeta: 0.55, maxBeta: 0.55,
           controlsEnabled: false,
         },
+        // Companion that CONFIGURES the ArcCamera above (it doesn't create its
+        // own camera): resolves the live ArcCamera, holds the top-down preset
+        // (distance/beta), hands it the follow target + locks the orbit
+        // controls. ArcCameraSystem (not this) owns the actual camera-target
+        // write, so the two never race. TwinStickShooter + ArcCameraDebugger
+        // still read ArcCameraComponent — keep ArcCamera here.
+        ShooterCamera: { target: 'Player', beta: 0.55, distance: 42, lockControls: true },
         // On-screen camera controls (toggle with C): zoom, pan, follow.
         ArcCameraDebugger: { activationKey: 'KeyC', position: 'top-left' },
       },

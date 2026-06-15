@@ -1,5 +1,5 @@
 import { Component } from 'solid-js';
-import { Slider, ResetButton } from '../_shared/ui';
+import { Slider, ResetButton } from '@babylonjsmarket/viz';
 
 export interface ShadowParams {
   darkness: number;

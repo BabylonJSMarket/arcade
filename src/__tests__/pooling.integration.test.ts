@@ -6,17 +6,17 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { EventBus, World, SceneLoader, MockRendererAdapter, type MeshHandle, type Vec3 } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { BulletPoolComponent, BulletPoolSystem } from '../BulletPool/BulletPool'
-import { BulletComponent, BulletSystem } from '../Bullet/Bullet'
-import { EntityPoolComponent, EntityPoolSystem } from '../EntityPool/EntityPool'
-import { EnemyComponent, EnemySystem } from '../Enemy/Enemy'
-import { EnemySpawnerComponent, EnemySpawnerSystem } from '../EnemySpawner/EnemySpawner'
-import { HealthComponent, HealthSystem } from '../Health/Health'
-import { HealthBarComponent, HealthBarSystem } from '../HealthBar/HealthBar'
-import { TwinStickShooterComponent, TwinStickShooterSystem } from '../TwinStickShooter/TwinStickShooter'
-import { FlashComponent, FlashSystem } from '../Flash/Flash'
-import { BulletPoolInputEvents } from '../BulletPool/BulletPool'
+import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../Components/MeshPrimitive/MeshPrimitive'
+import { BulletPoolComponent, BulletPoolSystem } from '../Components/BulletPool/BulletPool'
+import { BulletComponent, BulletSystem } from '../Components/Bullet/Bullet'
+import { EntityPoolComponent, EntityPoolSystem } from '../Components/EntityPool/EntityPool'
+import { EnemyComponent, EnemySystem } from '../Components/Enemy/Enemy'
+import { EnemySpawnerComponent, EnemySpawnerSystem } from '../Components/EnemySpawner/EnemySpawner'
+import { HealthComponent, HealthSystem } from '../Components/Health/Health'
+import { HealthBarComponent, HealthBarSystem } from '../Components/HealthBar/HealthBar'
+import { TwinStickShooterComponent, TwinStickShooterSystem } from '../Components/TwinStickShooter/TwinStickShooter'
+import { FlashComponent, FlashSystem } from '../Components/Flash/Flash'
+import { BulletPoolInputEvents } from '../Components/BulletPool/BulletPool'
 
 /** Latest position the renderer was told for a given handle. */
 function lastPosition(renderer: MockRendererAdapter, handle: MeshHandle): Vec3 | undefined {

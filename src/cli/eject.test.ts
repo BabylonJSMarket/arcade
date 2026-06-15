@@ -107,9 +107,7 @@ describe("arcade eject", () => {
       await runEject(["Score"]);
       expect(exists("src/components/Score/Score.ts")).toBe(true);
       // Score has no sibling deps — closure stays at exactly { Score }.
-      const others = fs
-        .readdirSync(path.join(tmpDir, "src", "components"))
-        .filter((n) => n !== "_shared");
+      const others = fs.readdirSync(path.join(tmpDir, "src", "components"));
       expect(others).toEqual(["Score"]);
     });
 
@@ -160,9 +158,7 @@ describe("arcade eject", () => {
       // co-ejected siblings (never a dangling relative path).
       await runEject(["Bullet"]);
       const ejected = new Set(
-        fs
-          .readdirSync(path.join(tmpDir, "src", "components"))
-          .filter((n) => n !== "_shared"),
+        fs.readdirSync(path.join(tmpDir, "src", "components")),
       );
       // Walk every ejected file: each `../Sibling/` relative import must target
       // a co-ejected sibling; non-ejected siblings must have become a package
@@ -271,29 +267,21 @@ describe("arcade eject", () => {
       await runEject(["--all"]);
       const pkgComponents = fs
         .readdirSync(COMPONENTS_SRC, { withFileTypes: true })
-        .filter((e) => e.isDirectory() && e.name !== "_shared")
+        .filter((e) => e.isDirectory())
         .map((e) => e.name);
       for (const c of pkgComponents) {
         expect(exists(`src/components/${c}`), `${c} should be ejected by --all`).toBe(true);
       }
     });
 
-    it("copies the _shared infra (some components import it) without its tests", async () => {
-      await runEject(["--all"]);
-      expect(exists("src/components/_shared")).toBe(true);
-      expect(joinLogs()).toContain("src/components/_shared/");
-      // _shared tests are filtered out of the copy.
-      const walk = (dir: string): string[] => {
-        const out: string[] = [];
-        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-          const p = path.join(dir, e.name);
-          if (e.isDirectory()) out.push(...walk(p));
-          else out.push(p);
-        }
-        return out;
-      };
-      const sharedFiles = walk(path.join(tmpDir, "src", "components", "_shared"));
-      expect(sharedFiles.some((f) => /\.test\.tsx?$/.test(f))).toBe(false);
+    it("rewrites the arcade-core inputEvents import to the package root", async () => {
+      // KeyboardMover imports `../../inputEvents` (arcade core). Once copied to
+      // src/components/KeyboardMover/, that path would dangle — eject rewrites
+      // it to `@babylonjsmarket/arcade`, which re-exports the constants.
+      await runEject(["KeyboardMover"]);
+      const src = read("src/components/KeyboardMover/KeyboardMover.ts");
+      expect(src).toContain("from '@babylonjsmarket/arcade'");
+      expect(src).not.toContain("../../inputEvents");
     });
 
     it("drops the babylonjsmarket Claude skill into .claude/skills", async () => {

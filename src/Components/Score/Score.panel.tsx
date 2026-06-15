@@ -6,7 +6,7 @@
 
 import { Component as SolidComponent, createSignal, For, onCleanup, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { Slider, ResetButton, Section } from '../_shared/ui';
+import { Slider, ResetButton, Section } from '@babylonjsmarket/viz';
 import {
   DEFAULT_SCORE_PARAMS,
   type ScoreInstance,

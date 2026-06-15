@@ -1,5 +1,5 @@
 import { Component } from 'solid-js';
-import { Slider, ResetButton, Section } from '../_shared/ui';
+import { Slider, ResetButton, Section } from '@babylonjsmarket/viz';
 
 export interface DirectionalLightParams {
   dirX: number;

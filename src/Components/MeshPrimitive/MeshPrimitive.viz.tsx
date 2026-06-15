@@ -17,7 +17,7 @@ import { System } from '@babylonjsmarket/ecs';
 import { EventBus } from '@babylonjsmarket/ecs';
 // Adapter-driven: no Babylon imports needed in the viz wrapper.
 import { MeshPrimitiveComponent } from './MeshPrimitive';
-import { vizStore } from '../_shared/viz';
+import { vizStore } from '@babylonjsmarket/viz';
 import { createStore } from 'solid-js/store';
 import { MeshPrimitivePanel, MeshPrimitiveParams } from './MeshPrimitive.panel';
 

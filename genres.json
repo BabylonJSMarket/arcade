@@ -1,0 +1,182 @@
+{
+  "note": "Classic arcade + home-computer game genres and subgenres for marketplace component categorization. Each entry: display name, kebab-case slug (usable as a category/subcategory id), and one real-world example title.",
+  "genres": [
+    {
+      "name": "Shooter",
+      "slug": "shooter",
+      "example": "Space Invaders",
+      "subgenres": [
+        { "name": "Fixed Shooter", "slug": "fixed-shooter", "example": "Space Invaders" },
+        { "name": "Twin-Stick Shooter", "slug": "twin-stick-shooter", "example": "Robotron: 2084" },
+        { "name": "Horizontal Scrolling Shooter", "slug": "horizontal-scrolling-shooter", "example": "R-Type" },
+        { "name": "Vertical Scrolling Shooter", "slug": "vertical-scrolling-shooter", "example": "1942" },
+        { "name": "Rail Shooter", "slug": "rail-shooter", "example": "Space Harrier" },
+        { "name": "Run-and-Gun", "slug": "run-and-gun", "example": "Contra" },
+        { "name": "Light-Gun Shooter", "slug": "light-gun-shooter", "example": "Duck Hunt" },
+        { "name": "Tube Shooter", "slug": "tube-shooter", "example": "Tempest" }
+      ]
+    },
+    {
+      "name": "Maze",
+      "slug": "maze",
+      "example": "Pac-Man",
+      "subgenres": [
+        { "name": "Dot-Eater / Maze Chase", "slug": "maze-chase", "example": "Pac-Man" },
+        { "name": "Maze Shooter", "slug": "maze-shooter", "example": "Berzerk" },
+        { "name": "Collect-'em-up", "slug": "collect-em-up", "example": "Wizard of Wor" }
+      ]
+    },
+    {
+      "name": "Platformer",
+      "slug": "platformer",
+      "example": "Donkey Kong",
+      "subgenres": [
+        { "name": "Single-Screen Platformer", "slug": "single-screen-platformer", "example": "Donkey Kong" },
+        { "name": "Scrolling Platformer", "slug": "scrolling-platformer", "example": "Super Mario Bros." },
+        { "name": "Puzzle Platformer", "slug": "puzzle-platformer", "example": "Lode Runner" },
+        { "name": "Cinematic Platformer", "slug": "cinematic-platformer", "example": "Prince of Persia" }
+      ]
+    },
+    {
+      "name": "Beat 'em up",
+      "slug": "beat-em-up",
+      "example": "Double Dragon",
+      "subgenres": [
+        { "name": "Side-Scrolling Brawler", "slug": "side-scrolling-brawler", "example": "Final Fight" },
+        { "name": "Weapon-Based Brawler", "slug": "weapon-based-brawler", "example": "Golden Axe" },
+        { "name": "Arena Brawler", "slug": "arena-brawler", "example": "Smash TV" }
+      ]
+    },
+    {
+      "name": "Fighting",
+      "slug": "fighting",
+      "example": "Street Fighter II",
+      "subgenres": [
+        { "name": "2D Versus Fighter", "slug": "2d-versus-fighter", "example": "Street Fighter II" },
+        { "name": "3D Fighter", "slug": "3d-fighter", "example": "Virtua Fighter" },
+        { "name": "Platform Fighter", "slug": "platform-fighter", "example": "Super Smash Bros." }
+      ]
+    },
+    {
+      "name": "Racing",
+      "slug": "racing",
+      "example": "Pole Position",
+      "subgenres": [
+        { "name": "Arcade Racer", "slug": "arcade-racer", "example": "OutRun" },
+        { "name": "Top-Down Racer", "slug": "top-down-racer", "example": "Super Sprint" },
+        { "name": "Kart Racer", "slug": "kart-racer", "example": "Super Mario Kart" },
+        { "name": "Combat Racer", "slug": "combat-racer", "example": "Spy Hunter" }
+      ]
+    },
+    {
+      "name": "Puzzle",
+      "slug": "puzzle",
+      "example": "Tetris",
+      "subgenres": [
+        { "name": "Falling-Block Puzzle", "slug": "falling-block-puzzle", "example": "Tetris" },
+        { "name": "Tile-Matching Puzzle", "slug": "tile-matching-puzzle", "example": "Columns" },
+        { "name": "Action Puzzle", "slug": "action-puzzle", "example": "Q*bert" },
+        { "name": "Route / Connection Puzzle", "slug": "route-puzzle", "example": "Pipe Mania" }
+      ]
+    },
+    {
+      "name": "Pinball",
+      "slug": "pinball",
+      "example": "Pinball Dreams",
+      "subgenres": [
+        { "name": "Simulation Table", "slug": "simulation-table", "example": "Pro Pinball: The Web" },
+        { "name": "Video Pinball", "slug": "video-pinball", "example": "Video Pinball" },
+        { "name": "Themed / Fantasy Table", "slug": "themed-table", "example": "Pinball Fantasies" }
+      ]
+    },
+    {
+      "name": "Bat & Ball / Block Breaker",
+      "slug": "bat-and-ball",
+      "example": "Breakout",
+      "subgenres": [
+        { "name": "Paddle (Pong-style)", "slug": "paddle", "example": "Pong" },
+        { "name": "Block Breaker", "slug": "block-breaker", "example": "Arkanoid" }
+      ]
+    },
+    {
+      "name": "Sports",
+      "slug": "sports",
+      "example": "Track & Field",
+      "subgenres": [
+        { "name": "Athletics", "slug": "athletics", "example": "Track & Field" },
+        { "name": "Ball Sports", "slug": "ball-sports", "example": "Tecmo Bowl" },
+        { "name": "Combat Sports", "slug": "combat-sports", "example": "Punch-Out!!" },
+        { "name": "Extreme Sports", "slug": "extreme-sports", "example": "720°" }
+      ]
+    },
+    {
+      "name": "Action-Adventure",
+      "slug": "action-adventure",
+      "example": "The Legend of Zelda",
+      "subgenres": [
+        { "name": "Top-Down Adventure", "slug": "top-down-adventure", "example": "The Legend of Zelda" },
+        { "name": "Metroidvania", "slug": "metroidvania", "example": "Metroid" },
+        { "name": "Isometric Adventure", "slug": "isometric-adventure", "example": "Knight Lore" }
+      ]
+    },
+    {
+      "name": "Adventure",
+      "slug": "adventure",
+      "example": "Zork",
+      "subgenres": [
+        { "name": "Text Adventure", "slug": "text-adventure", "example": "Zork" },
+        { "name": "Graphic Adventure", "slug": "graphic-adventure", "example": "King's Quest" },
+        { "name": "Point-and-Click", "slug": "point-and-click", "example": "Maniac Mansion" }
+      ]
+    },
+    {
+      "name": "Role-Playing",
+      "slug": "rpg",
+      "example": "Ultima",
+      "subgenres": [
+        { "name": "Roguelike / Dungeon Crawler", "slug": "roguelike", "example": "Rogue" },
+        { "name": "First-Person Dungeon Crawler", "slug": "dungeon-crawler", "example": "Dungeon Master" },
+        { "name": "Action RPG", "slug": "action-rpg", "example": "Gauntlet" },
+        { "name": "Computer RPG (CRPG)", "slug": "crpg", "example": "Ultima" }
+      ]
+    },
+    {
+      "name": "Strategy",
+      "slug": "strategy",
+      "example": "Dune II",
+      "subgenres": [
+        { "name": "Real-Time Strategy", "slug": "rts", "example": "Dune II" },
+        { "name": "Turn-Based Strategy", "slug": "tbs", "example": "Civilization" },
+        { "name": "Tower / Castle Defense", "slug": "tower-defense", "example": "Rampart" }
+      ]
+    },
+    {
+      "name": "Simulation",
+      "slug": "simulation",
+      "example": "SimCity",
+      "subgenres": [
+        { "name": "Construction & Management", "slug": "management-sim", "example": "SimCity" },
+        { "name": "Vehicle Simulator", "slug": "vehicle-sim", "example": "Flight Simulator" },
+        { "name": "Space Trading & Combat", "slug": "space-sim", "example": "Elite" }
+      ]
+    },
+    {
+      "name": "Digging",
+      "slug": "digging",
+      "example": "Dig Dug",
+      "subgenres": [
+        { "name": "Dig-'em-up", "slug": "dig-em-up", "example": "Dig Dug" },
+        { "name": "Boulder / Rock Puzzle", "slug": "boulder-puzzle", "example": "Boulder Dash" }
+      ]
+    },
+    {
+      "name": "Rhythm",
+      "slug": "rhythm",
+      "example": "Dance Dance Revolution",
+      "subgenres": [
+        { "name": "Dance", "slug": "dance", "example": "Dance Dance Revolution" },
+        { "name": "Music / Instrument", "slug": "music-instrument", "example": "PaRappa the Rapper" }
+      ]
+    }
+  ]
+}

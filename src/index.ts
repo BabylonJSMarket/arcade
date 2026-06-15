@@ -1,5 +1,6 @@
 export * from './ArcadeGame';
 export * from './registry';
+export * from './inputEvents';
 export * from './Components/MeshPrimitive/MeshPrimitive';
 export * from './Components/Movement/Movement';
 export * from './Components/KeyboardMover/KeyboardMover';
@@ -36,3 +37,4 @@ export * from './Components/Enemy/Enemy';
 export * from './Components/SkeletonAnimator/SkeletonAnimator';
 export * from './Components/EnemySpawner/EnemySpawner';
 export * from './Components/TwinStickShooter/TwinStickShooter';
+export * from './Components/ShooterCamera/ShooterCamera';

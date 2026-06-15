@@ -54,6 +54,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   LineOfSight: () => import("./Components/LineOfSight/LineOfSight"),
   TwinStickShooter: () =>
     import("./Components/TwinStickShooter/TwinStickShooter"),
+  ShooterCamera: () => import("./Components/ShooterCamera/ShooterCamera"),
 };
 
 export const ARCADE_COMPONENT_NAMES = Object.keys(ARCADE_COMPONENT_REGISTRY);

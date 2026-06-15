@@ -9,7 +9,7 @@ import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
-import { vizStore } from '../_shared/viz';
+import { vizStore } from '@babylonjsmarket/viz';
 import { MeshPanel } from './Mesh.panel';
 import {
   MeshComponent,

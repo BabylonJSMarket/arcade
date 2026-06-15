@@ -1,0 +1,14 @@
+{
+  "name": "EntityPool",
+  "description": "Generic, declarative object pool. Each pooled entity's component set is declared as data (resolved by name via the SceneLoader), so spawning a wave never churns entities or meshes. `entityPool.spawn` un-parks and resets a slot (re-applying config, clearing transient tags, positioning the MeshPrimitive collision proxy) and emits `entityPool.spawned` / `entityPool.acquired`; `entityPool.release` parks it and emits `entityPool.released`. Also emits `entityPool.ready` once each pool is pre-allocated and `entityPool.exhausted` when every slot is live.",
+  "category": "core",
+  "components": [
+    "EntityPoolComponent"
+  ],
+  "systems": [
+    "EntityPoolSystem"
+  ],
+  "dependencies": [
+    "MeshPrimitive"
+  ]
+}

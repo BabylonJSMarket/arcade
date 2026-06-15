@@ -1,5 +1,5 @@
 import { Component } from 'solid-js';
-import { Slider, ResetButton, ColorControl } from '../_shared/ui';
+import { Slider, ResetButton, ColorControl } from '@babylonjsmarket/viz';
 
 export interface HemisphericLightParams {
   intensity: number;

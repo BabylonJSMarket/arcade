@@ -17,7 +17,7 @@ import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import { EventBus } from '@babylonjsmarket/ecs';
 import { HemisphericLightComponent } from './HemisphericLight';
-import { vizStore } from '../_shared/viz';
+import { vizStore } from '@babylonjsmarket/viz';
 import { createStore } from 'solid-js/store';
 import { HemisphericLightPanel, HemisphericLightParams } from './HemisphericLight.panel';
 

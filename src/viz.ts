@@ -14,11 +14,18 @@ export {
   EntityListPanel,
   type EntityListPanelProps,
   type EntityListRow,
-} from './Components/_shared/viz';
-
-// Re-export the generic viz primitives from ecs so apps can use a single
-// import root if they prefer.
-export {
+  mountFpsOverlay,
+  type FpsOverlayHandle,
+  // Simple control widgets used by component control panels.
+  Slider,
+  type SliderProps,
+  ResetButton,
+  type ResetButtonProps,
+  Section,
+  type SectionProps,
+  ColorControl,
+  type ColorControlProps,
+  // Generic viz primitives, so apps can use a single import root if they prefer.
   vizStore,
   mountVizRoot,
   unmountVizRoot,

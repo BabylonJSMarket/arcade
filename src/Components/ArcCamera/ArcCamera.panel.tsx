@@ -1,5 +1,5 @@
 import { Component } from 'solid-js';
-import { Slider } from '../_shared/ui';
+import { Slider } from '@babylonjsmarket/viz';
 
 /** Live, user-facing camera controls (zoom / pan / follow). */
 export interface CameraControlParams {

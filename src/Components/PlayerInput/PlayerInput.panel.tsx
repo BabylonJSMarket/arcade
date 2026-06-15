@@ -6,7 +6,7 @@
  */
 
 import { Component as SolidComponent, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
-import { Slider, ResetButton, Section } from '../_shared/ui';
+import { Slider, ResetButton, Section } from '@babylonjsmarket/viz';
 import {
   DEFAULT_PLAYER_INPUT_PARAMS,
   type PlayerInputInstance,

@@ -48,6 +48,7 @@ const EXPECTED_NAMES = [
   'ObstacleField',
   'LineOfSight',
   'TwinStickShooter',
+  'ShooterCamera',
 ] as const;
 
 type ComponentClass = new (...args: never[]) => Component;

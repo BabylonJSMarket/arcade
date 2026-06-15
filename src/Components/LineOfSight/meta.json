@@ -1,0 +1,15 @@
+{
+  "name": "LineOfSight",
+  "description": "Reusable perception: can this entity see a tagged target? Combines a field-of-view cone, a max range, and ranged ray-casts that other bodies and sight-blocking Obstacle walls can occlude. Facing is derived from the entity's movement (mirroring its visual yaw); a per-entity timer runs the check and, on a visibility change, emits `lineofsight.acquired` / `lineofsight.lost` for consumers (e.g. an enemy AI) to react. Knows nothing about enemies, so it drops onto a turret, guard, or anything. `lineofsight.debugrays.set` toggles green/red sight-ray helpers.",
+  "category": "shooter",
+  "components": [
+    "LineOfSightComponent"
+  ],
+  "systems": [
+    "LineOfSightSystem"
+  ],
+  "dependencies": [
+    "MeshPrimitive",
+    "Obstacle"
+  ]
+}
