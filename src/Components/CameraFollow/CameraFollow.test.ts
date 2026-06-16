@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CameraFollowComponent, CameraFollowSystem } from './CameraFollow';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
+import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 import type { MeshHandle } from '@babylonjsmarket/ecs/renderer-types';
@@ -60,7 +61,7 @@ describe('CameraFollowSystem', () => {
     const arcEntity = world.createEntity('Camera');
     const arcComp = new ArcCameraComponent();
     arcComp.handle = renderer.createArcCamera(arcEntity.id, arcComp.toSpec());
-    arcComp.initialized = true;
+    getArcCameraRuntime(arcComp).initialized = true;
     arcEntity.add(arcComp);
 
     const followEntity = world.createEntity('Follow');
@@ -76,7 +77,7 @@ describe('CameraFollowSystem', () => {
     const arcEntity = world.createEntity('Camera');
     const arcComp = new ArcCameraComponent();
     arcComp.handle = renderer.createArcCamera(arcEntity.id, arcComp.toSpec());
-    arcComp.initialized = true;
+    getArcCameraRuntime(arcComp).initialized = true;
     arcEntity.add(arcComp);
 
     // Fake a Player mesh and emit the creation event the system listens for.
@@ -106,7 +107,7 @@ describe('CameraFollowSystem', () => {
     const arcEntity = world.createEntity('Camera');
     const arcComp = new ArcCameraComponent();
     arcComp.handle = renderer.createArcCamera(arcEntity.id, arcComp.toSpec());
-    arcComp.initialized = true;
+    getArcCameraRuntime(arcComp).initialized = true;
     arcEntity.add(arcComp);
 
     const fakeHandle = renderer.createMesh('Player', { kind: 'capsule' });

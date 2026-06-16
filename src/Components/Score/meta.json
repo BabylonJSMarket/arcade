@@ -8,5 +8,9 @@
   "systems": [
     "ScoreSystem"
   ],
-  "dependencies": []
+  "dependencies": [],
+  "tags": [
+    "core",
+    "ui"
+  ]
 }

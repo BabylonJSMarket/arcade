@@ -10,5 +10,9 @@
   ],
   "dependencies": [
     "MeshPrimitive"
+  ],
+  "tags": [
+    "core",
+    "combat"
   ]
 }

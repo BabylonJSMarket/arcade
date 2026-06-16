@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { KeyboardMoverComponent, KeyboardMoverSystem } from './KeyboardMover';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
+import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 
@@ -29,7 +30,7 @@ describe('KeyboardMover', () => {
     const camEntity = world.createEntity('Camera');
     const arc = new ArcCameraComponent({ alpha: 0 });
     arc.handle = renderer.createArcCamera(camEntity.id, arc.toSpec());
-    arc.initialized = true;
+    getArcCameraRuntime(arc).initialized = true;
     camEntity.add(arc);
 
     const playerEntity = world.createEntity('Player');
@@ -54,7 +55,7 @@ describe('KeyboardMover', () => {
     const camEntity = world.createEntity('Camera');
     const arc = new ArcCameraComponent({ alpha: 0 });
     arc.handle = renderer.createArcCamera(camEntity.id, arc.toSpec());
-    arc.initialized = true;
+    getArcCameraRuntime(arc).initialized = true;
     camEntity.add(arc);
 
     const playerEntity = world.createEntity('Player');
@@ -79,7 +80,7 @@ describe('KeyboardMover', () => {
     const camEntity = world.createEntity('Camera');
     const arc = new ArcCameraComponent({ alpha: 0 });
     arc.handle = renderer.createArcCamera(camEntity.id, arc.toSpec());
-    arc.initialized = true;
+    getArcCameraRuntime(arc).initialized = true;
     camEntity.add(arc);
 
     const playerEntity = world.createEntity('Player');

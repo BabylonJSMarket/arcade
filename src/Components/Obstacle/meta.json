@@ -8,5 +8,9 @@
   "systems": [],
   "dependencies": [
     "MeshPrimitive"
+  ],
+  "tags": [
+    "core",
+    "physics"
   ]
 }

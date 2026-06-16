@@ -5,6 +5,7 @@ import {
   CameraFollowEvents,
 } from './CameraFollow';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
+import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.core';
 
 runMechanicContract({
   name: 'CameraFollow',
@@ -30,7 +31,7 @@ runMechanicContract({
     const arcEntity = world.createEntity();
     const arc = new ArcCameraComponent();
     arc.handle = renderer.createArcCamera(arcEntity.id, arc.toSpec());
-    arc.initialized = true;
+    getArcCameraRuntime(arc).initialized = true;
     arcEntity.add(arc);
 
     // Stub a world position the mesh handle reports through the adapter.

@@ -2,7 +2,19 @@
   "name": "BulletPool",
   "description": "Registers a framework entity pool of reusable bullet entities (MeshPrimitive + Bullet) so firing never allocates an entity or mesh. On `bulletPool.fire` it acquires a parked slot and resets its direction/speed/lifetime/damage + muzzle position (with an optional per-shot color), then BulletSystem flies it and parks it again on expiry or hit. Emits `bulletPool.ready` once the pool is pre-built. Parking is the World `active` flag; the park-aware MeshPrimitiveSystem keeps each bullet mesh alive (hidden) for reuse.",
   "category": "shooter",
-  "components": ["BulletPoolComponent"],
-  "systems": ["BulletPoolSystem"],
-  "dependencies": ["MeshPrimitive", "Bullet"]
+  "components": [
+    "BulletPoolComponent"
+  ],
+  "systems": [
+    "BulletPoolSystem"
+  ],
+  "dependencies": [
+    "MeshPrimitive",
+    "Bullet"
+  ],
+  "tags": [
+    "core",
+    "combat",
+    "spawning"
+  ]
 }

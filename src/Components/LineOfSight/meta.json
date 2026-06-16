@@ -11,5 +11,9 @@
   "dependencies": [
     "MeshPrimitive",
     "Obstacle"
+  ],
+  "tags": [
+    "core",
+    "ai"
   ]
 }

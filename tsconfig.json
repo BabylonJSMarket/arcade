@@ -11,6 +11,7 @@
     "types": [],
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
+    "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": ["src/**/*"],

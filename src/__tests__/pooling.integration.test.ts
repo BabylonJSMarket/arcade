@@ -5,7 +5,8 @@
  * systems first; this guards the reversed order the runtime actually uses.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { EventBus, World, SceneLoader, MockRendererAdapter, type MeshHandle, type Vec3 } from '@babylonjsmarket/ecs'
+import { EventBus, World, SceneLoader, MockRendererAdapter } from '@babylonjsmarket/ecs'
+import type { MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types'
 import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../Components/MeshPrimitive/MeshPrimitive'
 import { BulletPoolComponent, BulletPoolSystem } from '../Components/BulletPool/BulletPool'
 import { BulletComponent, BulletSystem } from '../Components/Bullet/Bullet'
