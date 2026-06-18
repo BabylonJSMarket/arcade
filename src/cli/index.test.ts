@@ -137,11 +137,15 @@ describe("arcade CLI", () => {
       expect(pkg.dependencies).toMatchObject({
         "@babylonjsmarket/ecs": expect.any(String),
         "@babylonjsmarket/arcade": expect.any(String),
+        // viz must be a real dep: main.ts boots arcade/viz, which pulls in
+        // @babylonjsmarket/viz + every component panel. Without it a fresh
+        // scaffold fails to load (the panels' viz imports go unresolved).
+        "@babylonjsmarket/viz": expect.any(String),
         "@babylonjs/core": expect.any(String),
       });
     }, 60_000);
 
-    it("ships a tiny main.ts that loads the default scene", async () => {
+    it("ships a tiny main.ts that loads the default scene (and honors ?scene=)", async () => {
       await runCli([dir, "--overwrite"], tmpDir);
       const mainTs = fs.readFileSync(
         path.join(tmpDir, dir, "src", "main.ts"),
@@ -153,6 +157,9 @@ describe("arcade CLI", () => {
       expect(mainTs).toContain("from './scenes'");
       expect(mainTs).toContain("from './registry'");
       expect(mainTs).toContain("loadScene(scene)");
+      // ?scene=<url> override — how `bjs download` previews a downloaded asset.
+      expect(mainTs).toContain("loadSceneFromUrl");
+      expect(mainTs).toContain("'scene'");
     }, 60_000);
 
     it("ships a scenes/index.ts exposing the scene map (multigame seam)", async () => {
