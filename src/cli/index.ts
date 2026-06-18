@@ -68,6 +68,11 @@ const ARCADE_VERSION = (
 ).version;
 const ECS_VERSION = installedVersion("@babylonjsmarket/ecs", "latest");
 const ESLINT_PLUGIN_VERSION = installedVersion("@babylonjsmarket/eslint-plugin", "latest");
+// The scaffold's main.ts boots `@babylonjsmarket/arcade/viz`, which re-exports
+// @babylonjsmarket/viz and every component .viz panel — so viz must be a real
+// dependency, not just arcade's optional peer (otherwise Vite stubs it and the
+// panel imports, e.g. `ResetButton`, fail at load).
+const VIZ_VERSION = installedVersion("@babylonjsmarket/viz", "latest");
 
 // Allow `arcade init <name>` as well as the npm-create-style bare `arcade <name>`.
 // We strip a leading "init" subcommand here so positional parsing stays simple.
@@ -210,6 +215,7 @@ async function init() {
     dependencies: {
       "@babylonjsmarket/ecs": range(ECS_VERSION),
       "@babylonjsmarket/arcade": range(ARCADE_VERSION),
+      "@babylonjsmarket/viz": range(VIZ_VERSION),
       "@babylonjs/core": "^9.0.0",
       "@babylonjs/loaders": "^9.0.0",
       "@babylonjs/havok": "^1.3.0",
