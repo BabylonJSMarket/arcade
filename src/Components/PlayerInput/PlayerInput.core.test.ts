@@ -86,4 +86,60 @@ describe('PlayerInput core', () => {
     const input = createPlayerInput();
     expect(input.getParams().deadzone).toBe(DEFAULT_PLAYER_INPUT_PARAMS.deadzone);
   });
+
+  it('releasing a gamepad button deactivates the action and queues justReleased', () => {
+    const input = createPlayerInput();
+    input.pressGamepadButton(0);
+    input.consume();
+    expect(input.isActive('jump')).toBe(true);
+    input.releaseGamepadButton(0);
+    expect(input.isActive('jump')).toBe(false);
+    expect(input.consume().justReleased).toContain('jump');
+  });
+
+  it('releasing a gamepad button that was never pressed returns null', () => {
+    const input = createPlayerInput();
+    expect(input.releaseGamepadButton(0)).toBeNull();
+  });
+
+  it('pressing the same key twice only triggers once', () => {
+    const input = createPlayerInput();
+    expect(input.pressKey('Space')).toBe('jump');
+    expect(input.pressKey('Space')).toBeNull();
+  });
+
+  it('releasing a key that was never pressed returns null', () => {
+    const input = createPlayerInput();
+    expect(input.releaseKey('Space')).toBeNull();
+  });
+
+  it('pressing the same gamepad button twice only triggers once', () => {
+    const input = createPlayerInput();
+    expect(input.pressGamepadButton(0)).toBe('jump');
+    expect(input.pressGamepadButton(0)).toBeNull();
+  });
+
+  it('axis 1 drives moveZ (negated) outside the deadzone', () => {
+    const input = createPlayerInput({ deadzone: 0.1 });
+    input.setGamepadAxis(1, 0.5);
+    expect(input.consume().moveZ).toBeCloseTo(-0.5, 5);
+  });
+
+  it('moveBackward (KeyS) decrements moveZ', () => {
+    const input = createPlayerInput();
+    input.pressKey('KeyS');
+    expect(input.consume().moveZ).toBe(-1);
+  });
+
+  it('moveLeft (KeyA) decrements moveX', () => {
+    const input = createPlayerInput();
+    input.pressKey('KeyA');
+    expect(input.consume().moveX).toBe(-1);
+  });
+
+  it('a gamepad-only binding with no key binding still triggers via button (refreshAction keys fallback)', () => {
+    const input = createPlayerInput({ gamepadBindings: { dash: [7] } });
+    input.pressGamepadButton(7);
+    expect(input.isActive('dash')).toBe(true);
+  });
 });

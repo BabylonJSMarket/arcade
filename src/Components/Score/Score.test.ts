@@ -165,6 +165,66 @@ describe('ScoreSystem', () => {
     expect(entity.get(ScoreComponent)?.instance?.getAllScores()).toEqual({});
   });
 
+  it('serialize falls back to initialScores before the instance is attached', () => {
+    // No System has run, so .instance is still null — serialize must use the seed.
+    const comp = new ScoreComponent({ scores: { player1: 7 } });
+    expect(comp.serialize().scores).toEqual({ player1: 7 });
+  });
+
+  it('serialize prefers the live instance state once attached', () => {
+    const entity = world.createEntity();
+    entity.add(new ScoreComponent({ scores: { player1: 1 } }));
+    eventBus.emit(ScoreInputEvents.ADD, { ownerEntity: 'player1', points: 9 });
+    const comp = entity.get(ScoreComponent)!;
+    expect(comp.serialize().scores).toEqual({ player1: 10 });
+  });
+
+  it('seeds instances already present at world.initialize() time', () => {
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r });
+    const sys = new ScoreSystem(eb);
+    w.addSystem(sys);
+    const entity = w.createEntity();
+    entity.add(new ScoreComponent({ scores: { p: 2 } }));
+    w.initialize();
+    expect(entity.get(ScoreComponent)?.instance?.getScore('p')).toBe(2);
+  });
+
+  it('drops add requests when no scoreboard entity exists', () => {
+    // Fresh world with no ScoreComponent entity at all.
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r });
+    w.addSystem(new ScoreSystem(eb));
+    w.initialize();
+    const spy = vi.fn();
+    eb.on(ScoreEvents.CHANGED, spy);
+    eb.emit(ScoreInputEvents.ADD, { ownerEntity: 'player1', points: 10 });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('drops goal.scored payloads that carry no ownerEntity', () => {
+    const entity = world.createEntity();
+    entity.add(new ScoreComponent());
+    const spy = vi.fn();
+    eventBus.on(ScoreEvents.CHANGED, spy);
+    eventBus.emit(ScoreInputEvents.GOAL_SCORED, { points: 5 });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('drops reset requests when no scoreboard entity exists', () => {
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r });
+    w.addSystem(new ScoreSystem(eb));
+    w.initialize();
+    const spy = vi.fn();
+    eb.on(ScoreEvents.RESET, spy);
+    eb.emit(ScoreInputEvents.RESET, {});
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('does not touch the renderer — Score is data-only', () => {
     const entity = world.createEntity();
     entity.add(new ScoreComponent());

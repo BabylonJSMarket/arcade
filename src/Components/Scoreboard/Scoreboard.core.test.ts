@@ -72,6 +72,18 @@ describe('Scoreboard core', () => {
     expect(snap.rows[0].scoreText).toBe('11');
   });
 
+  it('getPlayers returns the current roster, reflecting setPlayers replacements', () => {
+    const sb = createScoreboard({}, PLAYERS);
+    expect(sb.getPlayers().map((p) => p.entityId)).toEqual(['p1', 'p2']);
+    sb.setPlayers([{ entityId: 'p3', name: 'Carol', color: [0, 0, 1] }]);
+    expect(sb.getPlayers().map((p) => p.name)).toEqual(['Carol']);
+  });
+
+  it('getParams returns the live params object', () => {
+    const sb = createScoreboard({ fontSize: 30 }, PLAYERS);
+    expect(sb.getParams().fontSize).toBe(30);
+  });
+
   it('reset restores default params and clears all scores', () => {
     const sb = createScoreboard({ fontSize: 30, position: 'bottom-right' }, PLAYERS);
     sb.setScores({ p1: 42 });

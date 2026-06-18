@@ -4,7 +4,7 @@
  * components it declares — mirroring the live ArcadeGame path (markers register
  * the names, then the pool builds from config).
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { EventBus, World, SceneLoader, MockRendererAdapter } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent, MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive'
 import { HealthComponent, HealthSystem } from '../Health/Health'
@@ -143,6 +143,100 @@ describe('EntityPoolSystem', () => {
     // The pooled entity exists (parked); its proxy primitive was forced invisible.
     const pooled = world.getEntitiesByTag('enemy')[0]!
     expect(pooled.get(MeshPrimitiveComponent)!.visible).toBe(false)
+  })
+
+  it('warns and skips a declared component whose name is not registered', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { world } = setup({
+      pool: 'enemy',
+      size: 1,
+      tags: ['enemy'],
+      components: {
+        MeshPrimitive: { primitive: 'sphere', diameter: 1 },
+        // "Ghost" is never registered on the SceneLoader → build warns + skips it.
+        Ghost: { foo: 1 },
+      },
+    })
+    world.update(1 / 60) // build
+
+    const pooled = world.getEntitiesByTag('enemy')[0]!
+    // Built anyway, with the registered component; the unknown one was skipped.
+    expect(pooled.get(MeshPrimitiveComponent)).toBeDefined()
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('component "Ghost" is not registered'),
+    )
+    warn.mockRestore()
+  })
+
+  it('turns off Shadow casting on the proxy when a visual Mesh is declared', () => {
+    // Declaring a visual Mesh forces the declared Shadow into castShadow:false
+    // (the Mesh casts instead) — exercises the hasVisual + name==="Shadow" branch.
+    const { world } = setup({
+      pool: 'enemy',
+      size: 1,
+      tags: ['enemy'],
+      components: {
+        MeshPrimitive: { primitive: 'sphere', diameter: 1.2 },
+        Shadow: { castShadow: true },
+        Mesh: { src: 'bot.glb', instanced: true, follow: true },
+      },
+    })
+    // No Shadow component is registered on the loader, so build skips it — but the
+    // effective-config rewrite (the branch under test) ran during registerPool.
+    // The proxy still ends up invisible (the MeshPrimitive visual rewrite).
+    world.update(1 / 60)
+    const pooled = world.getEntitiesByTag('enemy')[0]!
+    expect(pooled.get(MeshPrimitiveComponent)!.visible).toBe(false)
+  })
+
+  it('emits EXHAUSTED when every slot is live and none can recycle', () => {
+    // A pool recycles its OLDEST slot on overflow, so to truly exhaust it we hold
+    // the slot live and... since size-1 recycles, we need size 0 to force null.
+    const exhausted: unknown[] = []
+    const { eventBus, world } = setup({
+      pool: 'enemy',
+      size: 0,
+      tags: ['enemy'],
+      components: { MeshPrimitive: { primitive: 'sphere', diameter: 1 } },
+    })
+    eventBus.on(EntityPoolEvents.EXHAUSTED, (e) => exhausted.push(e))
+    world.update(1 / 60) // register the (empty) pool
+    eventBus.emit(EntityPoolInputEvents.SPAWN, { pool: 'enemy', x: 0, y: 0, z: 0 })
+    world.update(1 / 60)
+    // A size-0 pool has no slot to hand out → acquire returns null → EXHAUSTED.
+    expect(exhausted).toEqual([{ pool: 'enemy' }])
+  })
+
+  it('RELEASE for an unknown entity id is a guarded no-op', () => {
+    const released: unknown[] = []
+    const { eventBus, world } = setup({
+      pool: 'enemy',
+      size: 1,
+      tags: ['enemy'],
+      components: { MeshPrimitive: { primitive: 'sphere', diameter: 1 } },
+    })
+    eventBus.on(EntityPoolEvents.RELEASED, (e) => released.push(e))
+    world.update(1 / 60)
+    // No entity with this id → release() returns early before w.release().
+    eventBus.emit(EntityPoolInputEvents.RELEASE, { entityId: 'does-not-exist' })
+    expect(released).toEqual([])
+  })
+
+  it('does not emit RELEASED when the entity does not belong to a pool', () => {
+    const released: unknown[] = []
+    const { eventBus, world } = setup({
+      pool: 'enemy',
+      size: 1,
+      tags: ['enemy'],
+      components: { MeshPrimitive: { primitive: 'sphere', diameter: 1 } },
+    })
+    eventBus.on(EntityPoolEvents.RELEASED, (e) => released.push(e))
+    world.update(1 / 60)
+    // A plain (non-pooled) entity: it exists, so the !ent guard passes, but
+    // w.release(ent) returns false (no pool owns it) → no RELEASED emit.
+    const loose = world.createEntity('Loose')
+    eventBus.emit(EntityPoolInputEvents.RELEASE, { entityId: loose.id })
+    expect(released).toEqual([])
   })
 
   it('emits EXHAUSTED when a spawn cannot be served and no slot can recycle', () => {

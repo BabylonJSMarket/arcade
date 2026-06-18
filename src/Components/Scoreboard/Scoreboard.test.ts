@@ -103,6 +103,42 @@ describe('ScoreboardSystem', () => {
     expect(snap.rows.map((r: { scoreText: string }) => r.scoreText)).toEqual(['0', '0']);
   });
 
+  it('seeds instances already present at world.initialize() time', () => {
+    // The beforeEach builds the entity AFTER initialize. Here we add it before
+    // so onInitialize's seeding loop runs against a live entity.
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r });
+    const sys = new ScoreboardSystem(eb);
+    w.addSystem(sys);
+    const entity = w.createEntity();
+    entity.add(
+      new ScoreboardComponent({ players: [{ entityId: 'p1', name: 'Al', color: [1, 0, 0] }] }),
+    );
+    w.initialize();
+    expect(entity.get(ScoreboardComponent)?.instance).not.toBeNull();
+  });
+
+  it('treats a SCORE_CHANGED with no allScores map as an empty board', () => {
+    eventBus.emit(ScoreboardInputEvents.SCORE_CHANGED, { allScores: { p1: 4, p2: 6 } });
+    const spy = vi.fn();
+    eventBus.on(ScoreboardEvents.UPDATED, spy);
+    // No allScores field → the System falls back to {} and rows read zero.
+    eventBus.emit(ScoreboardInputEvents.SCORE_CHANGED, { ownerEntity: 'p1' });
+    const snap = spy.mock.calls[spy.mock.calls.length - 1][0].snapshot;
+    expect(snap.rows.map((r: { scoreText: string }) => r.scoreText)).toEqual(['0', '0']);
+  });
+
+  it('SCORE_RESET with an explicit allScores map applies those totals instead of zeroing', () => {
+    eventBus.emit(ScoreboardInputEvents.SCORE_CHANGED, { allScores: { p1: 7, p2: 9 } });
+    const spy = vi.fn();
+    eventBus.on(ScoreboardEvents.UPDATED, spy);
+    // A reset that carries a fresh map snaps rows to that map (not to zero).
+    eventBus.emit(ScoreboardInputEvents.SCORE_RESET, { allScores: { p1: 1, p2: 2 } });
+    const snap = spy.mock.calls[spy.mock.calls.length - 1][0].snapshot;
+    expect(snap.rows.map((r: { scoreText: string }) => r.scoreText)).toEqual(['1', '2']);
+  });
+
   it('makes no adapter calls — it is a DOM overlay, not a 3D element', () => {
     renderer.calls.length = 0;
     eventBus.emit(ScoreboardInputEvents.SCORE_CHANGED, {

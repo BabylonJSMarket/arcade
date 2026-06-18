@@ -134,6 +134,54 @@ describe('Physics core', () => {
     expect(sim.getParams().gravityY).toBe(-20);
   });
 
+  it('setBodyPosition relocates a known body and ignores unknown ids', () => {
+    const sim = createPhysics();
+    sim.createBody('ball', {
+      shapeType: 'sphere', motionType: 'dynamic', mass: 1,
+      friction: 0, restitution: 0, lockRotation: false,
+    });
+    sim.setBodyPosition('ball', 4, 5, 6);
+    const body = sim.getBody('ball')!;
+    expect([body.posX, body.posY, body.posZ]).toEqual([4, 5, 6]);
+    // Unknown id is a silent no-op (does not throw, does not create a body).
+    expect(() => sim.setBodyPosition('ghost', 1, 1, 1)).not.toThrow();
+    expect(sim.bodies().length).toBe(1);
+  });
+
+  it('setBodyVelocity is a no-op for an unknown id', () => {
+    const sim = createPhysics();
+    expect(() => sim.setBodyVelocity('ghost', 1, 2, 3)).not.toThrow();
+    expect(sim.getBody('ghost')).toBeUndefined();
+  });
+
+  it('destroyBody on an unknown id is a no-op', () => {
+    const sim = createPhysics();
+    sim.createBody('a', {
+      shapeType: 'box', motionType: 'dynamic', mass: 1,
+      friction: 0, restitution: 0, lockRotation: false,
+    });
+    expect(() => sim.destroyBody('ghost')).not.toThrow();
+    expect(sim.bodies().length).toBe(1);
+  });
+
+  it('snaps a tiny residual bounce to rest so a body actually settles', () => {
+    // A slow downward velocity hitting the ground reflects to a sub-0.01 value,
+    // which the integrator clamps to exactly 0 so the body stops jittering.
+    const sim = createPhysics({
+      gravityY: 0, groundY: 0, groundBounce: 0.35, linearDamping: 1,
+    });
+    sim.createBody('settler', {
+      shapeType: 'sphere', motionType: 'dynamic', mass: 1,
+      friction: 0, restitution: 0.5, lockRotation: false,
+      posY: 0,
+    });
+    // |velY| * restitution * groundBounce = 0.02 * 0.5 * 0.35 = 0.0035 < 0.01 → snapped to 0.
+    sim.setBodyVelocity('settler', 0, -0.02, 0);
+    sim.step(1);
+    expect(sim.getBody('settler')!.velY).toBe(0);
+    expect(sim.getBody('settler')!.posY).toBe(0);
+  });
+
   it('createBody with a duplicate meshId replaces the existing body', () => {
     const sim = createPhysics();
     sim.createBody('ball', {

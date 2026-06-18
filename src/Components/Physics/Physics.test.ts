@@ -177,6 +177,107 @@ describe('PhysicsSystem', () => {
     expect(disposeIds.has(b.id)).toBe(true);
   });
 
+  it('SET_GRAVITY input event forwards to physicsSetGravity', () => {
+    makeBodyEntity();
+    renderer.calls.length = 0;
+    eventBus.emit(PhysicsInputEvents.SET_GRAVITY, { x: 0, y: -20, z: 0 });
+    const grav = renderer.calls.find((c) => c.method === 'physicsSetGravity');
+    expect(grav?.args).toEqual([0, -20, 0]);
+  });
+
+  it('SET_COLLIDERS_VISIBLE input event forwards to setCollidersVisible', () => {
+    makeBodyEntity();
+    renderer.calls.length = 0;
+    eventBus.emit(PhysicsInputEvents.SET_COLLIDERS_VISIBLE, { visible: true });
+    const vis = renderer.calls.find((c) => c.method === 'setCollidersVisible');
+    expect(vis?.args).toEqual([true]);
+  });
+
+  it('SET_RESTITUTION mirrors the value onto the component and forwards to the adapter', () => {
+    const entity = makeBodyEntity();
+    const comp = entity.get(PhysicsComponent)!;
+    renderer.calls.length = 0;
+    eventBus.emit(PhysicsInputEvents.SET_RESTITUTION, {
+      entityId: entity.id,
+      restitution: 0.9,
+    });
+    // Mirrored so serialize() picks up the live value.
+    expect(comp.restitution).toBe(0.9);
+    const setR = renderer.calls.find((c) => c.method === 'physicsSetRestitution');
+    expect(setR?.args).toEqual([entity.id, 0.9]);
+  });
+
+  it('SET_RESTITUTION for an unknown entity still forwards to the adapter without throwing', () => {
+    makeBodyEntity();
+    renderer.calls.length = 0;
+    expect(() =>
+      eventBus.emit(PhysicsInputEvents.SET_RESTITUTION, { entityId: 'ghost', restitution: 0.3 }),
+    ).not.toThrow();
+    const setR = renderer.calls.find((c) => c.method === 'physicsSetRestitution');
+    expect(setR?.args).toEqual(['ghost', 0.3]);
+  });
+
+  it('SET_TIME_STEP mirrors hz onto the first PhysicsComponent and forwards to the adapter', () => {
+    const entity = makeBodyEntity();
+    const comp = entity.get(PhysicsComponent)!;
+    renderer.calls.length = 0;
+    eventBus.emit(PhysicsInputEvents.SET_TIME_STEP, { hz: 240 });
+    expect(comp.simulationHz).toBe(240);
+    const setTs = renderer.calls.find((c) => c.method === 'physicsSetTimeStep');
+    expect(setTs?.args).toEqual([240]);
+  });
+
+  it('SET_TIME_STEP ignores non-finite or non-positive hz', () => {
+    const entity = makeBodyEntity();
+    const comp = entity.get(PhysicsComponent)!;
+    const before = comp.simulationHz;
+    renderer.calls.length = 0;
+    eventBus.emit(PhysicsInputEvents.SET_TIME_STEP, { hz: 0 });
+    eventBus.emit(PhysicsInputEvents.SET_TIME_STEP, { hz: -5 });
+    eventBus.emit(PhysicsInputEvents.SET_TIME_STEP, { hz: Number.POSITIVE_INFINITY });
+    eventBus.emit(PhysicsInputEvents.SET_TIME_STEP, { hz: Number.NaN });
+    expect(comp.simulationHz).toBe(before);
+    expect(renderer.calls.some((c) => c.method === 'physicsSetTimeStep')).toBe(false);
+  });
+
+  it('applies the first PhysicsComponent simulationHz once at init for pre-existing entities', () => {
+    // Build a fresh world where the entity exists BEFORE the system mounts so
+    // onInitialize walks `this.entities` (tryCreateBody + applyInitialTimeStep).
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r });
+    const entity = w.createEntity();
+    const mesh = new MeshPrimitiveComponent({ primitive: 'sphere' });
+    mesh.handle = r.createMesh('pre', mesh.toPrimitiveSpec()) as ReturnType<typeof r.createMesh>;
+    entity.add(mesh);
+    entity.add(new PhysicsComponent({ simulationHz: 120 }));
+
+    w.addSystem(new PhysicsSystem(eb));
+    w.initialize();
+
+    const created = r.calls.filter((c) => c.method === 'physicsCreateBody');
+    expect(created.length).toBe(1);
+    const ts = r.calls.filter((c) => c.method === 'physicsSetTimeStep');
+    expect(ts.length).toBe(1);
+    expect(ts[0].args[0]).toBe(120);
+  });
+
+  it('SET_VELOCITY for an entity whose body was never created is a no-op', () => {
+    // autoCreate:false body never enters `created`, so SET_VELOCITY short-circuits.
+    const entity = world.createEntity();
+    const mesh = new MeshPrimitiveComponent({ primitive: 'sphere' });
+    mesh.handle = renderer.createMesh('nv', mesh.toPrimitiveSpec()) as ReturnType<
+      typeof renderer.createMesh
+    >;
+    entity.add(mesh);
+    entity.add(new PhysicsComponent({ autoCreate: false }));
+    renderer.calls.length = 0;
+    eventBus.emit(PhysicsInputEvents.SET_VELOCITY, {
+      entityId: entity.id, vx: 1, vy: 1, vz: 1,
+    });
+    expect(renderer.calls.some((c) => c.method === 'physicsSetBodyVelocity')).toBe(false);
+  });
+
   it('defers body creation until a sibling MeshPrimitive handle is ready', () => {
     const entity = world.createEntity();
     const mesh = new MeshPrimitiveComponent({ primitive: 'sphere' });

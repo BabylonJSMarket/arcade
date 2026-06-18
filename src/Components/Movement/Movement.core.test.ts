@@ -126,11 +126,61 @@ describe('Movement core', () => {
     expect(m.getParams()).toEqual(DEFAULT_MOVEMENT_PARAMS);
   });
 
+  it('caps downward velocity at -maxFallSpeed during a long airborne fall', () => {
+    const m = createMovement({ gravity: 100, maxFallSpeed: 5, jumpForce: 8, feetOffset: 1 });
+    m.setPosition(0, 100, 0);
+    // Leave the ground, then fall with no floor below.
+    m.update({ moveX: 0, moveZ: 0, jumpPressed: true, groundY: null }, 0.016);
+    // Several heavy-gravity frames would blow well past -5 without the clamp.
+    let tick = m.update({ moveX: 0, moveZ: 0, jumpPressed: false, groundY: null }, 1);
+    tick = m.update({ moveX: 0, moveZ: 0, jumpPressed: false, groundY: null }, 1);
+    expect(tick.velY).toBe(-5);
+  });
+
+  it('keeps falling indefinitely when maxFallSpeed is 0 (uncapped)', () => {
+    const m = createMovement({ gravity: 20, maxFallSpeed: 0, jumpForce: 8, feetOffset: 1 });
+    m.setPosition(0, 100, 0);
+    m.update({ moveX: 0, moveZ: 0, jumpPressed: true, groundY: null }, 0.016);
+    const t1 = m.update({ moveX: 0, moveZ: 0, jumpPressed: false, groundY: null }, 0.5);
+    const t2 = m.update({ moveX: 0, moveZ: 0, jumpPressed: false, groundY: null }, 0.5);
+    // No clamp, so velY keeps dropping past any fixed cap.
+    expect(t2.velY).toBeLessThan(t1.velY);
+    expect(t2.velY).toBeLessThan(-10);
+  });
+
+  it('stays grounded across a frame with no ground info and no jump intent', () => {
+    const m = createMovement({ feetOffset: 1 });
+    m.setPosition(0, 1, 0);
+    // Grounded, velY===0, groundY null, no jump → trust previous grounded state.
+    const tick = m.update({ moveX: 0, moveZ: 0, jumpPressed: false, groundY: null }, 0.1);
+    expect(tick.isGrounded).toBe(true);
+    expect(tick.groundedChanged).toBe(false);
+  });
+
+  it('does not re-ground a falling character when no ground info is supplied', () => {
+    const m = createMovement({ gravity: 20, feetOffset: 1 });
+    m.setPosition(0, 5, 0);
+    // Kick off the ground, then keep falling with null groundY and no jump.
+    m.update({ moveX: 0, moveZ: 0, jumpPressed: true, groundY: null }, 0.016);
+    const tick = m.update({ moveX: 0, moveZ: 0, jumpPressed: false, groundY: null }, 0.1);
+    // velY !== 0 (gravity pulling), so the "trust previous grounded" guard does
+    // not fire and the character remains airborne.
+    expect(tick.isGrounded).toBe(false);
+  });
+
   it('clampMoveInput normalizes magnitudes above 1 and preserves the direction', () => {
     const r = clampMoveInput(3, 4);
     expect(r.len).toBe(1);
     expect(r.x).toBeCloseTo(0.6, 5);
     expect(r.z).toBeCloseTo(0.8, 5);
+  });
+
+  it('stepYaw wraps a large positive delta down through +PI (short arc the other way)', () => {
+    // current 3.1 (just before +PI), target -3.1 (just past -PI). Raw delta is
+    // -6.2 (long way); reflexively-wrapped short arc is +0.083 through +PI.
+    const next = stepYaw(3.1, -3.1, 10, 0.01);
+    const shortArc = 2 * Math.PI - (3.1 - -3.1); // ≈ 0.0832
+    expect(next).toBeCloseTo(3.1 + shortArc, 5);
   });
 
   it('stepYaw takes the short arc across the PI wrap', () => {

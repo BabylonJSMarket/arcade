@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { eject } from "./eject.js";
+import { eject, rewriteImports } from "./eject.js";
 import { EJECT_HELP } from "./eject-options.js";
 
 // eject() reads the REAL component source that ships in this package
@@ -65,11 +65,62 @@ async function runEject(args: string[]): Promise<void> {
   }
 }
 
+/** Same, but against an isolated fixture component/payload source. */
+async function runEjectRoots(
+  args: string[],
+  roots: { componentsSrc: string; payloadSrc: string },
+): Promise<void> {
+  try {
+    await eject(args, roots);
+  } catch (e) {
+    if (!(e instanceof Error) || !e.message.startsWith("__EXIT__")) throw e;
+  }
+}
+
 function read(rel: string): string {
   return fs.readFileSync(path.join(tmpDir, rel), "utf8");
 }
 function exists(rel: string): boolean {
   return fs.existsSync(path.join(tmpDir, rel));
+}
+
+// ---------------------------------------------------------------------------
+// Fixture-root harness.
+//
+// Most tests drive eject() against the REAL package source (the default
+// roots). A few edge paths — a malformed meta.json, a missing component
+// source dir, a missing skill payload, a component folder with a nested
+// subdirectory — don't occur in the shipped package and can't be forced by
+// mutating it (other suites read it concurrently). For those, eject() takes
+// an optional { componentsSrc, payloadSrc } so we point it at a throwaway
+// fixture tree under tmpDir/_fixture instead.
+// ---------------------------------------------------------------------------
+
+interface FixtureComponent {
+  /** Map of relative file path → contents, written under the component dir. */
+  files: Record<string, string>;
+}
+
+/** Build an isolated component-source + payload tree; return roots for eject(). */
+function makeFixtureRoots(
+  components: Record<string, FixtureComponent>,
+  opts: { withPayload?: boolean } = { withPayload: true },
+): { componentsSrc: string; payloadSrc: string } {
+  const root = fs.mkdtempSync(path.join(tmpDir, "_fixture-"));
+  const componentsSrc = path.join(root, "Components");
+  for (const [name, comp] of Object.entries(components)) {
+    for (const [rel, contents] of Object.entries(comp.files)) {
+      const full = path.join(componentsSrc, name, rel);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, contents);
+    }
+  }
+  const payloadSrc = path.join(root, "payload", "babylonjsmarket");
+  if (opts.withPayload) {
+    fs.mkdirSync(payloadSrc, { recursive: true });
+    fs.writeFileSync(path.join(payloadSrc, "SKILL.md"), "# fixture skill\n");
+  }
+  return { componentsSrc, payloadSrc };
 }
 
 describe("arcade eject", () => {
@@ -309,6 +360,169 @@ describe("arcade eject", () => {
       );
       await runEject(["Score", "--dry-run"]);
       expect(read("src/registry.ts")).not.toContain("import('./components/Score/Score')");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Edge paths driven against an isolated fixture component source, so we
+  // never mutate the real package other suites read concurrently.
+  // -------------------------------------------------------------------------
+  describe("missing / empty component source", () => {
+    it("errors and exits 1 when the component source dir is absent", async () => {
+      // arcadeComponentNames() short-circuits to [] when COMPONENTS_SRC is
+      // missing; buildPlan then throws the "No component source found" guidance.
+      const roots = {
+        componentsSrc: path.join(tmpDir, "_fixture-does-not-exist", "Components"),
+        payloadSrc: path.join(tmpDir, "_fixture-does-not-exist", "payload"),
+      };
+      try {
+        await eject(["--all"], roots);
+      } catch (e) {
+        if (!(e instanceof Error) || !e.message.startsWith("__EXIT__")) throw e;
+      }
+      expect(exitCode).toBe(1);
+      expect(errs.join("\n")).toContain("No component source found");
+      expect(exists("src/components")).toBe(false);
+    });
+
+    it("errors when the component source dir exists but is empty", async () => {
+      // Same throw, reached through the readdir-returns-no-dirs branch.
+      const roots = makeFixtureRoots({});
+      // The fixture's Components dir is only created lazily per component, so
+      // create it empty to exercise the existsSync-true / zero-names path.
+      fs.mkdirSync(roots.componentsSrc, { recursive: true });
+      try {
+        await eject(["--all"], roots);
+      } catch (e) {
+        if (!(e instanceof Error) || !e.message.startsWith("__EXIT__")) throw e;
+      }
+      expect(exitCode).toBe(1);
+      expect(errs.join("\n")).toContain("No component source found");
+    });
+  });
+
+  describe("malformed meta.json", () => {
+    it("ignores a component's broken meta.json and falls back to the import scan", async () => {
+      // Foo's meta.json is invalid JSON → directDeps' try/catch swallows it and
+      // relies on the `../Bar/` import scan to still pull Bar into the closure.
+      const roots = makeFixtureRoots({
+        Foo: {
+          files: {
+            "meta.json": "{ this is not valid json",
+            "Foo.ts": "import { Bar } from '../Bar/Bar';\nexport const Foo = Bar;\n",
+          },
+        },
+        Bar: {
+          files: {
+            "meta.json": '{ "dependencies": [] }',
+            "Bar.ts": "export const Bar = 1;\n",
+          },
+        },
+      });
+      await runEjectRoots(["Foo"], roots);
+      // Despite the unparseable meta, Bar is still ejected via the import scan.
+      expect(exists("src/components/Foo/Foo.ts")).toBe(true);
+      expect(exists("src/components/Bar/Bar.ts")).toBe(true);
+    });
+  });
+
+  describe("nested component subdirectory", () => {
+    it("walks subfolders when collecting a component's files", async () => {
+      // componentFiles() recurses into subdirectories; a real package has none,
+      // so use a fixture whose dep import lives in a nested file.
+      const roots = makeFixtureRoots({
+        Parent: {
+          files: {
+            "meta.json": '{ "dependencies": [] }',
+            "Parent.ts": "export const Parent = 1;\n",
+            // dep declared only inside a nested subfolder file → exercises the
+            // `e.isDirectory()` recurse branch of componentFiles.
+            "nested/inner.ts": "import { Kid } from '../Kid/Kid';\nexport const x = Kid;\n",
+          },
+        },
+        Kid: {
+          files: {
+            "meta.json": '{ "dependencies": [] }',
+            "Kid.ts": "export const Kid = 2;\n",
+          },
+        },
+      });
+      await runEjectRoots(["Parent"], roots);
+      // The nested-file import was discovered → Kid ejected alongside Parent.
+      expect(exists("src/components/Parent/nested/inner.ts")).toBe(true);
+      expect(exists("src/components/Kid/Kid.ts")).toBe(true);
+    });
+  });
+
+  describe("missing skill payload", () => {
+    it("warns and skips when the package ships no skill payload", async () => {
+      const roots = makeFixtureRoots(
+        {
+          Solo: {
+            files: {
+              "meta.json": '{ "dependencies": [] }',
+              "Solo.ts": "export const Solo = 1;\n",
+            },
+          },
+        },
+        { withPayload: false },
+      );
+      await runEjectRoots(["Solo"], roots);
+      expect(exists("src/components/Solo/Solo.ts")).toBe(true);
+      expect(joinLogs()).toContain("skill payload not found in package — skipped");
+      expect(exists(".claude/skills/babylonjsmarket")).toBe(false);
+    });
+
+    it("copies the payload into the project when present", async () => {
+      const roots = makeFixtureRoots({
+        Solo: {
+          files: {
+            "meta.json": '{ "dependencies": [] }',
+            "Solo.ts": "export const Solo = 1;\n",
+          },
+        },
+      });
+      await runEjectRoots(["Solo"], roots);
+      expect(exists(".claude/skills/babylonjsmarket/SKILL.md")).toBe(true);
+    });
+  });
+
+  describe("rewriteImports (unit)", () => {
+    // The closure builder always co-ejects siblings a copied file imports, so
+    // the "non-ejected sibling" rewrite never fires through eject(). It is the
+    // documented safety net for the standalone rewrite contract, exercised here
+    // directly.
+    it("rewrites a sibling import to the package subpath when the sibling was NOT ejected", () => {
+      const all = new Set(["Foo", "Bar"]);
+      const ejected = new Set(["Foo"]); // Bar was not ejected
+      const out = rewriteImports(
+        'import { Bar } from "../Bar/Bar.js";',
+        ejected,
+        all,
+      );
+      expect(out).toBe('import { Bar } from "@babylonjsmarket/arcade/Bar";');
+    });
+
+    it("keeps a sibling import relative when the sibling WAS co-ejected", () => {
+      const all = new Set(["Foo", "Bar"]);
+      const ejected = new Set(["Foo", "Bar"]);
+      const src = 'import { Bar } from "../Bar/Bar.js";';
+      expect(rewriteImports(src, ejected, all)).toBe(src);
+    });
+
+    it("leaves a sibling import alone when it is not a known component", () => {
+      const all = new Set(["Foo"]);
+      const src = 'import { x } from "../Unknown/x.js";';
+      expect(rewriteImports(src, new Set(["Foo"]), all)).toBe(src);
+    });
+
+    it("rewrites ../../inputEvents to the package root", () => {
+      const out = rewriteImports(
+        'import { KEY } from "../../inputEvents";',
+        new Set(),
+        new Set(),
+      );
+      expect(out).toBe('import { KEY } from "@babylonjsmarket/arcade";');
     });
   });
 });

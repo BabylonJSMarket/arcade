@@ -171,4 +171,30 @@ describe('AnimationSystem', () => {
     const playCalls = renderer.calls.filter((c) => c.method === 'playAnimation');
     expect(playCalls).toHaveLength(0);
   });
+
+  it('builds instances for entities that exist before the system initializes', () => {
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r, detectRaces: false });
+    const entity = w.createEntity();
+    entity.add(new AnimationComponent({ walkSpeed: 2 }));
+    // System added AFTER the entity → onInitialize scans and wires the instance.
+    w.addSystem(new AnimationSystem(bus));
+    w.initialize();
+    const comp = entity.get(AnimationComponent);
+    expect(comp?.instance).not.toBeNull();
+    expect(comp?.instance?.getParams().walkSpeed).toBe(2);
+  });
+
+  it('does not rebuild the core instance for an entity already wired up', () => {
+    const entity = world.createEntity();
+    entity.add(new AnimationComponent());
+    const comp = entity.get(AnimationComponent)!;
+    const firstInstance = comp.instance;
+    expect(firstInstance).not.toBeNull();
+    // A second update (and the internal ensureInstance guard) must not replace
+    // the existing instance.
+    world.update(1 / 60);
+    expect(comp.instance).toBe(firstInstance);
+  });
 });

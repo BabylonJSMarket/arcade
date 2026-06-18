@@ -28,6 +28,11 @@ describe('DirectionalLightComponent (core)', () => {
     expect(c.direction[2]).toBeCloseTo(0);
   });
 
+  it('falls back to straight-down for a zero-length direction', () => {
+    const c = new DirectionalLightComponent({ direction: [0, 0, 0] });
+    expect(c.direction).toEqual([0, -1, 0]);
+  });
+
   it('accepts full configuration', () => {
     const c = new DirectionalLightComponent({
       direction: [-1, -3, -1],
@@ -181,5 +186,48 @@ describe('DirectionalLightSystem — adapter integration', () => {
     renderer.calls.length = 0;
     world.removeEntity(entity);
     expect(renderer.calls.some((c) => c.method === 'disposeLight')).toBe(true);
+  });
+
+  it('creates lights for entities that exist before the system initializes', () => {
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    const entity = w.createEntity();
+    entity.add(new DirectionalLightComponent({ intensity: 0.7 }));
+    // System added AFTER the entity exists → onInitialize scans and creates it.
+    w.addSystem(new DirectionalLightSystem(bus));
+    w.initialize();
+    const call = r.calls.find((c) => c.method === 'createDirectionalLight');
+    expect(call).toBeDefined();
+    expect((call!.args[1] as { intensity: number }).intensity).toBe(0.7);
+  });
+
+  it('does not emit when an unchanged light ticks (no snapshot drift)', () => {
+    const entity = world.createEntity();
+    entity.add(new DirectionalLightComponent());
+    renderer.calls.length = 0;
+    // Nothing mutated → onUpdate must not push any change to the adapter.
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'updateLightIntensity')).toBe(false);
+  });
+
+  it('no-ops on a renderer-less world (never creates a light)', () => {
+    const bus = new EventBus();
+    const w = new World({ eventBus: bus });
+    w.addSystem(new DirectionalLightSystem(bus));
+    w.initialize();
+    const entity = w.createEntity();
+    expect(() => entity.add(new DirectionalLightComponent())).not.toThrow();
+    expect(() => w.update(0.016)).not.toThrow();
+  });
+
+  it('skips the update loop entirely for an un-created (autoCreate:false) light', () => {
+    const entity = world.createEntity();
+    const comp = new DirectionalLightComponent({ autoCreate: false });
+    entity.add(comp);
+    comp.intensity = 5; // would emit if it had a handle/snapshot
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'updateLightIntensity')).toBe(false);
   });
 });

@@ -19,6 +19,13 @@ describe('EnvironmentTextureComponent (core)', () => {
     expect(c.level).toBe(0.7);
   });
 
+  it('defaults url to empty string when omitted from the input object', () => {
+    // Input object present but without a `url` key → the `?? ''` fallback.
+    const c = new EnvironmentTextureComponent({ level: 2 } as { url?: string; level: number } as never);
+    expect(c.url).toBe('');
+    expect(c.level).toBe(2);
+  });
+
   it('serialize round-trips through the constructor', () => {
     const original = new EnvironmentTextureComponent({ url: 'studio.env', level: 1.5 });
     const copy = new EnvironmentTextureComponent(original.serialize());
@@ -73,5 +80,29 @@ describe('EnvironmentTextureSystem — adapter integration', () => {
     renderer.calls.length = 0;
     world.removeEntity(entity);
     expect(renderer.calls.some((c) => c.method === 'clearEnvironmentTexture')).toBe(true);
+  });
+
+  it('no-ops on a renderer-less world (never applies a texture)', () => {
+    const bus = new EventBus();
+    const w = new World({ eventBus: bus });
+    w.addSystem(new EnvironmentTextureSystem(bus));
+    w.initialize();
+    const entity = w.createEntity();
+    expect(() => entity.add(new EnvironmentTextureComponent({ url: 'env.env' }))).not.toThrow();
+    expect(() => w.update(0.016)).not.toThrow();
+  });
+
+  it('applies to entities that already exist when the system initializes', () => {
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    const entity = w.createEntity();
+    entity.add(new EnvironmentTextureComponent({ url: 'studio.env', level: 0.5 }));
+    // System added AFTER the entity → onInitialize applies it.
+    w.addSystem(new EnvironmentTextureSystem(bus));
+    w.initialize();
+    const call = r.calls.find((c) => c.method === 'setEnvironmentTexture');
+    expect(call).toBeDefined();
+    expect(call!.args[0]).toBe('studio.env');
   });
 });

@@ -57,6 +57,11 @@ describe('inSightCone', () => {
     expect(inSightCone(0, 0, 1, 0, 10, 10, 40, 100)).toBe(false)
     expect(inSightCone(0, 0, 1, 0, 10, 0, 40, 100)).toBe(true)
   })
+
+  it('always sees a target essentially at the viewer', () => {
+    // dist < 1e-4 short-circuits, even with a narrow cone facing away.
+    expect(inSightCone(0, 0, 1, 0, 0, 0, 40, 100)).toBe(true)
+  })
 })
 
 describe('rayFanEndpoints', () => {
@@ -73,6 +78,12 @@ describe('rayFanEndpoints', () => {
     // Perpendicular to +X sightline is ±Z; spread spans [-0.6, +0.6].
     expect(ends[0]![1]).toBeCloseTo(-0.6, 5)
     expect(ends[2]![1]).toBeCloseTo(0.6, 5)
+  })
+
+  it('returns a single endpoint at the from point when the target coincides', () => {
+    // dist < 1e-4 short-circuits to one endpoint (no perpendicular axis).
+    const ends = rayFanEndpoints(0, 0, 0, 0, 3, 0.6)
+    expect(ends).toEqual([[0, 0]])
   })
 })
 
@@ -91,6 +102,21 @@ describe('rayReaches', () => {
 
   it('is blocked by a wall box across the line', () => {
     expect(rayReaches(0, 0, 10, 0, [], 0.6, [{ minX: 4, maxX: 6, minZ: -2, maxZ: 2 }])).toBe(false)
+  })
+
+  it('handles a degenerate zero-length segment (from == to)', () => {
+    // segLen2 < 1e-8 → t = 0; occluder at the point is within radius → blocked.
+    expect(rayReaches(0, 0, 0, 0, [{ x: 0, z: 0 }], 0.6)).toBe(false)
+  })
+
+  it('clamps the projection to the segment start when the occluder is behind A', () => {
+    // Occluder just behind A: projection t < 0, clamped to 0, within radius → blocked.
+    expect(rayReaches(0, 0, 10, 0, [{ x: -0.1, z: 0 }], 0.6)).toBe(false)
+  })
+
+  it('clamps the projection to the segment end when the occluder is beyond B', () => {
+    // Occluder just past B: projection t > 1, clamped to 1, within radius → blocked.
+    expect(rayReaches(0, 0, 10, 0, [{ x: 10.1, z: 0 }], 0.6)).toBe(false)
   })
 })
 

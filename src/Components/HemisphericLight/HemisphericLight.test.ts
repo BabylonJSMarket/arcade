@@ -24,6 +24,11 @@ describe('HemisphericLightComponent (core)', () => {
     expect(c.direction[2]).toBeCloseTo(0);
   });
 
+  it('falls back to straight-up for a zero-length direction', () => {
+    const c = new HemisphericLightComponent({ direction: [0, 0, 0] });
+    expect(c.direction).toEqual([0, 1, 0]);
+  });
+
   it('accepts full color config as tuples', () => {
     const c = new HemisphericLightComponent({
       direction: [0, 1, 0],
@@ -128,5 +133,36 @@ describe('HemisphericLightSystem — adapter integration', () => {
     renderer.calls.length = 0;
     world.removeEntity(entity);
     expect(renderer.calls.some((c) => c.method === 'disposeLight')).toBe(true);
+  });
+
+  it('creates lights for entities that exist before the system initializes', () => {
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    const entity = w.createEntity();
+    entity.add(new HemisphericLightComponent({ intensity: 0.6 }));
+    w.addSystem(new HemisphericLightSystem(bus));
+    w.initialize();
+    const call = r.calls.find((c) => c.method === 'createHemisphericLight');
+    expect(call).toBeDefined();
+    expect((call!.args[1] as { intensity: number }).intensity).toBe(0.6);
+  });
+
+  it('no-ops on a renderer-less world (never creates a light)', () => {
+    const bus = new EventBus();
+    const w = new World({ eventBus: bus });
+    w.addSystem(new HemisphericLightSystem(bus));
+    w.initialize();
+    const entity = w.createEntity();
+    expect(() => entity.add(new HemisphericLightComponent())).not.toThrow();
+    expect(() => w.update(0.016)).not.toThrow();
+  });
+
+  it('does not re-emit when intensity is unchanged across frames', () => {
+    const entity = world.createEntity();
+    entity.add(new HemisphericLightComponent({ intensity: 0.3 }));
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'updateLightIntensity')).toBe(false);
   });
 });

@@ -145,4 +145,77 @@ describe('MovementSystem', () => {
   it('skips cleanly when no entities are present', () => {
     expect(() => world.update(1 / 60)).not.toThrow();
   });
+
+  it('seeds the core from initialPosition when the entity has no mesh', () => {
+    const entity = world.createEntity();
+    entity.add(new MovementComponent({ position: [4, 2, 6], feetOffset: 1 }));
+    const s = entity.get(MovementComponent)!.instance!.getState();
+    // No MeshPrimitive/handle, so the System falls back to the component's
+    // initialPosition rather than the renderer world position.
+    expect([s.posX, s.posY, s.posZ]).toEqual([4, 2, 6]);
+  });
+
+  it('ignores a SET_MOVEMENT_VECTOR for an unknown entity id', () => {
+    makePlayer();
+    expect(() =>
+      eventBus.emit(MovementInputEvents.SET_MOVEMENT_VECTOR, {
+        entityId: 'no-such-entity',
+        x: 1,
+        z: 1,
+      }),
+    ).not.toThrow();
+  });
+
+  it('ignores a JUMP_REQUESTED for an unknown entity id', () => {
+    const entity = makePlayer();
+    const jumpSpy = vi.fn();
+    eventBus.on(MovementEvents.JUMP_STARTED, jumpSpy);
+    eventBus.emit(MovementInputEvents.JUMP_REQUESTED, { entityId: 'ghost' });
+    world.update(0.016);
+    // The real player never requested a jump, and the ghost id matched nothing.
+    expect(jumpSpy).not.toHaveBeenCalled();
+    expect(entity.get(MovementComponent)!.jumpPressed).toBe(false);
+  });
+
+  it('seeds instances already present at world.initialize() time', () => {
+    // Build the world and entity BEFORE initialize so onInitialize's seeding
+    // loop has a matching entity to walk.
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r });
+    const sys = new MovementSystem(eb);
+    w.addSystem(sys);
+    const entity = w.createEntity();
+    entity.add(new MovementComponent({ position: [7, 1, 0], feetOffset: 1 }));
+    w.initialize();
+    expect(entity.get(MovementComponent)?.instance).not.toBeNull();
+  });
+
+  it('does not skip faceMotion rotation off — leaves rotation alone when faceMotion is false', () => {
+    const entity = world.createEntity();
+    const mesh = new MeshPrimitiveComponent({ primitive: 'capsule', position: [0, 1, 0] });
+    mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
+    renderer.meshWorldPositions.set(mesh.handle, [0, 1, 0]);
+    entity.add(mesh);
+    entity.add(new MovementComponent({ speed: 10, faceMotion: false }));
+    eventBus.emit(MovementInputEvents.SET_MOVEMENT_VECTOR, { entityId: entity.id, x: 1, z: 0 });
+    renderer.calls.length = 0;
+    world.update(0.1);
+    const rot = renderer.calls.find((c) => c.method === 'setMeshRotation');
+    expect(rot).toBeUndefined();
+  });
+
+  it('updates mesh position data without renderer calls when the mesh has no handle', () => {
+    const entity = world.createEntity();
+    const mesh = new MeshPrimitiveComponent({ primitive: 'capsule', position: [0, 1, 0] });
+    // No handle set — the renderer write path is skipped, but mesh.position
+    // data is still authored from the core tick.
+    entity.add(mesh);
+    entity.add(new MovementComponent({ speed: 10, feetOffset: 1 }));
+    eventBus.emit(MovementInputEvents.SET_MOVEMENT_VECTOR, { entityId: entity.id, x: 1, z: 0 });
+    renderer.calls.length = 0;
+    world.update(0.1);
+    expect(renderer.calls.filter((c) => c.method === 'setMeshPosition')).toHaveLength(0);
+    expect(mesh.position[0]).toBeCloseTo(1, 5);
+  });
 });

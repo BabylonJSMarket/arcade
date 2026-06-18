@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { CameraFollowComponent, CameraFollowSystem } from './CameraFollow';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
 import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.core';
+import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 import type { MeshHandle } from '@babylonjsmarket/ecs/renderer-types';
@@ -123,5 +124,96 @@ describe('CameraFollowSystem', () => {
 
     const target = renderer.cameraTargets.get(arcComp.handle!)!;
     expect(target[1]).toBeCloseTo(5, 2);
+  });
+
+  it('does nothing while no ArcCamera handle exists in the world', () => {
+    // No ArcCamera at all → findArcCameraHandle returns undefined.
+    const fakeHandle = renderer.createMesh('Player', { kind: 'capsule' });
+    renderer.meshWorldPositions.set(fakeHandle as MeshHandle, [1, 1, 1]);
+    const followEntity = world.createEntity('Follow');
+    followEntity.add(new CameraFollowComponent({ target: 'Player' }));
+    eventBus.emit('meshprimitive.created', { entityId: 'Player', handle: fakeHandle });
+
+    renderer.calls.length = 0;
+    world.update(1 / 60);
+    expect(renderer.calls.some((c) => c.method === 'setCameraTarget')).toBe(false);
+  });
+
+  it('skips entities whose component carries no follow target', () => {
+    const arcEntity = world.createEntity('Camera');
+    const arcComp = new ArcCameraComponent();
+    arcComp.handle = renderer.createArcCamera(arcEntity.id, arcComp.toSpec());
+    getArcCameraRuntime(arcComp).initialized = true;
+    arcEntity.add(arcComp);
+
+    const followEntity = world.createEntity('Follow');
+    followEntity.add(new CameraFollowComponent()); // empty target ''
+
+    renderer.calls.length = 0;
+    world.update(1 / 60);
+    expect(renderer.calls.some((c) => c.method === 'setCameraTarget')).toBe(false);
+  });
+
+  it('picks up a mesh handle already created before the system initializes', () => {
+    // Build a fresh world where the target mesh exists BEFORE CameraFollowSystem
+    // is added — exercising the existing-entity scan in onInitialize.
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    w.addSystem(new MeshPrimitiveSystem(bus));
+
+    const arcEntity = w.createEntity('Camera');
+    const arcComp = new ArcCameraComponent();
+    arcComp.handle = r.createArcCamera(arcEntity.id, arcComp.toSpec());
+    getArcCameraRuntime(arcComp).initialized = true;
+    arcEntity.add(arcComp);
+
+    const player = w.createEntity('Player');
+    player.add(new MeshPrimitiveComponent());
+    const mp = player.get(MeshPrimitiveComponent)!;
+    r.meshWorldPositions.set(mp.handle as MeshHandle, [4, 0, 2]);
+
+    const follow = w.createEntity('Follow');
+    follow.add(new CameraFollowComponent({ target: 'Player', smoothing: 1000, offsetX: 0, offsetY: 0, offsetZ: 0 }));
+
+    // System added AFTER the mesh handle already exists.
+    w.addSystem(new CameraFollowSystem(bus));
+    w.initialize();
+
+    r.calls.length = 0;
+    w.update(1 / 60);
+    const setCalls = r.calls.filter((c) => c.method === 'setCameraTarget');
+    expect(setCalls.length).toBe(1);
+    const tgt = r.cameraTargets.get(arcComp.handle!)!;
+    expect(tgt[0]).toBeCloseTo(4, 3);
+    expect(tgt[2]).toBeCloseTo(2, 3);
+  });
+
+  it('no-ops on a renderer-less world', () => {
+    const bus = new EventBus();
+    const w = new World({ eventBus: bus });
+    w.addSystem(new CameraFollowSystem(bus));
+    w.initialize();
+    const e = w.createEntity('Follow');
+    e.add(new CameraFollowComponent({ target: 'Player' }));
+    expect(() => w.update(1 / 60)).not.toThrow();
+  });
+
+  it('clears its primed flag when an entity is removed', () => {
+    const arcEntity = world.createEntity('Camera');
+    const arcComp = new ArcCameraComponent();
+    arcComp.handle = renderer.createArcCamera(arcEntity.id, arcComp.toSpec());
+    getArcCameraRuntime(arcComp).initialized = true;
+    arcEntity.add(arcComp);
+
+    const fakeHandle = renderer.createMesh('Player', { kind: 'capsule' });
+    renderer.meshWorldPositions.set(fakeHandle as MeshHandle, [0, 0, 0]);
+    const followEntity = world.createEntity('Follow');
+    followEntity.add(new CameraFollowComponent({ target: 'Player' }));
+    eventBus.emit('meshprimitive.created', { entityId: 'Player', handle: fakeHandle });
+
+    world.update(1 / 60);
+    // Removing the follow entity must not throw and should clear primed state.
+    expect(() => world.removeEntity(followEntity)).not.toThrow();
   });
 });

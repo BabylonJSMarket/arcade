@@ -11,26 +11,41 @@ const { cyan, green, yellow, dim, bold } = colors;
 // `src/Components` and `.claude-payload` ship in the published `files` array.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(HERE, "..", "..");
-const COMPONENTS_SRC = path.resolve(PACKAGE_ROOT, "src", "Components");
-const PAYLOAD_SRC = path.resolve(
+const COMPONENTS_SRC_DEFAULT = path.resolve(PACKAGE_ROOT, "src", "Components");
+const PAYLOAD_SRC_DEFAULT = path.resolve(
   PACKAGE_ROOT,
   ".claude-payload",
   "skills",
   "babylonjsmarket",
 );
 
+/**
+ * Where eject reads its source from. Defaults to this package's shipped dirs;
+ * overridable so tests can point at an isolated fixture tree instead of
+ * mutating the real package (which other suites read concurrently).
+ */
+export interface EjectRoots {
+  componentsSrc: string;
+  payloadSrc: string;
+}
+
+const DEFAULT_ROOTS: EjectRoots = {
+  componentsSrc: COMPONENTS_SRC_DEFAULT,
+  payloadSrc: PAYLOAD_SRC_DEFAULT,
+};
+
 /** The component universe = top-level folders under src/Components. */
-function arcadeComponentNames(): string[] {
-  if (!fs.existsSync(COMPONENTS_SRC)) return [];
+function arcadeComponentNames(componentsSrc: string): string[] {
+  if (!fs.existsSync(componentsSrc)) return [];
   return fs
-    .readdirSync(COMPONENTS_SRC, { withFileTypes: true })
+    .readdirSync(componentsSrc, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name);
 }
 
 /** Every .ts/.tsx file inside a component folder. */
-function componentFiles(name: string): string[] {
-  const dir = path.join(COMPONENTS_SRC, name);
+function componentFiles(componentsSrc: string, name: string): string[] {
+  const dir = path.join(componentsSrc, name);
   const out: string[] = [];
   const walk = (d: string) => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -44,7 +59,10 @@ function componentFiles(name: string): string[] {
 }
 
 /** Scan scene.ts + registry.ts for arcade component names used as object keys. */
-function parseUsedComponents(projectDir: string, names: string[]): Set<string> {
+function parseUsedComponents(
+  projectDir: string,
+  names: string[],
+): Set<string> {
   const used = new Set<string>();
   const text = ["src/scene.ts", "src/registry.ts", "src/scene.json"]
     .map((f) => path.join(projectDir, f))
@@ -60,9 +78,13 @@ function parseUsedComponents(projectDir: string, names: string[]): Set<string> {
 }
 
 /** Component names a given component imports via `../Sibling/...` or lists in meta.json. */
-function directDeps(name: string, names: Set<string>): Set<string> {
+function directDeps(
+  componentsSrc: string,
+  name: string,
+  names: Set<string>,
+): Set<string> {
   const deps = new Set<string>();
-  const metaPath = path.join(COMPONENTS_SRC, name, "meta.json");
+  const metaPath = path.join(componentsSrc, name, "meta.json");
   if (fs.existsSync(metaPath)) {
     try {
       const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
@@ -72,7 +94,7 @@ function directDeps(name: string, names: Set<string>): Set<string> {
     }
   }
   const importRe = /['"]\.\.\/([A-Z][A-Za-z0-9_]*)\//g;
-  for (const file of componentFiles(name)) {
+  for (const file of componentFiles(componentsSrc, name)) {
     const src = fs.readFileSync(file, "utf8");
     let m: RegExpExecArray | null;
     while ((m = importRe.exec(src))) if (names.has(m[1])) deps.add(m[1]);
@@ -81,13 +103,17 @@ function directDeps(name: string, names: Set<string>): Set<string> {
 }
 
 /** Expand a seed set to its transitive component-dependency closure. */
-function resolveClosure(seed: Set<string>, allNames: string[]): Set<string> {
+function resolveClosure(
+  componentsSrc: string,
+  seed: Set<string>,
+  allNames: string[],
+): Set<string> {
   const all = new Set(allNames);
   const out = new Set(seed);
   const queue = [...seed];
   while (queue.length) {
     const next = queue.pop()!;
-    for (const dep of directDeps(next, all)) {
+    for (const dep of directDeps(componentsSrc, next, all)) {
       if (!out.has(dep)) {
         out.add(dep);
         queue.push(dep);
@@ -110,7 +136,7 @@ function resolveClosure(seed: Set<string>, allNames: string[]): Set<string> {
  * ecs/arcade/viz/solid/babylon package imports are left alone — they resolve
  * from node_modules in the ejected project.
  */
-function rewriteImports(
+export function rewriteImports(
   src: string,
   ejected: Set<string>,
   allNames: Set<string>,
@@ -181,11 +207,15 @@ interface EjectPlan {
   components: string[];
 }
 
-function buildPlan(args: string[], projectDir: string): EjectPlan {
+function buildPlan(
+  args: string[],
+  projectDir: string,
+  componentsSrc: string,
+): EjectPlan {
   const argv = mri(args, { boolean: ["all", "dry-run"] });
   const all = argv.all as boolean;
   const explicit = argv._.map(String);
-  const names = arcadeComponentNames();
+  const names = arcadeComponentNames(componentsSrc);
   if (names.length === 0) {
     throw new Error(
       "No component source found. Run inside a project with @babylonjsmarket/arcade installed (the package must ship src/Components).",
@@ -213,11 +243,15 @@ function buildPlan(args: string[], projectDir: string): EjectPlan {
     }
   }
 
-  const components = [...resolveClosure(seed, names)].sort();
+  const components = [...resolveClosure(componentsSrc, seed, names)].sort();
   return { components };
 }
 
-export async function eject(args: string[]): Promise<void> {
+export async function eject(
+  args: string[],
+  roots: EjectRoots = DEFAULT_ROOTS,
+): Promise<void> {
+  const { componentsSrc, payloadSrc } = roots;
   if (args.includes("-h") || args.includes("--help")) {
     console.log(EJECT_HELP);
     return;
@@ -227,7 +261,7 @@ export async function eject(args: string[]): Promise<void> {
 
   let plan: EjectPlan;
   try {
-    plan = buildPlan(args, projectDir);
+    plan = buildPlan(args, projectDir, componentsSrc);
   } catch (e) {
     console.error(yellow((e as Error).message));
     process.exit(1);
@@ -235,7 +269,7 @@ export async function eject(args: string[]): Promise<void> {
   }
 
   const ejectedSet = new Set(plan.components);
-  const allNames = new Set(arcadeComponentNames());
+  const allNames = new Set(arcadeComponentNames(componentsSrc));
   const componentsDir = path.join(projectDir, "src", "components");
 
   console.log(
@@ -245,7 +279,7 @@ export async function eject(args: string[]): Promise<void> {
 
   // 1. Copy each component folder (with its own tests).
   for (const name of plan.components) {
-    if (!dryRun) copyDir(path.join(COMPONENTS_SRC, name), path.join(componentsDir, name));
+    if (!dryRun) copyDir(path.join(componentsSrc, name), path.join(componentsDir, name));
     console.log(green(`  + src/components/${name}/`));
   }
 
@@ -262,8 +296,8 @@ export async function eject(args: string[]): Promise<void> {
 
   // 4. Drop the babylonjsmarket Claude skill into the project.
   const skillDest = path.join(projectDir, ".claude", "skills", "babylonjsmarket");
-  if (fs.existsSync(PAYLOAD_SRC)) {
-    if (!dryRun) copyDir(PAYLOAD_SRC, skillDest);
+  if (fs.existsSync(payloadSrc)) {
+    if (!dryRun) copyDir(payloadSrc, skillDest);
     console.log(green("  + .claude/skills/babylonjsmarket/"));
   } else {
     console.log(yellow("  ! skill payload not found in package — skipped"));

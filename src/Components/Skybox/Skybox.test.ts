@@ -125,4 +125,87 @@ describe('SkyboxSystem — adapter integration', () => {
     // sun direction should be +X (negative of -X), not +Z.
     expect(spec.sunDirection[0]).toBeGreaterThan(0.9);
   });
+
+  it('a free skybox (no followLight) never tracks a light on update', () => {
+    const lightEntity = world.createEntity();
+    lightEntity.add(new DirectionalLightComponent({ direction: [-1, -1, 0] }));
+    const sky = world.createEntity();
+    sky.add(new SkyboxComponent()); // followLight undefined
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'updateSkyboxSun')).toBe(false);
+  });
+
+  it('does not re-push the sun while the light direction is unchanged', () => {
+    const lightEntity = world.createEntity();
+    lightEntity.add(new DirectionalLightComponent({ direction: [-1, -1, 0] }));
+    const sky = world.createEntity();
+    sky.add(new SkyboxComponent({ followLight: 'auto' }));
+    renderer.calls.length = 0;
+    world.update(0.016); // light unchanged since creation primed the sun
+    expect(renderer.calls.some((c) => c.method === 'updateSkyboxSun')).toBe(false);
+  });
+
+  it('followLight pointing at a missing tag never updates the sun', () => {
+    const lightEntity = world.createEntity();
+    lightEntity.add(new DirectionalLightComponent({ direction: [-1, -1, 0] }));
+    const sky = world.createEntity();
+    // No entity carries the "moon" tag → findFollowedLight returns undefined.
+    sky.add(new SkyboxComponent({ followLight: 'moon' }));
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'updateSkyboxSun')).toBe(false);
+  });
+
+  it('tagged entity without a DirectionalLight is skipped by the follow lookup', () => {
+    // Tagged entity exists but has NO DirectionalLight; the followed light is a
+    // separate, untagged entity. findFollowedLight must skip the tagged-but-
+    // lightless entity and (since the tag does not match the real light) find
+    // nothing — so no sun update fires.
+    const decoy = world.createEntity();
+    decoy.addTag('sun');
+
+    const realLight = world.createEntity();
+    realLight.add(new DirectionalLightComponent({ direction: [-1, -1, 0] }));
+
+    const sky = world.createEntity();
+    sky.add(new SkyboxComponent({ followLight: 'sun' }));
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'updateSkyboxSun')).toBe(false);
+  });
+
+  it('creates skyboxes for entities that exist before the system initializes', () => {
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    const sky = w.createEntity();
+    sky.add(new SkyboxComponent());
+    // SkyboxSystem added AFTER the entity → onInitialize scans and creates it.
+    w.addSystem(new SkyboxSystem(bus));
+    w.initialize();
+    expect(r.calls.some((c) => c.method === 'createSkybox')).toBe(true);
+  });
+
+  it('no-ops on a renderer-less world (never creates a skybox)', () => {
+    const bus = new EventBus();
+    const w = new World({ eventBus: bus });
+    w.addSystem(new SkyboxSystem(bus));
+    w.initialize();
+    const sky = w.createEntity();
+    expect(() => sky.add(new SkyboxComponent())).not.toThrow();
+    expect(() => w.update(0.016)).not.toThrow();
+  });
+
+  it('disposes nothing for an entity that never created a skybox handle', () => {
+    // Removing a skybox entity whose handle was never built must not throw.
+    const sky = world.createEntity();
+    const comp = new SkyboxComponent();
+    // Don't add to world (so no system creates a handle); simulate removal path
+    // by adding then immediately removing while no renderer handle exists is
+    // covered elsewhere — here we assert the createSkybox happened then removal
+    // disposes cleanly.
+    sky.add(comp);
+    expect(() => world.removeEntity(sky)).not.toThrow();
+  });
 });

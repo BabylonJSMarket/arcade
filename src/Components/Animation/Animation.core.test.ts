@@ -137,6 +137,17 @@ describe('Animation core', () => {
     }).not.toThrow();
   });
 
+  it('pins walk (no run band) when runSpeed <= walkSpeed and speed exceeds walk', () => {
+    // Degenerate config: runSpeed equals walkSpeed → no meaningful run band.
+    // A speed above walkSpeed must settle on pure walk, never run.
+    const a = createAnimation({ walkSpeed: 3, runSpeed: 3, blendSpeed: 50 });
+    for (let i = 0; i < 400; i++) a.update(5, 1 / 60);
+    const out = a.update(5, 1 / 60);
+    expect(out.walkWeight).toBeCloseTo(1, 3);
+    expect(out.runWeight).toBeCloseTo(0, 3);
+    expect(out.state).toBe('walk');
+  });
+
   it('treats negative dt as zero (never unwinds weights)', () => {
     const a = createAnimation();
     const before = a.getState();

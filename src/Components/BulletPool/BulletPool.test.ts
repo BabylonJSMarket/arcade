@@ -7,7 +7,7 @@ import {
   BulletPoolInputEvents,
 } from './BulletPool';
 import { BulletComponent } from '../Bullet/Bullet';
-import { MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive';
+import { MeshPrimitiveComponent, MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive';
 
 describe('BulletPoolComponent', () => {
   it('applies defaults', () => {
@@ -103,6 +103,55 @@ describe('BulletPoolSystem (World pool)', () => {
       (c) => c.method === 'setMeshPosition' && c.args[1] === 2 && c.args[2] === 0.8 && c.args[3] === 3,
     );
     expect(placed).toBe(true);
+  });
+
+  it('applies a per-shot color override to the reused bullet mesh', () => {
+    makePool(4);
+    eventBus.emit(BulletPoolInputEvents.FIRE, { x: 0, y: 1, z: 0, dz: 1, color: [0.2, 0.4, 0.6] });
+
+    const bullet = live()[0]!;
+    const handle = bullet.get(MeshPrimitiveComponent)!.handle;
+    const colored = renderer.calls.some(
+      (c) =>
+        c.method === 'setMeshColor' &&
+        c.args[0] === handle &&
+        c.args[1] === 0.2 &&
+        c.args[2] === 0.4 &&
+        c.args[3] === 0.6,
+    );
+    expect(colored).toBe(true);
+  });
+
+  it('ignores FIRE before the pool has registered (guarded)', () => {
+    // No pool entity created yet → registered stays false.
+    eventBus.emit(BulletPoolInputEvents.FIRE, { x: 0, y: 1, z: 0, dz: 1 });
+    expect(allBullets().length).toBe(0);
+  });
+
+  it('FIRE is a no-op when the pool is exhausted (all slots live)', () => {
+    makePool(1);
+    eventBus.emit(BulletPoolInputEvents.FIRE, { x: 0, y: 1, z: 0, dz: 1 });
+    expect(live().length).toBe(1);
+    // A second shot recycles the oldest slot rather than allocating — still 1 live.
+    eventBus.emit(BulletPoolInputEvents.FIRE, { x: 5, y: 1, z: 0, dz: 1 });
+    expect(live().length).toBe(1);
+    expect(allBullets().length).toBe(1);
+  });
+
+  it('FIRE is a no-op for a zero-size pool (acquire returns nothing)', () => {
+    const entity = world.createEntity('Pool');
+    entity.add(new BulletPoolComponent({ poolSize: 0 }));
+    world.update(1 / 60); // registers an empty pool
+    eventBus.emit(BulletPoolInputEvents.FIRE, { x: 0, y: 1, z: 0, dz: 1 });
+    expect(live().length).toBe(0); // nothing to hand out → guarded
+  });
+
+  it('does not re-register the pool on a second tick', () => {
+    const ready = vi.fn();
+    eventBus.on(BulletPoolEvents.READY, ready);
+    makePool(2); // first tick registers + emits READY
+    world.update(1 / 60); // second tick: early-return on `registered`
+    expect(ready).toHaveBeenCalledTimes(1);
   });
 
   it('removeEntity releases a fired bullet back to the pool (parked, reused)', () => {

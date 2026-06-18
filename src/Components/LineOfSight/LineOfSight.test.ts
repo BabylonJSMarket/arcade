@@ -77,4 +77,42 @@ describe('LineOfSightSystem', () => {
     world.update(0.016)
     expect(renderer.calls.some((c) => c.method === 'disposeLineSystem')).toBe(true)
   })
+
+  it('updates facing as the seer moves between frames', () => {
+    makePlayer([5, 0.8, 0])
+    const seer = makeSeer([0, 0.5, 0])
+    const m = seer.get(MeshPrimitiveComponent)!
+    world.update(0.016)
+    // Move the seer >1e-3 so the facing-update block runs on the next frame.
+    m.position[0] = 2
+    expect(() => world.update(0.016)).not.toThrow()
+    // Still in clear view of the player → acquired (no spurious loss).
+    expect(acquired).toContain(seer.id)
+    expect(lost).not.toContain(seer.id)
+  })
+
+  it('updates both clear and blocked line systems with debug rays on', () => {
+    // Player in view; a second seer sits squarely between this seer and the
+    // player, blocking its rays. With rays on we expect both line systems to be
+    // updated and made visible (clear for the unblocked seer, blocked for the
+    // occluded one).
+    makePlayer([10, 0.8, 0])
+    makeSeer([5, 0.5, 0]) // blocker between
+    makeSeer([0, 0.5, 0]) // blocked seer
+    makeSeer([9, 0.5, 0]) // clear seer right next to the player
+
+    eventBus.emit(LineOfSightInputEvents.SET_DEBUG_RAYS, { enabled: true })
+    renderer.calls.length = 0
+    world.update(0.016)
+
+    const updates = renderer.calls.filter((c) => c.method === 'updateLineSystem')
+    expect(updates.length).toBeGreaterThanOrEqual(2)
+    // Both visibility toggles fire true (each set has at least one segment).
+    const visTrue = renderer.calls.filter(
+      (c) => c.method === 'setLineSystemVisible' && c.args[1] === true,
+    )
+    expect(visTrue.length).toBeGreaterThanOrEqual(2)
+    // The updates carry non-degenerate segments (more than the single DEGENERATE seg).
+    expect(updates.some((c) => (c.args[1] as unknown[]).length >= 1)).toBe(true)
+  })
 })

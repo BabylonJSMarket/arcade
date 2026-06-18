@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EnemyComponent, wanderHeading, allDeathClips, chooseDeathClip } from './Enemy.core';
+import { EnemyComponent, wanderHeading, allDeathClips, chooseDeathClip, decideLocomotion } from './Enemy.core';
 
 describe('EnemyComponent', () => {
   it('applies defaults', () => {
@@ -75,6 +75,25 @@ describe('allDeathClips', () => {
 
   it('returns the de-duped union when directional clips are configured', () => {
     expect(allDeathClips(['a'], ['a', 'back'], ['fwd']).sort()).toEqual(['a', 'back', 'fwd']);
+  });
+});
+
+describe('decideLocomotion', () => {
+  it('attacks within contact range', () => {
+    expect(decideLocomotion(0.5, 1, 'walk', 1.15)).toBe('attack');
+    // boundary: distance === contactRange is still attack (<=)
+    expect(decideLocomotion(1, 1, 'walk', 1.15)).toBe('attack');
+  });
+
+  it('walks once past the hysteresis-scaled exit threshold', () => {
+    // contactRange*hysteresis = 1.15; just beyond → walk
+    expect(decideLocomotion(1.2, 1, 'attack', 1.15)).toBe('walk');
+  });
+
+  it('holds the current state inside the dead-band (anti-flicker)', () => {
+    // Between contactRange (1) and contactRange*hysteresis (1.15): keep current.
+    expect(decideLocomotion(1.1, 1, 'attack', 1.15)).toBe('attack');
+    expect(decideLocomotion(1.1, 1, 'walk', 1.15)).toBe('walk');
   });
 });
 

@@ -73,4 +73,23 @@ describe('CameraFollow core', () => {
     const f = createCameraFollow();
     expect(f.getParams()).toEqual(DEFAULT_CAMERA_FOLLOW_PARAMS);
   });
+
+  it('reset() with no argument snaps back to the origin', () => {
+    const f = createCameraFollow({ smoothing: 100, offsetY: 0 }, { camX: 9, camY: 9, camZ: 9 });
+    f.reset();
+    const out = f.update({ targetX: 50, targetY: 50, targetZ: 50 }, 0);
+    expect(out.camX).toBe(0);
+    expect(out.camY).toBe(0);
+    expect(out.camZ).toBe(0);
+  });
+
+  it('reset() falls back to 0 for any axis omitted from the supplied position', () => {
+    const f = createCameraFollow({ smoothing: 100, offsetY: 0 }, { camX: 9, camY: 9, camZ: 9 });
+    // Only camX given; camY/camZ should default to 0.
+    f.reset({ camX: 7 } as { camX: number; camY: number; camZ: number });
+    const out = f.update({ targetX: 0, targetY: 0, targetZ: 0 }, 0);
+    expect(out.camX).toBe(7);
+    expect(out.camY).toBe(0);
+    expect(out.camZ).toBe(0);
+  });
 });

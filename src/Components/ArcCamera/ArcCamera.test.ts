@@ -4,8 +4,11 @@ import {
   ArcCameraSystem,
   ArcCameraEvents,
 } from './ArcCamera';
+import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { getArcCameraRuntime } from './ArcCamera.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
+import type { MeshHandle } from '@babylonjsmarket/ecs/renderer-types';
 
 describe('ArcCameraComponent (core)', () => {
   it('applies sensible defaults', () => {
@@ -183,5 +186,170 @@ describe('ArcCameraSystem — adapter integration', () => {
     renderer.calls.length = 0;
     world.update(4);
     expect(renderer.calls.some((c) => c.method === 'nudgeCameraAlpha')).toBe(false);
+  });
+
+  it('locks radius each frame when controls are disabled', () => {
+    const entity = world.createEntity();
+    entity.add(new ArcCameraComponent({ controlsEnabled: false, distance: 30 }));
+    renderer.calls.length = 0;
+    world.update(0.016);
+    const radius = renderer.calls.find((c) => c.method === 'setCameraRadius');
+    expect(radius).toBeDefined();
+    expect(radius!.args[1]).toBe(30);
+    const limits = renderer.calls.find((c) => c.method === 'setCameraRadiusLimits');
+    expect(limits).toBeDefined();
+    expect(limits!.args[1]).toBe(30);
+    expect(limits!.args[2]).toBe(30);
+  });
+
+  it('does not lock the radius for a free-orbit camera (controls on)', () => {
+    const entity = world.createEntity();
+    entity.add(new ArcCameraComponent({ controlsEnabled: true }));
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'setCameraRadius')).toBe(false);
+  });
+
+  it('tracks an active target by reading its mesh world position each frame', () => {
+    const entity = world.createEntity();
+    entity.add(new ArcCameraComponent({ target: 'hero', follow: true }));
+    const fakeMeshHandle = { __mockHandle: 'mesh:hero' } as unknown as MeshHandle;
+    renderer.meshWorldPositions.set(fakeMeshHandle, [10, 2, 6]);
+    eventBus.emit('meshprimitive.created', { entityId: 'hero', handle: fakeMeshHandle });
+    renderer.calls.length = 0;
+    world.update(0.016);
+    const setTarget = renderer.calls.find((c) => c.method === 'setCameraTarget');
+    expect(setTarget).toBeDefined();
+    // base + targetOffset(0,0,0)
+    expect(setTarget!.args[1]).toBeCloseTo(10);
+    expect(setTarget!.args[2]).toBeCloseTo(2);
+    expect(setTarget!.args[3]).toBeCloseTo(6);
+  });
+
+  it('holds a captured free base when a target is named but its mesh is not ready', () => {
+    const entity = world.createEntity();
+    // target is named but no meshprimitive.created ever fires for it, so the
+    // System captures the current look point (origin, the seeded target) as the
+    // free base and pans it by targetOffset.
+    const comp = new ArcCameraComponent({ target: 'ghost', follow: true, targetOffset: [1, 0, 0] });
+    entity.add(comp);
+    renderer.calls.length = 0;
+    world.update(0.016);
+    const setTarget = renderer.calls.find((c) => c.method === 'setCameraTarget');
+    expect(setTarget).toBeDefined();
+    // base (captured origin) + offset [1,0,0].
+    expect(setTarget!.args[1]).toBeCloseTo(1);
+    expect(setTarget!.args[2]).toBeCloseTo(0);
+    expect(setTarget!.args[3]).toBeCloseTo(0);
+
+    // The free base is cached on the runtime so panning is relative to it.
+    const rt = getArcCameraRuntime(comp);
+    expect(rt.freeBase).toEqual([0, 0, 0]);
+
+    // Second frame still drives the target from the same cached base.
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'setCameraTarget')).toBe(true);
+  });
+
+  it('resets the idle timer the frame the camera receives input while auto-rotating', () => {
+    const entity = world.createEntity();
+    const comp = new ArcCameraComponent({ autoRotate: true, autoRotateSpeed: 1 });
+    entity.add(comp);
+    // Let it idle past the threshold so it begins nudging.
+    world.update(4);
+    expect(renderer.calls.some((c) => c.method === 'nudgeCameraAlpha')).toBe(true);
+    // Now simulate user input: bump the reported alpha so onUpdate detects
+    // rotation, which must reset idleTime to 0 and suppress nudging this frame.
+    const angles = [...renderer.cameraAngles.values()][0];
+    if (angles) angles.alpha += 1;
+    renderer.calls.length = 0;
+    world.update(0.016);
+    expect(renderer.calls.some((c) => c.method === 'nudgeCameraAlpha')).toBe(false);
+  });
+
+  it('seeds the camera target from a target mesh that already exists at creation', () => {
+    // Build a fresh world where the target mesh is created BEFORE the
+    // ArcCamera entity, so ensureCamera resolves the handle and seeds from it.
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    w.addSystem(new MeshPrimitiveSystem(bus));
+    w.addSystem(new ArcCameraSystem(bus));
+    w.initialize();
+
+    const hero = w.createEntity('hero');
+    hero.add(new MeshPrimitiveComponent());
+    const mp = hero.get(MeshPrimitiveComponent)!;
+    r.meshWorldPositions.set(mp.handle as MeshHandle, [5, 1, 3]);
+
+    const cam = w.createEntity('Cam');
+    cam.add(new ArcCameraComponent({ target: 'hero', follow: true, targetOffset: [0, 2, 0] }));
+
+    const create = r.calls.find((c) => c.method === 'createArcCamera');
+    expect(create).toBeDefined();
+    const spec = create!.args[1] as { target: [number, number, number] };
+    expect(spec.target[0]).toBeCloseTo(5);
+    expect(spec.target[1]).toBeCloseTo(3); // 1 + offset 2
+    expect(spec.target[2]).toBeCloseTo(3);
+  });
+
+  it('no-ops on a renderer-less world', () => {
+    const bus = new EventBus();
+    const w = new World({ eventBus: bus });
+    w.addSystem(new ArcCameraSystem(bus));
+    w.initialize();
+    const e = w.createEntity();
+    expect(() => e.add(new ArcCameraComponent())).not.toThrow();
+    expect(() => w.update(0.016)).not.toThrow();
+  });
+
+  it('creates cameras for entities that exist before the system initializes', () => {
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    const entity = w.createEntity();
+    entity.add(new ArcCameraComponent({ distance: 22 }));
+    // System added AFTER the entity → onInitialize scans and creates it.
+    w.addSystem(new ArcCameraSystem(bus));
+    w.initialize();
+    const create = r.calls.find((c) => c.method === 'createArcCamera');
+    expect(create).toBeDefined();
+    expect((create!.args[1] as { radius: number }).radius).toBe(22);
+  });
+
+  it('centres restTarget when not following', () => {
+    const entity = world.createEntity();
+    entity.add(new ArcCameraComponent({ follow: false, restTarget: 'table' }));
+    const fakeMeshHandle = { __mockHandle: 'mesh:table' } as unknown as MeshHandle;
+    renderer.meshWorldPositions.set(fakeMeshHandle, [0, 0, 9]);
+    eventBus.emit('meshprimitive.created', { entityId: 'table', handle: fakeMeshHandle });
+    renderer.calls.length = 0;
+    world.update(0.016);
+    const setTarget = renderer.calls.find((c) => c.method === 'setCameraTarget');
+    expect(setTarget).toBeDefined();
+    expect(setTarget!.args[3]).toBeCloseTo(9);
+  });
+
+  it('seeds from `target` when not following and no restTarget is set', () => {
+    // follow:false with no restTarget → seedName falls back to `target`.
+    const bus = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: bus, renderer: r });
+    w.addSystem(new MeshPrimitiveSystem(bus));
+    w.addSystem(new ArcCameraSystem(bus));
+    w.initialize();
+
+    const hero = w.createEntity('hero');
+    hero.add(new MeshPrimitiveComponent());
+    const mp = hero.get(MeshPrimitiveComponent)!;
+    r.meshWorldPositions.set(mp.handle as MeshHandle, [7, 0, 0]);
+
+    const cam = w.createEntity('Cam');
+    cam.add(new ArcCameraComponent({ target: 'hero', follow: false }));
+
+    const create = r.calls.find((c) => c.method === 'createArcCamera');
+    const spec = create!.args[1] as { target: [number, number, number] };
+    expect(spec.target[0]).toBeCloseTo(7);
   });
 });

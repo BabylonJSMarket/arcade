@@ -56,6 +56,20 @@ describe('MeshComponent', () => {
     const copy = new MeshComponent(original.serialize());
     expect(copy.params).toEqual(original.params);
   });
+
+  it('falls back to the default for a malformed position object', () => {
+    const c = new MeshComponent({
+      position: { x: 1, y: 2 } as unknown as { x: number; y: number; z: number },
+    });
+    expect(c.params.position).toEqual([0, 0, 0]);
+  });
+
+  it('falls back to the default for a wrong-length position array', () => {
+    const c = new MeshComponent({
+      position: [1, 2] as unknown as [number, number, number],
+    });
+    expect(c.params.position).toEqual([0, 0, 0]);
+  });
 });
 
 describe('MeshSystem', () => {
@@ -193,6 +207,101 @@ describe('MeshSystem', () => {
     const disposeCalls = renderer.calls.filter((c) => c.method === 'disposeMesh');
     expect(disposeCalls).toHaveLength(1);
   });
+
+  it('creates core instances for entities that existed before the system mounted', () => {
+    const eb = new EventBus();
+    const r = new MockRendererAdapter();
+    const w = new World({ eventBus: eb, renderer: r, detectRaces: false });
+    const entity = w.createEntity();
+    const comp = new MeshComponent({ src: '/pre.glb' });
+    entity.add(comp);
+    // No system yet — instance not created.
+    expect(comp.instance).toBeNull();
+    w.addSystem(new MeshSystem(eb));
+    w.initialize(); // onInitialize walks pre-existing entities → ensureInstance
+    expect(comp.instance).not.toBeNull();
+    expect(comp.instance?.getParams().src).toBe('/pre.glb');
+  });
+
+  it('leaves the core in "loading" when no renderer is attached (unit-test path)', () => {
+    const eb = new EventBus();
+    const w = new World({ eventBus: eb }); // no renderer
+    w.addSystem(new MeshSystem(eb));
+    w.initialize();
+    const entity = w.createEntity();
+    const comp = new MeshComponent({ src: '/a.glb' });
+    entity.add(comp);
+    w.update(1 / 60);
+    // beginLoad ran + LOADING emitted, but with no renderer the load can't
+    // complete, so state stays loading and no loadMesh was recorded.
+    expect(comp.instance?.getState().state).toBe('loading');
+  });
+
+  it('LOAD event finds the entity via the world even before the query indexes it', async () => {
+    const entity = world.createEntity();
+    entity.add(new MeshComponent({ src: '/a.glb', autoLoad: false }));
+    // findEntityById falls through to world.getEntity for this id.
+    eventBus.emit(MeshInputEvents.LOAD, { entityId: entity.id, src: '/override.glb' });
+    await Promise.resolve();
+    await Promise.resolve();
+    const loadCalls = renderer.calls.filter((c) => c.method === 'loadMesh');
+    expect(loadCalls).toHaveLength(1);
+    // The src override flowed through to the resolved url.
+    expect(String(loadCalls[0].args[1] && (loadCalls[0].args[1] as { url: string }).url)).toContain(
+      '/override.glb',
+    );
+  });
+
+  it('LOAD event for an unknown entity id is a no-op', () => {
+    expect(() =>
+      eventBus.emit(MeshInputEvents.LOAD, { entityId: 'ghost' }),
+    ).not.toThrow();
+    expect(renderer.calls.some((c) => c.method === 'loadMesh')).toBe(false);
+  });
+
+  it('stringifies a non-Error rejection into the ERROR event message', async () => {
+    vi.spyOn(renderer, 'loadMesh').mockRejectedValueOnce('plain string failure');
+    const errorSpy = vi.fn();
+    eventBus.on(MeshEvents.ERROR, errorSpy);
+    const entity = world.createEntity();
+    entity.add(new MeshComponent({ src: '/x.glb' }));
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: entity.id, error: 'plain string failure' }),
+    );
+  });
+
+  it('does not dispatch a load while the component has no src yet', async () => {
+    const entity = world.createEntity();
+    entity.add(new MeshComponent()); // autoLoad true, but src === ''
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    // dispatchLoad bails at the empty-src guard → no loadMesh, still unloaded.
+    expect(renderer.calls.some((c) => c.method === 'loadMesh')).toBe(false);
+    expect(entity.get(MeshComponent)!.instance?.getState().state).toBe('idle');
+
+    // Once a src arrives via LOAD, the load goes through.
+    eventBus.emit(MeshInputEvents.LOAD, { entityId: entity.id, src: '/late.glb' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(renderer.calls.some((c) => c.method === 'loadMesh')).toBe(true);
+  });
+
+  it('follow with no sibling MeshPrimitive is a no-op (does not throw)', async () => {
+    const entity = world.createEntity();
+    // follow:true but NOT instanced and NO MeshPrimitive sibling.
+    entity.add(new MeshComponent({ src: '/a.glb', follow: true }));
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    renderer.calls.length = 0;
+    expect(() => world.update(1 / 60)).not.toThrow();
+    // updateFollow returns early at the missing-sibling guard → no follow writes.
+    expect(renderer.calls.some((c) => c.method === 'setMeshRotation')).toBe(false);
+  });
 });
 
 describe('MeshSystem — instanced clone + follow', () => {
@@ -302,6 +411,25 @@ describe('MeshSystem — instanced clone + follow', () => {
     expect(yawed).toBe(true);
   });
 
+  it('re-acquiring a non-following instanced entity reveals the clone without touching follow state', async () => {
+    const entity = world.createEntity('Enemy');
+    // instanced but follow:false → no followState is ever created.
+    entity.add(new MeshComponent({ src: 'enemy.glb', instanced: true }));
+    entity.add(new MeshPrimitiveComponent({ primitive: 'sphere', position: [0, 1, 0] }));
+
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60); // instantiate
+
+    entity.active = false;
+    renderer.calls.length = 0;
+    // Re-acquire: fs is undefined so the prevX/prevZ reseed is skipped (295 false).
+    entity.active = true;
+    expect(callsOf('setModelVisible').some((c) => c.args[1] === true)).toBe(true);
+    expect(callsOf('instantiateModel')).toHaveLength(0);
+  });
+
   it('parked (active=false) entity hides the clone but keeps it; true destroy disposes it', async () => {
     const parked = world.createEntity('ParkedEnemy');
     parked.add(new MeshComponent({ src: 'enemy.glb', instanced: true }));
@@ -327,6 +455,79 @@ describe('MeshSystem — instanced clone + follow', () => {
     world.removeEntity(destroyed.id);
     expect(callsOf('disposeModel')).toHaveLength(1);
     expect(callsOf('disposeModel')[0].args[0]).toBe(destroyed.id);
+  });
+
+  it('faceMode "proxy" copies the proxy yaw (+yawOffset) instead of inferring from movement', async () => {
+    const entity = world.createEntity('Player');
+    entity.add(
+      new MeshComponent({
+        src: 'player.glb',
+        instanced: true,
+        follow: true,
+        faceMode: 'proxy',
+        yawOffset: Math.PI / 4,
+        position: [0, 0.5, 0],
+      }),
+    );
+    const mp = new MeshPrimitiveComponent({ primitive: 'capsule', position: [0, 1, 0] });
+    entity.add(mp);
+
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60); // instantiate
+
+    // Aim the proxy without moving it — proxy faceMode reads rotation[1] directly.
+    mp.rotation[1] = Math.PI / 2;
+    world.update(1 / 60);
+
+    const rots = callsOf('setMeshRotation');
+    const expectedYaw = Math.PI / 2 + Math.PI / 4;
+    expect(rots.some((c) => c.args[1] === 0 && c.args[2] === expectedYaw && c.args[3] === 0)).toBe(
+      true,
+    );
+  });
+
+  it('instanced load leaves the core in "loading" when no renderer is attached', () => {
+    const eb = new EventBus();
+    const w = new World({ eventBus: eb }); // no renderer
+    w.addSystem(new MeshSystem(eb));
+    w.initialize();
+    const entity = w.createEntity('Enemy');
+    const comp = new MeshComponent({ src: 'enemy.glb', instanced: true });
+    entity.add(comp);
+    w.update(1 / 60);
+    // beginLoad ran (LOADING fired) but dispatchInstancedLoad returns at the
+    // no-renderer guard before requesting any template.
+    expect(comp.instance?.getState().state).toBe('loading');
+  });
+
+  it('retries the template load on a later frame after the first attempt rejects', async () => {
+    const fail = vi
+      .spyOn(renderer, 'loadModelTemplate')
+      .mockRejectedValueOnce(new Error('404'));
+
+    const entity = world.createEntity('Enemy');
+    entity.add(new MeshComponent({ src: 'enemy.glb', instanced: true }));
+
+    // First tick requests the template; the promise rejects → templateRequested
+    // is rolled back so a retry can happen.
+    world.update(1 / 60);
+    // Flush the rejected microtask so the .catch rolls back templateRequested.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(fail).toHaveBeenCalledTimes(1);
+    expect(callsOf('instantiateModel')).toHaveLength(0);
+
+    // Next frame: the template load is attempted again (the spy counts every
+    // invocation, including the once-rejected one and the retry).
+    world.update(1 / 60);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(fail.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    // And now it can instantiate.
+    world.update(1 / 60);
+    expect(callsOf('instantiateModel')).toHaveLength(1);
+    expect(entity.get(MeshComponent)!.instance?.getState().state).toBe('loaded');
   });
 
   it('re-acquiring a parked instanced entity reveals the kept clone without re-instantiating', async () => {

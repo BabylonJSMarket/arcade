@@ -227,6 +227,33 @@ describe('ArcadeGame — loadScene lazy resolution', () => {
     warn.mockRestore();
   });
 
+  it('ignores scene entities that have no components key', async () => {
+    // branch 154 `if (entity?.components)` FALSE arm: an entity object with no
+    // `components` field contributes no names, so only the real one resolves.
+    // SceneLoader.instantiateScene itself requires `components`, so we stub the
+    // loader pass and assert collectComponentNames skipped the bare entity.
+    const realResolver = vi.fn(async () => makeStubModule('Real'));
+    game.addComponentResolver('Real', realResolver);
+    vi.spyOn(game.sceneLoader, 'loadSceneFromData').mockImplementation(() => undefined as never);
+    vi.spyOn(game.sceneLoader, 'instantiateScene').mockReturnValue({
+      systems: [],
+    } as never);
+
+    await expect(
+      game.loadScene({
+        name: 'no-components-test',
+        entities: {
+          empty: {}, // no components key → false arm
+          e1: { components: { Real: {} } },
+        },
+      }),
+    ).resolves.toBeUndefined();
+
+    // Only the entity that actually declares components triggered a resolve.
+    expect(realResolver).toHaveBeenCalledTimes(1);
+    expect(game.sceneLoader.getComponentClass('Real')).toBe(StubComponent);
+  });
+
   it('warns when the resolver returns a module without the expected ${name}Component export', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const resolver = vi.fn(async () => ({ NotItComponent: StubComponent }) as ComponentModule);
