@@ -264,6 +264,61 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
+  describe("--renderer (engine choice)", () => {
+    it("documents --renderer in --help", async () => {
+      const { stdout } = await runCli(["--help"], tmpDir);
+      expect(stdout).toContain("--renderer");
+      expect(stdout).toContain("babylon-lite");
+      expect(stdout).toContain("three");
+    });
+
+    it("defaults to Babylon (Havok) with no flag", async () => {
+      await runCli(["d", "--overwrite"], tmpDir);
+      const main = fs.readFileSync(path.join(tmpDir, "d", "src", "main.ts"), "utf-8");
+      expect(main).toContain("new BabylonAdapter()");
+      expect(main).toContain("from '@babylonjsmarket/ecs/babylon'");
+      const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, "d", "package.json"), "utf-8"));
+      expect(pkg.dependencies).toHaveProperty("@babylonjs/core");
+      expect(pkg.dependencies).toHaveProperty("@babylonjs/havok");
+    }, 60_000);
+
+    it("--renderer three wires the Three adapter + Rapier + a three import map", async () => {
+      await runCli(["d", "--renderer", "three", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, "d");
+      const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
+      expect(main).toContain("new ThreeAdapter()");
+      expect(main).toContain("from '@babylonjsmarket/ecs/three'");
+      expect(main).not.toContain("BabylonAdapter");
+      const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
+      expect(pkg.dependencies).toHaveProperty("@dimforge/rapier3d-compat");
+      expect(pkg.dependencies).not.toHaveProperty("@babylonjs/core"); // three is CDN
+      expect(pkg.devDependencies).toHaveProperty("@types/three");
+      const html = fs.readFileSync(path.join(root, "index.html"), "utf-8");
+      expect(html).toContain("esm.sh/three");
+      const vite = fs.readFileSync(path.join(root, "vite.config.js"), "utf-8");
+      expect(vite).toContain("@dimforge/rapier3d-compat");
+    }, 60_000);
+
+    it("--renderer babylon-lite wires the Lite adapter + Havok, no three import map", async () => {
+      await runCli(["d", "--renderer", "babylon-lite", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, "d");
+      const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
+      expect(main).toContain("new BabylonLiteAdapter()");
+      expect(main).toContain("from '@babylonjsmarket/ecs/babylon-lite'");
+      const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
+      expect(pkg.dependencies).toHaveProperty("@babylonjs/lite");
+      expect(pkg.dependencies).toHaveProperty("@babylonjs/havok");
+      const html = fs.readFileSync(path.join(root, "index.html"), "utf-8");
+      expect(html).not.toContain("esm.sh/three");
+    }, 60_000);
+
+    it("rejects an unknown --renderer without scaffolding", async () => {
+      const { code } = await runCli(["d", "--renderer", "unreal", "--overwrite"], tmpDir);
+      expect(code).not.toBe(0);
+      expect(fs.existsSync(path.join(tmpDir, "d", "package.json"))).toBe(false);
+    }, 60_000);
+  });
+
   describe("init subcommand", () => {
     it("accepts `init <name>` as a synonym for the bare positional form", async () => {
       const { code } = await runCli(

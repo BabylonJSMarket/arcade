@@ -125,6 +125,31 @@ describe.skipIf(!SHOULD_RUN)('CLI integration — scaffolded projects build', ()
     },
     90_000,
   )
+
+  for (const renderer of ['three', 'babylon-lite']) {
+    it(
+      `arcade --renderer ${renderer} — scaffold typechecks against live source`,
+      async () => {
+        const projectDir = path.join(scaffoldRoot, `app-${renderer}`)
+        const scaffold = await execCli(
+          [`app-${renderer}`, '--renderer', renderer, '--overwrite'],
+          scaffoldRoot,
+        )
+        if (scaffold.code !== 0) {
+          throw new Error(`scaffold failed:\n${scaffold.stderr}`)
+        }
+        buildNodeModules(projectDir)
+        const tsc = await runNode([TSC_BIN, '--noEmit'], projectDir, 60_000)
+        if (tsc.code !== 0) {
+          throw new Error(
+            `tsc failed (code ${tsc.code}):\n` +
+              `--- stdout ---\n${tsc.stdout}\n--- stderr ---\n${tsc.stderr}`,
+          )
+        }
+      },
+      90_000,
+    )
+  }
 })
 
 /**

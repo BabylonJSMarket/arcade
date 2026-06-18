@@ -74,6 +74,49 @@ const ESLINT_PLUGIN_VERSION = installedVersion("@babylonjsmarket/eslint-plugin",
 // panel imports, e.g. `ResetButton`, fail at load).
 const VIZ_VERSION = installedVersion("@babylonjsmarket/viz", "latest");
 
+// ── Renderer / physics pairings ─────────────────────────────────────────────
+// The scaffold targets ONE engine for the whole arcade — every game (scene)
+// runs on the same adapter, the renderer-agnostic point of the framework. The
+// chosen adapter is wired into src/main.ts; its engine packages go in
+// package.json + vite.config. (Three loads from a CDN import map because its
+// adapter dynamic-imports `three` past Vite, so only its types are installed.)
+interface RendererConfig {
+  label: string;
+  adapter: string; // exported adapter class
+  import: string; // @babylonjsmarket/ecs subpath the adapter is exported from
+  deps: Record<string, string>;
+  devDeps?: Record<string, string>;
+  /** Extra packages to dedupe + exclude from Vite optimize (WASM / WebGPU). */
+  viteExtras?: string[];
+  /** Three's adapter loads `three` via a CDN import map (it bypasses Vite). */
+  needsThreeImportmap?: boolean;
+}
+const RENDERERS: Record<string, RendererConfig> = {
+  babylon: {
+    label: "Babylon.js (Classic) + Havok physics",
+    adapter: "BabylonAdapter",
+    import: "@babylonjsmarket/ecs/babylon",
+    deps: { "@babylonjs/core": "^9.0.0", "@babylonjs/loaders": "^9.0.0", "@babylonjs/havok": "^1.3.0" },
+  },
+  "babylon-lite": {
+    label: "Babylon Lite + Havok physics (WebGPU)",
+    adapter: "BabylonLiteAdapter",
+    import: "@babylonjsmarket/ecs/babylon-lite",
+    deps: { "@babylonjs/lite": "^1.0.1", "@babylonjs/havok": "^1.3.0" },
+    viteExtras: ["@babylonjs/lite"],
+  },
+  three: {
+    label: "Three.js + Rapier physics",
+    adapter: "ThreeAdapter",
+    import: "@babylonjsmarket/ecs/three",
+    deps: { "@dimforge/rapier3d-compat": "^0.19.3" },
+    devDeps: { "@types/three": "^0.184.0" },
+    viteExtras: ["@dimforge/rapier3d-compat"],
+    needsThreeImportmap: true,
+  },
+};
+const RENDERER_KEYS = Object.keys(RENDERERS);
+
 // Allow `arcade init <name>` as well as the npm-create-style bare `arcade <name>`.
 // We strip a leading "init" subcommand here so positional parsing stays simple.
 const rawArgs = process.argv.slice(2);
@@ -84,9 +127,11 @@ const argv = mri<{
   help?: boolean;
   overwrite?: boolean;
   demo?: boolean;
+  renderer?: string;
 }>(argsAfterSubcommand, {
   alias: { h: "help" },
   boolean: ["help", "overwrite", "demo"],
+  string: ["renderer"],
 });
 const cwd = process.cwd();
 
@@ -110,6 +155,10 @@ With no arguments, start the CLI in interactive mode.
 Options:
   -h, --help                 print this help message
       --overwrite            replace any existing files in the target directory
+      --renderer <engine>    renderer + physics for the whole arcade — one of:
+                             babylon (Babylon.js + Havok, default), babylon-lite
+                             (Babylon Lite + Havok, WebGPU), three (Three.js +
+                             Rapier). Omit to pick interactively.
       --demo                 scaffold the renderer-adapter comparison demo: one
                              scene rendered side-by-side by the Babylon, Three
                              and Babylon Lite adapters (instead of the arcade room)`;
@@ -189,7 +238,33 @@ async function init() {
     packageName = packageNameResult;
   }
 
-  // There is no template choice — every scaffold is the multigame arcade.
+  // 4. Choose the renderer + physics (one engine for the whole arcade). The
+  // demo scaffold runs all three adapters, so it skips this. Honor --renderer
+  // when given; otherwise prompt interactively; default to Babylon in CI / when
+  // a prompt isn't available.
+  let renderer = "babylon";
+  if (!demo) {
+    const flag = typeof argv.renderer === "string" ? argv.renderer : undefined;
+    if (flag) {
+      if (!RENDERER_KEYS.includes(flag)) {
+        prompts.log.error(
+          `Unknown --renderer "${flag}". Choose one of: ${RENDERER_KEYS.join(", ")}.`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+      renderer = flag;
+    } else if (!process.env.CI) {
+      const choice = await prompts.select({
+        message: "Renderer & physics (used by every game in the arcade):",
+        options: RENDERER_KEYS.map((k) => ({ label: RENDERERS[k].label, value: k })),
+        initialValue: "babylon",
+      });
+      if (prompts.isCancel(choice)) return cancel();
+      renderer = choice as string;
+    }
+  }
+  const rc = RENDERERS[renderer];
 
   const root = path.isAbsolute(targetDir) ? targetDir : path.join(cwd, targetDir);
   fs.mkdirSync(root, { recursive: true });
@@ -207,7 +282,21 @@ async function init() {
     fs.writeFileSync(targetPath, content);
   };
 
-  // package.json — same for every template; templates differ only in scene JSON.
+  // Engine packages: the demo boots all three adapters; a normal scaffold pulls
+  // only the chosen renderer's engine set. (Three itself loads from a CDN import
+  // map — only its types are installed locally.)
+  const engineDeps = demo
+    ? {
+        "@babylonjs/core": "^9.0.0",
+        "@babylonjs/loaders": "^9.0.0",
+        "@babylonjs/havok": "^1.3.0",
+        "@babylonjs/lite": "^1.0.1",
+        "@dimforge/rapier3d-compat": "^0.19.3",
+      }
+    : rc.deps;
+  const engineDevDeps = demo ? { "@types/three": "^0.184.0" } : (rc.devDeps ?? {});
+
+  // package.json — templates differ only in scene data + the chosen adapter.
   const pkg = {
     name: packageName,
     version: "0.1.0",
@@ -222,19 +311,7 @@ async function init() {
       "@babylonjsmarket/ecs": range(ECS_VERSION),
       "@babylonjsmarket/arcade": range(ARCADE_VERSION),
       "@babylonjsmarket/viz": range(VIZ_VERSION),
-      "@babylonjs/core": "^9.0.0",
-      "@babylonjs/loaders": "^9.0.0",
-      "@babylonjs/havok": "^1.3.0",
-      // The demo also boots the Three and Babylon Lite adapters: Three uses
-      // Rapier for physics; Babylon Lite is its own (WebGPU) engine. (Three
-      // itself loads from a CDN via the index.html import map — only its types
-      // are needed locally, see devDependencies.)
-      ...(demo
-        ? {
-            "@babylonjs/lite": "^1.0.1",
-            "@dimforge/rapier3d-compat": "^0.19.3",
-          }
-        : {}),
+      ...engineDeps,
     },
     devDependencies: {
       typescript: "^5.5.0",
@@ -244,7 +321,7 @@ async function init() {
       eslint: "^9.0.0",
       "@typescript-eslint/parser": "^8.0.0",
       "@babylonjsmarket/eslint-plugin": range(ESLINT_PLUGIN_VERSION),
-      ...(demo ? { "@types/three": "^0.184.0" } : {}),
+      ...engineDevDeps,
     },
   };
   write("package.json", JSON.stringify(pkg, null, 2) + "\n");
@@ -257,16 +334,13 @@ async function init() {
   // build.target: 'esnext' opts esbuild into top-level await (our main.ts
   // uses `await game.init(canvas)` directly). Without this, the default
   // browser baseline rejects TLA at bundle time.
-  // The demo also runs the Three (Rapier) and Babylon Lite adapters; both pull
-  // WASM (rapier) / WebGPU shader assets (lite), so they get the same
+  // Rapier (WASM) and Babylon Lite (WebGPU shader assets) get the same
   // dedupe + optimize-exclude treatment as havok. (Three itself is CDN-loaded
-  // via the import map, so it stays out of Vite's graph.)
-  const demoDedupe = demo
-    ? `
-      '@dimforge/rapier3d-compat',
-      '@babylonjs/lite',`
-    : "";
-  const demoExclude = demo ? ", '@dimforge/rapier3d-compat', '@babylonjs/lite'" : "";
+  // via the import map, so it stays out of Vite's graph.) The demo pulls both;
+  // a normal scaffold pulls just its renderer's extras.
+  const viteExtras = demo ? ["@dimforge/rapier3d-compat", "@babylonjs/lite"] : (rc.viteExtras ?? []);
+  const demoDedupe = viteExtras.map((p) => `\n      '${p}',`).join("");
+  const demoExclude = viteExtras.map((p) => `, '${p}'`).join("");
   write(
     "vite.config.js",
     `import { defineConfig } from 'vite';
@@ -414,6 +488,19 @@ export default [
 `,
     );
   } else {
+    // The Three renderer's adapter dynamic-imports `three` past Vite, so it
+    // resolves through a CDN import map; Babylon / Babylon Lite need none.
+    const threeImportmap = rc.needsThreeImportmap
+      ? `    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.184.0",
+        "three/addons/": "https://esm.sh/three@0.184.0/examples/jsm/"
+      }
+    }
+    </script>
+`
+      : "";
     write(
       "index.html",
       `<!DOCTYPE html>
@@ -422,7 +509,7 @@ export default [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${packageName}</title>
-    <style>
+${threeImportmap}    <style>
       body { margin: 0; padding: 0; overflow: hidden; width: 100vw; height: 100vh; }
       #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; }
     </style>
@@ -445,7 +532,18 @@ export default [
     write("src/scenes/index.ts", readTemplate("demo-scenes-index.ts"));
     write("src/scenes/compare.ts", readTemplate("demo-compare.scene.ts"));
   } else {
-    write("src/main.ts", readTemplate("main.ts"));
+    // The starter main.ts is authored for Babylon; for the other renderers swap
+    // the adapter import + constructor (the only renderer-specific lines).
+    let mainTs = readTemplate("main.ts");
+    if (renderer !== "babylon") {
+      mainTs = mainTs
+        .replace(
+          "import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'",
+          `import { ${rc.adapter} } from '${rc.import}'`,
+        )
+        .replace("new BabylonAdapter()", `new ${rc.adapter}()`);
+    }
+    write("src/main.ts", mainTs);
     write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
     write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
   }
@@ -500,7 +598,7 @@ cabinets at them.
 | \`src/scenes/arcade-room.ts\` | The starter room — entities + components, as pure data |
 | \`src/scenes/index.ts\` | The scene map: every scene the arcade can load (the multigame seam) |
 | \`src/registry.ts\` | Resolvers for HUD panels and any custom components |
-| \`src/main.ts\` | Boot: BabylonAdapter → ArcadeGame → loadScene → start |
+| \`src/main.ts\` | Boot: ${rc.adapter} → ArcadeGame → loadScene → start |
 
 ## Getting Started
 
