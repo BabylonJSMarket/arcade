@@ -79,6 +79,7 @@
     "build": "tsc -p tsconfig.build.json",
     "build:watch": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
@@ -86,7 +87,7 @@
     "sync-templates:check": "node scripts/sync-templates.js --check",
     "try:scaffold": "node scripts/try-scaffold.mjs",
     "validate:scenes": "tsx scripts/validate-example-scenes.ts",
-    "prepublishOnly": "npm run build && npm run test"
+    "prepublishOnly": "npm run build && npm run test:coverage"
   },
   "dependencies": {
     "@babylonjsmarket/ecs": "^0.5.3",

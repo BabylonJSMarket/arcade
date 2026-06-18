@@ -24,6 +24,16 @@ export default defineConfig({
         // ephemeral UI, not unit-tested. mountArcadeViz.ts (logic) stays in scope.
         'src/Components/_shared/viz/**/*.tsx',
       ],
+      // Publish guardrail: prepublishOnly runs `test:coverage`, so a publish
+      // ABORTS if coverage regresses. lines/functions/statements are held at
+      // 100; branches are floored at the current level (the remainder are
+      // documented defensive guards — see the components' System null-checks).
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        statements: 100,
+        branches: 95,
+      },
     },
   },
 });
