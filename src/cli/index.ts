@@ -83,9 +83,10 @@ const argsAfterSubcommand =
 const argv = mri<{
   help?: boolean;
   overwrite?: boolean;
+  demo?: boolean;
 }>(argsAfterSubcommand, {
   alias: { h: "help" },
-  boolean: ["help", "overwrite"],
+  boolean: ["help", "overwrite", "demo"],
 });
 const cwd = process.cwd();
 
@@ -108,7 +109,10 @@ With no arguments, start the CLI in interactive mode.
 
 Options:
   -h, --help                 print this help message
-      --overwrite            replace any existing files in the target directory`;
+      --overwrite            replace any existing files in the target directory
+      --demo                 scaffold the renderer-adapter comparison demo: one
+                             scene rendered side-by-side by the Babylon, Three
+                             and Babylon Lite adapters (instead of the arcade room)`;
 
 const defaultTargetDir = "babylonjs-arcade";
 
@@ -117,6 +121,8 @@ async function init() {
     ? formatTargetDir(String(argv._[0]))
     : undefined;
   const argOverwrite = argv.overwrite;
+  // `--demo` scaffolds the multi-adapter comparison instead of the arcade room.
+  const demo = !!argv.demo;
 
   const help = argv.help;
   if (help) {
@@ -219,6 +225,16 @@ async function init() {
       "@babylonjs/core": "^9.0.0",
       "@babylonjs/loaders": "^9.0.0",
       "@babylonjs/havok": "^1.3.0",
+      // The demo also boots the Three and Babylon Lite adapters: Three uses
+      // Rapier for physics; Babylon Lite is its own (WebGPU) engine. (Three
+      // itself loads from a CDN via the index.html import map — only its types
+      // are needed locally, see devDependencies.)
+      ...(demo
+        ? {
+            "@babylonjs/lite": "^1.0.1",
+            "@dimforge/rapier3d-compat": "^0.19.3",
+          }
+        : {}),
     },
     devDependencies: {
       typescript: "^5.5.0",
@@ -228,6 +244,7 @@ async function init() {
       eslint: "^9.0.0",
       "@typescript-eslint/parser": "^8.0.0",
       "@babylonjsmarket/eslint-plugin": range(ESLINT_PLUGIN_VERSION),
+      ...(demo ? { "@types/three": "^0.184.0" } : {}),
     },
   };
   write("package.json", JSON.stringify(pkg, null, 2) + "\n");
@@ -240,6 +257,16 @@ async function init() {
   // build.target: 'esnext' opts esbuild into top-level await (our main.ts
   // uses `await game.init(canvas)` directly). Without this, the default
   // browser baseline rejects TLA at bundle time.
+  // The demo also runs the Three (Rapier) and Babylon Lite adapters; both pull
+  // WASM (rapier) / WebGPU shader assets (lite), so they get the same
+  // dedupe + optimize-exclude treatment as havok. (Three itself is CDN-loaded
+  // via the import map, so it stays out of Vite's graph.)
+  const demoDedupe = demo
+    ? `
+      '@dimforge/rapier3d-compat',
+      '@babylonjs/lite',`
+    : "";
+  const demoExclude = demo ? ", '@dimforge/rapier3d-compat', '@babylonjs/lite'" : "";
   write(
     "vite.config.js",
     `import { defineConfig } from 'vite';
@@ -260,13 +287,13 @@ export default defineConfig({
       '@babylonjs/loaders',
       '@babylonjs/havok',
       '@babylonjsmarket/ecs',
-      '@babylonjsmarket/arcade',
+      '@babylonjsmarket/arcade',${demoDedupe}
     ],
   },
   optimizeDeps: {
     // arcade excluded so esbuild doesn't pre-bundle its .tsx with the default
     // React JSX transform; havok excluded so Vite doesn't rewrite its wasm URL.
-    exclude: ['@babylonjsmarket/arcade', '@babylonjs/havok'],
+    exclude: ['@babylonjsmarket/arcade', '@babylonjs/havok'${demoExclude}],
     include: ['@babylonjs/core', '@babylonjs/loaders']
   }
 });
@@ -323,9 +350,73 @@ export default [
 `,
   );
 
-  write(
-    "index.html",
-    `<!DOCTYPE html>
+  if (demo) {
+    // Three labelled panes. The import map points the Three adapter's runtime
+    // `import('three')` at a CDN (it uses a non-literal @vite-ignore import that
+    // bypasses Vite); Babylon, Babylon Lite and Rapier resolve from node_modules
+    // through Vite as usual, so they stay out of the map.
+    write(
+      "index.html",
+      `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${packageName} — adapter comparison</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://esm.sh/three@0.184.0",
+        "three/addons/": "https://esm.sh/three@0.184.0/examples/jsm/"
+      }
+    }
+    </script>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #0b0e14; color: #e6e6e6;
+        font: 14px/1.4 system-ui, sans-serif; }
+      .grid { display: flex; gap: 1px; height: 100vh; background: #1d2430; }
+      .pane { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+        background: #0b0e14; position: relative; }
+      .pane h2 { margin: 0; padding: 8px 12px; font-size: 13px; font-weight: 600;
+        display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1d2430; }
+      .pane h2 .fps { margin-left: auto; font-weight: 600; color: #3ddc84;
+        font-variant-numeric: tabular-nums; }
+      .pane h2 .tag { font-weight: 400; font-size: 11px; color: #8b97a7; }
+      canvas { flex: 1 1 auto; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+      .status { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 12px;
+        font-size: 11px; color: #8b97a7; background: rgba(11,14,20,.7); border-top: 1px solid #1d2430; }
+      .status.error { color: #ff8c8c; }
+    </style>
+  </head>
+  <body>
+    <div class="grid">
+      <div class="pane">
+        <h2>Babylon <span class="tag">Havok</span><span class="fps" id="fps-babylon">— fps</span></h2>
+        <canvas id="cv-babylon"></canvas>
+        <div class="status" id="st-babylon">starting…</div>
+      </div>
+      <div class="pane">
+        <h2>Three.js <span class="tag">Rapier</span><span class="fps" id="fps-three">— fps</span></h2>
+        <canvas id="cv-three"></canvas>
+        <div class="status" id="st-three">starting…</div>
+      </div>
+      <div class="pane">
+        <h2>Babylon Lite <span class="tag">WebGPU · Havok</span><span class="fps" id="fps-lite">— fps</span></h2>
+        <canvas id="cv-lite"></canvas>
+        <div class="status" id="st-lite">starting…</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+`,
+    );
+  } else {
+    write(
+      "index.html",
+      `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -342,19 +433,25 @@ export default [
   </body>
 </html>
 `,
-  );
+    );
+  }
 
-  // Tiny boot — imports the scene map + REGISTRY and starts the game. Users
-  // rarely edit this file.
-  write("src/main.ts", readTemplate("main.ts"));
+  // Tiny boot — imports the scene map + REGISTRY and starts the game(s). The
+  // demo boot spins up one ArcadeGame per adapter into three canvases; the
+  // normal boot runs a single Babylon game. Both load pure-data scenes whose
+  // component names resolve via arcade's default registry or src/registry.ts.
+  if (demo) {
+    write("src/main.ts", readTemplate("demo-main.ts"));
+    write("src/scenes/index.ts", readTemplate("demo-scenes-index.ts"));
+    write("src/scenes/compare.ts", readTemplate("demo-compare.scene.ts"));
+  } else {
+    write("src/main.ts", readTemplate("main.ts"));
+    write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
+    write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
+  }
 
-  // The scene map (the "multigame" seam) + the starter arcade-room scene. Pure
-  // data: entities + components by name. Every component name is resolved
-  // either by arcade's default registry or by src/registry.ts (custom comps).
-  write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
-  write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
-
-  // Shared component resolver map (HUD panels + any custom components).
+  // Shared component resolver map (HUD panels + any custom components). The
+  // demo uses only stock components, so the empty default map is correct too.
   write("src/registry.ts", readTemplate("arcade-room.registry.ts"));
 
   // .gitignore

@@ -212,6 +212,58 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
+  describe("--demo (renderer-adapter comparison)", () => {
+    const dir = "my-demo";
+
+    it("documents the --demo flag in --help", async () => {
+      const { stdout } = await runCli(["--help"], tmpDir);
+      expect(stdout).toContain("--demo");
+    });
+
+    it("scaffolds the comparison scene instead of the arcade room", async () => {
+      const { code } = await runCli([dir, "--demo", "--overwrite"], tmpDir);
+      expect(code).toBe(0);
+      const root = path.join(tmpDir, dir);
+      expect(fs.existsSync(path.join(root, "src", "scenes", "compare.ts"))).toBe(true);
+      // The demo replaces the arcade room.
+      expect(fs.existsSync(path.join(root, "src", "scenes", "arcade-room.ts"))).toBe(false);
+    }, 60_000);
+
+    it("adds the Three (Rapier) + Babylon Lite engine deps", async () => {
+      await runCli([dir, "--demo", "--overwrite"], tmpDir);
+      const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, dir, "package.json"), "utf-8"));
+      expect(pkg.dependencies).toMatchObject({
+        "@babylonjs/lite": expect.any(String),
+        "@dimforge/rapier3d-compat": expect.any(String),
+      });
+      // three loads from a CDN (import map); only its types are local.
+      expect(pkg.devDependencies).toMatchObject({ "@types/three": expect.any(String) });
+    }, 60_000);
+
+    it("boots all three adapters into three labelled canvases", async () => {
+      await runCli([dir, "--demo", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, dir);
+      const mainTs = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
+      expect(mainTs).toContain("from '@babylonjsmarket/ecs/babylon'");
+      expect(mainTs).toContain("from '@babylonjsmarket/ecs/three'");
+      expect(mainTs).toContain("from '@babylonjsmarket/ecs/babylon-lite'");
+      const html = fs.readFileSync(path.join(root, "index.html"), "utf-8");
+      for (const id of ["cv-babylon", "cv-three", "cv-lite"]) {
+        expect(html).toContain(`id="${id}"`);
+      }
+      // Three's runtime import resolves via the import map (CDN).
+      expect(html).toContain("importmap");
+      expect(html).toContain("esm.sh/three");
+    }, 60_000);
+
+    it("extends vite dedupe/optimize for the extra engines", async () => {
+      await runCli([dir, "--demo", "--overwrite"], tmpDir);
+      const vite = fs.readFileSync(path.join(tmpDir, dir, "vite.config.js"), "utf-8");
+      expect(vite).toContain("@dimforge/rapier3d-compat");
+      expect(vite).toContain("@babylonjs/lite");
+    }, 60_000);
+  });
+
   describe("init subcommand", () => {
     it("accepts `init <name>` as a synonym for the bare positional form", async () => {
       const { code } = await runCli(

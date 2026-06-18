@@ -18,6 +18,7 @@
  *
  * Usage:
  *   node scripts/try-scaffold.mjs               # scaffold to a temp dir, open browser
+ *   node scripts/try-scaffold.mjs --demo        # the 3-adapter comparison demo
  *   node scripts/try-scaffold.mjs --port 5180   # pick the dev-server port
  *   node scripts/try-scaffold.mjs --out <dir>   # scaffold to a specific dir
  *   node scripts/try-scaffold.mjs --no-open     # don't auto-open the browser
@@ -49,6 +50,8 @@ const port = opt('--port', '5180')
 const openBrowser = !flag('--no-open')
 const explicitOut = opt('--out', null)
 const keep = flag('--keep') || !!explicitOut
+// --demo scaffolds the multi-adapter comparison instead of the arcade room.
+const demo = flag('--demo')
 
 // The CLI derives the package name from the project dir's basename and prompts
 // (and, non-interactively, cancels) if it isn't a valid npm name — so the
@@ -79,7 +82,11 @@ if (!fs.existsSync(ROOT_NODE_MODULES)) {
 fs.rmSync(outDir, { recursive: true, force: true })
 fs.mkdirSync(outDir, { recursive: true })
 console.log(`\n▸ Scaffolding arcade into ${outDir}`)
-run(process.execPath, [CLI_PATH, path.basename(outDir), '--overwrite'], path.dirname(outDir))
+run(
+  process.execPath,
+  [CLI_PATH, path.basename(outDir), '--overwrite', ...(demo ? ['--demo'] : [])],
+  path.dirname(outDir),
+)
 
 // ── 3. wire node_modules to the workspace (resolves local ecs/arcade) ────────
 // The root node_modules already symlinks @babylonjsmarket/{ecs,arcade} to this

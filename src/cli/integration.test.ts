@@ -99,6 +99,32 @@ describe.skipIf(!SHOULD_RUN)('CLI integration — scaffolded projects build', ()
     },
     90_000,
   )
+
+  it(
+    'arcade --demo — comparison project typechecks (all three adapters)',
+    async () => {
+      const projectDir = path.join(scaffoldRoot, 'app-demo')
+
+      const scaffold = await execCli(['app-demo', '--demo', '--overwrite'], scaffoldRoot)
+      if (scaffold.code !== 0) {
+        throw new Error(`scaffold failed:\n${scaffold.stderr}`)
+      }
+
+      // Same fabrication: the root node_modules already carries three/@types/three,
+      // @babylonjs/lite and @dimforge/rapier3d-compat (ecs's dev/optional deps),
+      // so the demo's adapter imports resolve through the live ecs source.
+      buildNodeModules(projectDir)
+
+      const tsc = await runNode([TSC_BIN, '--noEmit'], projectDir, 60_000)
+      if (tsc.code !== 0) {
+        throw new Error(
+          `tsc failed (code ${tsc.code}):\n` +
+            `--- stdout ---\n${tsc.stdout}\n--- stderr ---\n${tsc.stderr}`,
+        )
+      }
+    },
+    90_000,
+  )
 })
 
 /**
