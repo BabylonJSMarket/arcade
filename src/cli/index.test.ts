@@ -154,9 +154,14 @@ describe("arcade CLI", () => {
       expect(mainTs).toContain("from '@babylonjsmarket/arcade'");
       expect(mainTs).toContain("from '@babylonjsmarket/ecs/babylon'");
       expect(mainTs).toContain("mountArcadeViz");
+      // The Esc gear/FPS menu + themed panels come from the viz renderer; the
+      // scaffold must mount it (and pull a theme) or panels render bare.
+      expect(mainTs).toContain("mountViz");
+      expect(mainTs).toContain("from '@babylonjsmarket/viz/solid'");
+      expect(mainTs).toContain("@babylonjsmarket/viz/themes/");
       expect(mainTs).toContain("from './scenes'");
       expect(mainTs).toContain("from './registry'");
-      expect(mainTs).toContain("loadScene(scene)");
+      expect(mainTs).toContain("loadScene(scene");
       // ?scene=<url> override — how `bjs download` previews a downloaded asset.
       expect(mainTs).toContain("loadSceneFromUrl");
       expect(mainTs).toContain("'scene'");
