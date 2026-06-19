@@ -361,13 +361,16 @@ export default defineConfig({
       '@babylonjs/loaders',
       '@babylonjs/havok',
       '@babylonjsmarket/ecs',
-      '@babylonjsmarket/arcade',${demoDedupe}
+      '@babylonjsmarket/arcade',
+      '@babylonjsmarket/viz',${demoDedupe}
     ],
   },
   optimizeDeps: {
-    // arcade excluded so esbuild doesn't pre-bundle its .tsx with the default
-    // React JSX transform; havok excluded so Vite doesn't rewrite its wasm URL.
-    exclude: ['@babylonjsmarket/arcade', '@babylonjs/havok'${demoExclude}],
+    // arcade + viz excluded so esbuild doesn't pre-bundle their Solid .tsx with
+    // the default React JSX transform — that throws "React is not defined" at
+    // runtime (viz ships raw .tsx source). havok excluded so Vite doesn't
+    // rewrite its wasm URL.
+    exclude: ['@babylonjsmarket/arcade', '@babylonjsmarket/viz', '@babylonjs/havok'${demoExclude}],
     include: ['@babylonjs/core', '@babylonjs/loaders']
   }
 });
