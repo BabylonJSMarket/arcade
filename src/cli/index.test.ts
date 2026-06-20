@@ -319,6 +319,81 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
+  describe("--kind (game vs arcade)", () => {
+    it("documents --kind in --help", async () => {
+      const { stdout } = await runCli(["--help"], tmpDir);
+      expect(stdout).toContain("--kind");
+      expect(stdout).toContain("game");
+      expect(stdout).toContain("arcade");
+    });
+
+    it("defaults to the arcade room (no flag) — the multigame seam", async () => {
+      await runCli(["d", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, "d");
+      expect(fs.existsSync(path.join(root, "src", "scenes", "arcade-room.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(root, "src", "scenes", "game.ts"))).toBe(false);
+      const idx = fs.readFileSync(path.join(root, "src", "scenes", "index.ts"), "utf-8");
+      expect(idx).toContain("ARCADE_ROOM");
+      expect(idx).toContain("'arcade-room'");
+    }, 60_000);
+
+    it("--kind game scaffolds a single starter game scene instead of the room", async () => {
+      const { code } = await runCli(["d", "--kind", "game", "--overwrite"], tmpDir);
+      expect(code).toBe(0);
+      const root = path.join(tmpDir, "d");
+      // The single game replaces the arcade room.
+      expect(fs.existsSync(path.join(root, "src", "scenes", "game.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(root, "src", "scenes", "arcade-room.ts"))).toBe(false);
+
+      const sceneTs = fs.readFileSync(path.join(root, "src", "scenes", "game.ts"), "utf-8");
+      expect(sceneTs).toContain("export const GAME");
+      expect(sceneTs).toMatch(/entities\s*:/);
+      expect(sceneTs).toContain("Hero");
+      expect(sceneTs).toContain("ArcCamera");
+      // The single game is asset-free (no remote streaming, no cabinets).
+      expect(sceneTs).not.toContain("babylonjsgames.com");
+      expect(sceneTs).not.toContain("Cabinet");
+
+      const idx = fs.readFileSync(path.join(root, "src", "scenes", "index.ts"), "utf-8");
+      expect(idx).toContain("GAME");
+      expect(idx).toContain("DEFAULT_SCENE");
+      expect(idx).toContain("'game'");
+
+      // Shared framework wiring is identical to the arcade kind.
+      expect(fs.existsSync(path.join(root, "src", "registry.ts"))).toBe(true);
+      const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
+      expect(main).toContain("new BabylonAdapter()");
+    }, 60_000);
+
+    it("--kind arcade is explicit-equivalent to the default", async () => {
+      await runCli(["d", "--kind", "arcade", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, "d");
+      expect(fs.existsSync(path.join(root, "src", "scenes", "arcade-room.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(root, "src", "scenes", "game.ts"))).toBe(false);
+    }, 60_000);
+
+    it("--kind game composes with --renderer three", async () => {
+      await runCli(["d", "--kind", "game", "--renderer", "three", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, "d");
+      expect(fs.existsSync(path.join(root, "src", "scenes", "game.ts"))).toBe(true);
+      const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
+      expect(main).toContain("new ThreeAdapter()");
+    }, 60_000);
+
+    it("the game README reflects the single-game kind", async () => {
+      await runCli(["d", "--kind", "game", "--overwrite"], tmpDir);
+      const readme = fs.readFileSync(path.join(tmpDir, "d", "README.md"), "utf-8");
+      expect(readme).toContain("src/scenes/game.ts");
+      expect(readme).not.toContain("row of\ncabinets");
+    }, 60_000);
+
+    it("rejects an unknown --kind without scaffolding", async () => {
+      const { code } = await runCli(["d", "--kind", "platformer", "--overwrite"], tmpDir);
+      expect(code).not.toBe(0);
+      expect(fs.existsSync(path.join(tmpDir, "d", "package.json"))).toBe(false);
+    }, 60_000);
+  });
+
   describe("init subcommand", () => {
     it("accepts `init <name>` as a synonym for the bare positional form", async () => {
       const { code } = await runCli(

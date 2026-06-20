@@ -117,6 +117,15 @@ const RENDERERS: Record<string, RendererConfig> = {
 };
 const RENDERER_KEYS = Object.keys(RENDERERS);
 
+// What to scaffold. `arcade` (default) = the walk-up room + cabinets multigame
+// seam; `game` = a single starter scene (no room). The --demo path overrides
+// both with the 3-adapter comparison.
+const KINDS = {
+  arcade: "Arcade — a walk-up room with cabinets that launch many games",
+  game: "Game — a single starter scene",
+} as const;
+const KIND_KEYS = Object.keys(KINDS);
+
 // Allow `arcade init <name>` as well as the npm-create-style bare `arcade <name>`.
 // We strip a leading "init" subcommand here so positional parsing stays simple.
 const rawArgs = process.argv.slice(2);
@@ -128,10 +137,11 @@ const argv = mri<{
   overwrite?: boolean;
   demo?: boolean;
   renderer?: string;
+  kind?: string;
 }>(argsAfterSubcommand, {
   alias: { h: "help" },
   boolean: ["help", "overwrite", "demo"],
-  string: ["renderer"],
+  string: ["renderer", "kind"],
 });
 const cwd = process.cwd();
 
@@ -139,29 +149,32 @@ const helpMessage = `\
 Usage: arcade init [OPTION]... [DIRECTORY]
    or: npm create @babylonjsmarket/arcade [DIRECTORY]
 
-Create a new multigame BabylonJS arcade powered by @babylonjsmarket/ecs and
-@babylonjsmarket/arcade.
+Create a new data-driven BabylonJS game (or multigame arcade) powered by
+@babylonjsmarket/ecs and @babylonjsmarket/arcade.
 
-The scaffold ships a single starter "arcade room" scene — a carpeted room with
-a row of cabinets — that you grow into a full arcade. Scenes are TS modules
-under src/scenes/ that declare entities + their components by name; arcade
-lazy-imports each named component the first time it appears. Each cabinet can
-point a player at another scene (a subdirectory game) registered in
-src/scenes/index.ts. Custom components go under src/components/ and are wired
-up via src/registry.ts.
+Pick a KIND: a single "game" (one starter scene) or a multigame "arcade" (a
+walk-up "arcade room" — a carpeted room with a row of cabinets — whose cabinets
+launch each game). An arcade is just the same data-driven idea at scale: many
+game scenes sharing one code library. Either way, scenes are TS modules under
+src/scenes/ that declare entities + their components by name; arcade lazy-imports
+each named component the first time it appears, and custom components go under
+src/components/ wired up via src/registry.ts.
 
 With no arguments, start the CLI in interactive mode.
 
 Options:
   -h, --help                 print this help message
       --overwrite            replace any existing files in the target directory
-      --renderer <engine>    renderer + physics for the whole arcade — one of:
+      --kind <kind>          what to scaffold — one of: arcade (multigame room +
+                             cabinets, default), game (a single starter scene).
+                             Omit to pick interactively.
+      --renderer <engine>    renderer + physics for the whole project — one of:
                              babylon (Babylon.js + Havok, default), babylon-lite
                              (Babylon Lite + Havok, WebGPU), three (Three.js +
                              Rapier). Omit to pick interactively.
       --demo                 scaffold the renderer-adapter comparison demo: one
                              scene rendered side-by-side by the Babylon, Three
-                             and Babylon Lite adapters (instead of the arcade room)`;
+                             and Babylon Lite adapters (instead of a game/arcade)`;
 
 const defaultTargetDir = "babylonjs-arcade";
 
@@ -265,6 +278,32 @@ async function init() {
     }
   }
   const rc = RENDERERS[renderer];
+
+  // 5. Choose the KIND — a single game or a multigame arcade. The demo overrides
+  // both. Honor --kind when given; otherwise prompt; default to arcade in CI /
+  // when a prompt isn't available (preserving `npm create arcade`'s behavior).
+  let kind = "arcade";
+  if (!demo) {
+    const kindFlag = typeof argv.kind === "string" ? argv.kind : undefined;
+    if (kindFlag) {
+      if (!KIND_KEYS.includes(kindFlag)) {
+        prompts.log.error(
+          `Unknown --kind "${kindFlag}". Choose one of: ${KIND_KEYS.join(", ")}.`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+      kind = kindFlag;
+    } else if (!process.env.CI) {
+      const choice = await prompts.select({
+        message: "What do you want to scaffold?",
+        options: KIND_KEYS.map((k) => ({ label: KINDS[k as keyof typeof KINDS], value: k })),
+        initialValue: "arcade",
+      });
+      if (prompts.isCancel(choice)) return cancel();
+      kind = choice as string;
+    }
+  }
 
   const root = path.isAbsolute(targetDir) ? targetDir : path.join(cwd, targetDir);
   fs.mkdirSync(root, { recursive: true });
@@ -547,8 +586,15 @@ ${threeImportmap}    <style>
         .replace("new BabylonAdapter()", `new ${rc.adapter}()`);
     }
     write("src/main.ts", mainTs);
-    write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
-    write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
+    // The scene set differs by kind: a single game ships one starter scene; an
+    // arcade ships the walk-up room + cabinets (the multigame seam).
+    if (kind === "game") {
+      write("src/scenes/index.ts", readTemplate("game-scenes-index.ts"));
+      write("src/scenes/game.ts", readTemplate("game.scene.ts"));
+    } else {
+      write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
+      write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
+    }
   }
 
   // Shared component resolver map (HUD panels + any custom components). The
@@ -585,21 +631,66 @@ dist-ssr
 `,
   );
 
-  write(
-    "README.md",
-    `# ${packageName}
+  const isGame = kind === "game";
+  // The two kinds share the same framework + boot; only the starter scene, the
+  // file table, the assets note, and the "grow it" section differ.
+  const readmeIntro = isGame
+    ? `A data-driven BabylonJS game built with the @babylonjsmarket/ecs framework
+and the @babylonjsmarket/arcade component library.
 
-A data-driven, multigame BabylonJS arcade built with the @babylonjsmarket/ecs
+You start with one scene — the **starter game** (a lit ground, a hero mesh, and
+an orbit camera) — and grow it by adding entities + components, or more scenes.
+
+An **arcade** is just this same idea at scale: many game scenes sharing one code
+library, fronted by a walk-up "arcade room" whose cabinets launch each game.
+Re-scaffold one with \`npm create @babylonjsmarket/arcade -- --kind arcade\`.`
+    : `A data-driven, multigame BabylonJS arcade built with the @babylonjsmarket/ecs
 framework and the @babylonjsmarket/arcade component library.
 
 You start with one scene — the **arcade room** (a carpeted room with a row of
 cabinets) — and grow it into a full arcade by adding more scenes and pointing
-cabinets at them.
+cabinets at them.`;
+  const readmeFileRow = isGame
+    ? `| \`src/scenes/game.ts\` | The starter game — entities + components, as pure data |`
+    : `| \`src/scenes/arcade-room.ts\` | The starter room — entities + components, as pure data |`;
+  const readmeSceneMapRow = isGame
+    ? `| \`src/scenes/index.ts\` | The scene map: every scene the game can load (the multigame seam) |`
+    : `| \`src/scenes/index.ts\` | The scene map: every scene the arcade can load (the multigame seam) |`;
+  const readmeAssetsNote = isGame
+    ? `The starter game uses no external assets, so a fresh scaffold runs offline.
+Drop your own models/textures under \`public/\` and reference them from
+\`src/scenes/game.ts\`.`
+    : `The room streams its carpet textures and cabinet model from the public
+BabylonJS Games asset host, so a fresh scaffold runs with no local assets. To
+serve your own, drop optimized copies under \`public/arcade/\` and set
+\`ASSET_BASE = ''\` in \`src/scenes/arcade-room.ts\`.`;
+  const readmeGrow = isGame
+    ? `## Growing your game
+
+To add another scene:
+
+1. Author it under \`src/scenes/<my-scene>.ts\` (copy \`game.ts\`).
+2. Import it in \`src/scenes/index.ts\` and add it under a new key.
+3. Switch to it at runtime: \`game.loadScene(SCENES['<my-scene>'])\`.`
+    : `## Filling the arcade
+
+Each cabinet is meant to launch its own game. To add one:
+
+1. Author a scene under \`src/scenes/<my-game>.ts\` (copy \`arcade-room.ts\`).
+2. Import it in \`src/scenes/index.ts\` and add it under a new key.
+3. Switch to it at runtime: \`game.loadScene(SCENES['<my-game>'])\` — e.g. when
+   the player activates the matching cabinet.`;
+
+  write(
+    "README.md",
+    `# ${packageName}
+
+${readmeIntro}
 
 | File | What's in it |
 |---|---|
-| \`src/scenes/arcade-room.ts\` | The starter room — entities + components, as pure data |
-| \`src/scenes/index.ts\` | The scene map: every scene the arcade can load (the multigame seam) |
+${readmeFileRow}
+${readmeSceneMapRow}
 | \`src/registry.ts\` | Resolvers for HUD panels and any custom components |
 | \`src/main.ts\` | Boot: ${rc.adapter} → ArcadeGame → loadScene → start |
 
@@ -610,10 +701,7 @@ npm install
 npm run dev      # http://localhost:3000
 \`\`\`
 
-The room streams its carpet textures and cabinet model from the public
-BabylonJS Games asset host, so a fresh scaffold runs with no local assets. To
-serve your own, drop optimized copies under \`public/arcade/\` and set
-\`ASSET_BASE = ''\` in \`src/scenes/arcade-room.ts\`.
+${readmeAssetsNote}
 
 ## How it works
 
@@ -626,14 +714,7 @@ scene modules as entities + named components. The arcade package's default
 registry maps every named component to its module; bundlers tree-shake any
 component a scene doesn't use.
 
-## Filling the arcade
-
-Each cabinet is meant to launch its own game. To add one:
-
-1. Author a scene under \`src/scenes/<my-game>.ts\` (copy \`arcade-room.ts\`).
-2. Import it in \`src/scenes/index.ts\` and add it under a new key.
-3. Switch to it at runtime: \`game.loadScene(SCENES['<my-game>'])\` — e.g. when
-   the player activates the matching cabinet.
+${readmeGrow}
 
 To add a custom component, drop a file under \`src/components/MyThing.ts\`
 exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`), then add
