@@ -264,6 +264,21 @@ describe("arcade eject", () => {
       expect(matches.length).toBe(1);
     });
 
+    it("skips patching an auto-glob registry (components are auto-discovered)", async () => {
+      const srcDir = path.join(tmpDir, "src");
+      fs.mkdirSync(srcDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(srcDir, "registry.ts"),
+        "export const REGISTRY = Object.fromEntries(\n" +
+          "  Object.entries(import.meta.glob('./components/*/*.ts')))\n",
+      );
+      await runEject(["Score"]);
+      const reg = read("src/registry.ts");
+      // Untouched — no manual resolver line injected.
+      expect(reg).not.toContain("Score: () => import(");
+      expect(joinLogs()).toContain("auto-discovers components");
+    });
+
     it("warns when registry.ts is missing", async () => {
       await runEject(["Score"]);
       expect(joinLogs()).toContain("src/registry.ts not found");

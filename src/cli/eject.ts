@@ -185,6 +185,11 @@ function patchRegistry(
     return [`! src/registry.ts not found — add resolvers manually for: ${names.join(", ")}`];
   }
   let text = fs.readFileSync(registryPath, "utf8");
+  // The current scaffold auto-discovers components via `import.meta.glob`, so
+  // ejected folders under src/components/ are registered with no edit needed.
+  if (text.includes("import.meta.glob")) {
+    return [`  registry auto-discovers components — no wiring needed for: ${names.join(", ")}`];
+  }
   const marker = /export const REGISTRY\s*=\s*\{/;
   if (!marker.test(text)) {
     return [`! Could not find 'export const REGISTRY = {' — add resolvers manually for: ${names.join(", ")}`];

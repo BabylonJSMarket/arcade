@@ -102,6 +102,7 @@ describe("arcade CLI", () => {
     "src/scenes/index.ts",
     "src/scenes/arcade-room.ts",
     "src/registry.ts",
+    "src/vite-env.d.ts",
     "README.md",
     ".gitignore",
   ];
@@ -179,13 +180,20 @@ describe("arcade CLI", () => {
       expect(indexTs).toContain("from './arcade-room'");
     }, 60_000);
 
-    it("ships a registry.ts that exports REGISTRY", async () => {
+    it("ships a registry.ts that auto-discovers downloaded components", async () => {
       await runCli([dir, "--overwrite"], tmpDir);
       const registryTs = fs.readFileSync(
         path.join(tmpDir, dir, "src", "registry.ts"),
         "utf-8",
       );
       expect(registryTs).toContain("export const REGISTRY");
+      // Auto-glob: components dropped by `bjs download` into
+      // src/Components/<Name>/<Name>.ts are registered with zero manual wiring.
+      expect(registryTs).toContain("import.meta.glob('./Components/*/*.ts')");
+      // …and `arcade eject`'s lowercase target is globbed too.
+      expect(registryTs).toContain("import.meta.glob('./components/*/*.ts')");
+      // No hand-maintained literal object body to keep in sync.
+      expect(registryTs).not.toContain("export const REGISTRY = {}");
     }, 60_000);
   });
 

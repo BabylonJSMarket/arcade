@@ -466,6 +466,10 @@ export default [
 `,
   );
 
+  // Vite ambient types — pulls in `import.meta.glob` / `import.meta.env` typing
+  // used by src/registry.ts (it auto-discovers downloaded components via a glob).
+  write("src/vite-env.d.ts", `/// <reference types="vite/client" />\n`);
+
   if (demo) {
     // Three labelled panes. The import map points the Three adapter's runtime
     // `import('three')` at a CDN (it uses a non-literal @vite-ignore import that
