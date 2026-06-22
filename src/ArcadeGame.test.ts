@@ -271,6 +271,111 @@ describe('ArcadeGame — loadScene lazy resolution', () => {
   });
 });
 
+describe('ArcadeGame — one-shot lifecycle events on loadScene (regression)', () => {
+  // Reproduces the DirectionalLight → CardFan/Shadow shadow-caster wiring bug.
+  //
+  // One system EMITS a one-shot "created" event from its `onEntityAdded` (like
+  // DirectionalLightSystem emitting `directionallight.created` carrying the
+  // light handle). Another system SUBSCRIBES to that event in `onInitialize`
+  // and records the payload (like Shadow/CardFan attaching shadow casters).
+  //
+  // Under the old order (instantiate entities, THEN addSystem each), entities
+  // existed before any system had subscribed, so the one-shot event fired into
+  // an empty bus and the consumer never received the light handle — cards cast
+  // no shadow unless the member manually called world.initialize() first and
+  // ordered the entities just so. This asserts it now works regardless of
+  // entity/system order, with NO manual world.initialize().
+
+  class LightComponent extends Component {}
+  class CasterComponent extends Component {}
+
+  // Captured across systems so the test can assert delivery.
+  let receivedHandle: unknown;
+
+  class LightSystem extends System {
+    protected query = { required: [LightComponent] };
+    protected onEntityAdded(): void {
+      // One-shot: emitted exactly once, when the light entity appears.
+      this.eventBus.emit('light.created', { handle: 'LIGHT_HANDLE' });
+    }
+    onUpdate(): void {}
+  }
+
+  class CasterSystem extends System {
+    protected query = { required: [CasterComponent] };
+    protected onInitialize(): void {
+      // Subscribes here — must already be subscribed before the light entity is
+      // created, or the one-shot event is lost.
+      this.listen<{ handle: unknown }>('light.created', (d) => {
+        receivedHandle = d.handle;
+      });
+    }
+    onUpdate(): void {}
+  }
+
+  async function makeLightModule(): Promise<ComponentModule> {
+    return { LightComponent, LightSystem } as unknown as ComponentModule;
+  }
+  async function makeCasterModule(): Promise<ComponentModule> {
+    return { CasterComponent, CasterSystem } as unknown as ComponentModule;
+  }
+
+  beforeEach(() => {
+    receivedHandle = undefined;
+  });
+
+  it('delivers the one-shot event when the light entity is listed FIRST', async () => {
+    const game = new ArcadeGame(new MockRendererAdapter());
+    game.addComponentResolver('Light', makeLightModule);
+    game.addComponentResolver('Caster', makeCasterModule);
+
+    await game.loadScene({
+      name: 'light-first',
+      entities: {
+        theLight: { components: { Light: {} } },
+        theCard: { components: { Caster: {} } },
+      },
+    });
+
+    expect(receivedHandle).toBe('LIGHT_HANDLE');
+  });
+
+  it('delivers the one-shot event when the light entity is listed LAST (order-independent)', async () => {
+    const game = new ArcadeGame(new MockRendererAdapter());
+    game.addComponentResolver('Light', makeLightModule);
+    game.addComponentResolver('Caster', makeCasterModule);
+
+    await game.loadScene({
+      name: 'light-last',
+      entities: {
+        theCard: { components: { Caster: {} } },
+        theLight: { components: { Light: {} } },
+      },
+    });
+
+    expect(receivedHandle).toBe('LIGHT_HANDLE');
+  });
+
+  it('does NOT require a manual world.initialize() before loadScene', async () => {
+    const game = new ArcadeGame(new MockRendererAdapter());
+    game.addComponentResolver('Light', makeLightModule);
+    game.addComponentResolver('Caster', makeCasterModule);
+
+    // No game.world.initialize() here — the old workaround. The fix makes it
+    // redundant.
+    await game.loadScene({
+      name: 'no-manual-init',
+      entities: {
+        theCard: { components: { Caster: {} } },
+        theLight: { components: { Light: {} } },
+      },
+    });
+
+    expect(game.world.initialized).toBe(true);
+    expect(receivedHandle).toBe('LIGHT_HANDLE');
+  });
+});
+
 describe('ArcadeGame — loadSceneFromUrl', () => {
   let renderer: MockRendererAdapter;
   let game: ArcadeGame;

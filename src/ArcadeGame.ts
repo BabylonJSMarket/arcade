@@ -97,10 +97,42 @@ export class ArcadeGame {
     const names = collectComponentNames(sceneData);
     await Promise.all(Array.from(names).map((name) => this.registerByName(name)));
     this.sceneLoader.loadSceneFromData(sceneData as Parameters<SceneLoader["loadSceneFromData"]>[0]);
-    const { systems } = this.sceneLoader.instantiateScene(sceneData.name, this.world);
+
+    // Two-phase load so the order is correct regardless of how the scene JSON
+    // orders its entities/systems:
+    //
+    //   1. Create + add + INITIALIZE every system the scene uses, WITHOUT
+    //      creating any entities yet (`createEntities: false`). Adding each
+    //      system to an initialized world subscribes it to the EventBus
+    //      (its `onInitialize` runs).
+    //   2. Instantiate the entities (`createSystems: false`, since the systems
+    //      already exist). Creating an entity fires every system's
+    //      `onEntityAdded`; because all systems are already subscribed, a
+    //      one-shot event emitted from one system's `onEntityAdded` (e.g. the
+    //      arcade DirectionalLight's `directionallight.created`, which carries
+    //      the light handle that CardFan/PokerTableCards/Shadow need) reliably
+    //      reaches every other system.
+    //
+    // The previous order (instantiate entities, THEN addSystem each) lost those
+    // one-shot events: entities existed before any system was subscribed, so the
+    // member had to manually call `world.initialize()` first and order the
+    // card-renderer entity ahead of the light. This makes it just work.
+    const { systems } = this.sceneLoader.instantiateScene(sceneData.name, this.world, {
+      createEntities: false,
+    });
     for (const system of systems) {
       this.world.addSystem(system);
     }
+
+    // Ensure the world (and therefore every system just added) is initialized
+    // and subscribed BEFORE any entity is created. addSystem only initializes a
+    // system immediately when the world is already initialized; for the first
+    // scene the world is not yet initialized, so initialize it now.
+    this.world.initialize();
+
+    this.sceneLoader.instantiateScene(sceneData.name, this.world, {
+      createSystems: false,
+    });
   }
 
   /**
