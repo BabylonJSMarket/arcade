@@ -49,6 +49,22 @@ const EXPECTED_NAMES = [
   'LineOfSight',
   'TwinStickShooter',
   'ShooterCamera',
+  // Soccer
+  'Goal',
+  'BallPossession',
+  'BallReset',
+  'TeamSpawner',
+  'AISeek',
+  'AIInput',
+  'AIBrakeNearBall',
+  'AIAvoidance',
+  'AIGoalSeek',
+  'AIKick',
+  'AIZone',
+  'AICoach',
+  'Stamina',
+  'Stride',
+  'AimIndicator',
 ] as const;
 
 type ComponentClass = new (...args: never[]) => Component;
@@ -95,7 +111,7 @@ describe('ARCADE_COMPONENT_REGISTRY', () => {
       expect(typeof ComponentCtor).toBe('function');
       expect(ComponentCtor!.prototype).toBeInstanceOf(Component);
     }
-    // Bumped — 33 modules x dynamic import + Solid transform can exceed the
+    // Bumped — 48 modules x dynamic import + Solid transform can exceed the
     // default 5 s under parallel-suite contention.
   }, 30_000);
 

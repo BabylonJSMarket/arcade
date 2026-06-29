@@ -55,6 +55,23 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   TwinStickShooter: () =>
     import("./Components/TwinStickShooter/TwinStickShooter"),
   ShooterCamera: () => import("./Components/ShooterCamera/ShooterCamera"),
+  // Soccer — pitch, ball, AI team play, stamina/movement.
+  Goal: () => import("./Components/Goal/Goal"),
+  BallPossession: () => import("./Components/BallPossession/BallPossession"),
+  BallReset: () => import("./Components/BallReset/BallReset"),
+  TeamSpawner: () => import("./Components/TeamSpawner/TeamSpawner"),
+  AISeek: () => import("./Components/AISeek/AISeek"),
+  AIInput: () => import("./Components/AIInput/AIInput"),
+  AIBrakeNearBall: () =>
+    import("./Components/AIBrakeNearBall/AIBrakeNearBall"),
+  AIAvoidance: () => import("./Components/AIAvoidance/AIAvoidance"),
+  AIGoalSeek: () => import("./Components/AIGoalSeek/AIGoalSeek"),
+  AIKick: () => import("./Components/AIKick/AIKick"),
+  AIZone: () => import("./Components/AIZone/AIZone"),
+  AICoach: () => import("./Components/AICoach/AICoach"),
+  Stamina: () => import("./Components/Stamina/Stamina"),
+  Stride: () => import("./Components/Stride/Stride"),
+  AimIndicator: () => import("./Components/AimIndicator/AimIndicator"),
 };
 
 export const ARCADE_COMPONENT_NAMES = Object.keys(ARCADE_COMPONENT_REGISTRY);
