@@ -16,6 +16,8 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Movement: () => import("./Components/Movement/Movement"),
   KeyboardMover: () => import("./Components/KeyboardMover/KeyboardMover"),
   PlayerInput: () => import("./Components/PlayerInput/PlayerInput"),
+  PlayerInputBridge: () =>
+    import("./Components/PlayerInputBridge/PlayerInputBridge"),
   ArcCamera: () => import("./Components/ArcCamera/ArcCamera"),
   CameraFollow: () => import("./Components/CameraFollow/CameraFollow"),
   DirectionalLight: () => import("./Components/DirectionalLight/DirectionalLight"),
@@ -69,6 +71,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   AIKick: () => import("./Components/AIKick/AIKick"),
   AIZone: () => import("./Components/AIZone/AIZone"),
   AICoach: () => import("./Components/AICoach/AICoach"),
+  SoccerDirector: () => import("./Components/SoccerDirector/SoccerDirector"),
   Stamina: () => import("./Components/Stamina/Stamina"),
   Stride: () => import("./Components/Stride/Stride"),
   AimIndicator: () => import("./Components/AimIndicator/AimIndicator"),
