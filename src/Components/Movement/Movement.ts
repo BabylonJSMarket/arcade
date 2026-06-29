@@ -24,6 +24,11 @@ import type { Entity } from '@babylonjsmarket/ecs';
 import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import {
+  PhysicsComponent,
+  PhysicsInputEvents,
+  type PhysicsSetVelocityEvent,
+} from '../Physics/Physics';
+import {
   createMovement,
   DEFAULT_MOVEMENT_PARAMS,
   type MovementInstance,
@@ -118,10 +123,59 @@ export class MovementComponent extends Component {
 export class MovementSystem extends System {
   /** Reusable tuple for get/set adapter calls — avoids per-frame allocation. */
   private _tmp: Vec3 = [0, 0, 0];
+  /** Reused scratch for the separation neighbor scan + its result. */
+  private _sep: Vec3 = [0, 0, 0];
+  private _sepOut = { x: 0, z: 0 };
   protected query = { required: [MovementComponent] };
 
   constructor(eventBus: EventBus) {
     super(eventBus);
+  }
+
+  /**
+   * AI anti-clump separation. Physics bodies that all chase one ball pile into
+   * a scrum; this adds a short-range, capped repulsion from nearby players so
+   * `ai`-tagged agents keep their personal space and the play spreads out.
+   * Only `ai` agents are pushed (the human's input stays crisp — they already
+   * can't overlap thanks to the body), but they steer clear of EVERY player +
+   * AI. Returns a velocity addend in `out`; zero when off or no one's close.
+   */
+  private separationVelocity(entity: Entity, px: number, pz: number, out: { x: number; z: number }): void {
+    out.x = 0;
+    out.z = 0;
+    const r = this.world?.renderer;
+    if (!r || !this.world || !entity.hasTag('ai')) return;
+    const RADIUS = 2.2; // centers closer than this repel
+    const STRENGTH = 4; // u/s per unit of crowding
+    const MAX = 6; // cap so a tight cluster can't fling anyone
+    let sx = 0;
+    let sz = 0;
+    for (const tag of ['ai', 'player']) {
+      for (const other of this.world.getEntitiesByTag(tag)) {
+        if (other.id === entity.id) continue;
+        const om = other.get(MeshPrimitiveComponent);
+        if (!om?.handle) continue;
+        r.getMeshWorldPosition(om.handle, this._sep);
+        const dx = px - this._sep[0];
+        const dz = pz - this._sep[2];
+        const d2 = dx * dx + dz * dz;
+        if (d2 > 1e-6 && d2 < RADIUS * RADIUS) {
+          const d = Math.sqrt(d2);
+          const w = (1 - d / RADIUS) / d; // direction × linear falloff
+          sx += dx * w;
+          sz += dz * w;
+        }
+      }
+    }
+    let vx = sx * STRENGTH;
+    let vz = sz * STRENGTH;
+    const mag = Math.hypot(vx, vz);
+    if (mag > MAX) {
+      vx = (vx / mag) * MAX;
+      vz = (vz / mag) * MAX;
+    }
+    out.x = vx;
+    out.z = vz;
   }
 
   protected onInitialize(): void {
@@ -208,22 +262,49 @@ export class MovementSystem extends System {
       // Jump is edge-triggered; reset after the update consumes it.
       comp.jumpPressed = false;
 
-      if (mesh?.handle && r) {
-        r.setMeshPosition(mesh.handle, tick.posX, tick.posY, tick.posZ);
-        if (comp.params.faceMotion) {
-          r.setMeshRotation(mesh.handle, 0, tick.yaw, 0);
+      const entityId = (entity as unknown as { id: string }).id;
+
+      // Physics-velocity mode: when the entity ALSO carries a (non-static)
+      // Physics body, the rigid body — not this System — owns the transform.
+      // We translate the core's per-tick horizontal velocity into a
+      // `physics.setVelocity` so the capsule COLLIDES with walls, the ball, and
+      // other bodies instead of teleporting through them. Vertical velocity is
+      // left to the engine (gravity), except on the jump frame where we inject
+      // the jump impulse. We do NOT write the mesh transform here — Havok syncs
+      // it from the body after each step (a setMeshPosition would be overwritten).
+      const phys = entity.get(PhysicsComponent);
+      const physicsMode = !!phys && phys.motionType !== 'static';
+
+      if (physicsMode && r) {
+        const state = r.physicsGetBodyState(entityId);
+        if (state) {
+          const vy = tick.jumpedThisFrame ? comp.params.jumpForce : state.linearVelocity[1];
+          // Blend in AI separation so chasers don't clump on the ball.
+          this.separationVelocity(entity, this._tmp[0], this._tmp[2], this._sepOut);
+          this.eventBus.emit(PhysicsInputEvents.SET_VELOCITY, {
+            entityId,
+            vx: tick.velX + this._sepOut.x,
+            vy,
+            vz: tick.velZ + this._sepOut.z,
+          } satisfies PhysicsSetVelocityEvent);
         }
-      }
-      if (mesh) {
-        mesh.position[0] = tick.posX;
-        mesh.position[1] = tick.posY;
-        mesh.position[2] = tick.posZ;
-        if (comp.params.faceMotion) {
-          mesh.rotation[1] = tick.yaw;
+      } else {
+        if (mesh?.handle && r) {
+          r.setMeshPosition(mesh.handle, tick.posX, tick.posY, tick.posZ);
+          if (comp.params.faceMotion) {
+            r.setMeshRotation(mesh.handle, 0, tick.yaw, 0);
+          }
+        }
+        if (mesh) {
+          mesh.position[0] = tick.posX;
+          mesh.position[1] = tick.posY;
+          mesh.position[2] = tick.posZ;
+          if (comp.params.faceMotion) {
+            mesh.rotation[1] = tick.yaw;
+          }
         }
       }
 
-      const entityId = (entity as unknown as { id: string }).id;
       if (tick.jumpedThisFrame) {
         this.eventBus.emit(MovementEvents.JUMP_STARTED, { entityId });
       }
