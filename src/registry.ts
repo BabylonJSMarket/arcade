@@ -16,8 +16,6 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Movement: () => import("./Components/Movement/Movement"),
   KeyboardMover: () => import("./Components/KeyboardMover/KeyboardMover"),
   PlayerInput: () => import("./Components/PlayerInput/PlayerInput"),
-  PlayerInputBridge: () =>
-    import("./Components/PlayerInputBridge/PlayerInputBridge"),
   ArcCamera: () => import("./Components/ArcCamera/ArcCamera"),
   CameraFollow: () => import("./Components/CameraFollow/CameraFollow"),
   DirectionalLight: () => import("./Components/DirectionalLight/DirectionalLight"),
@@ -57,25 +55,13 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   TwinStickShooter: () =>
     import("./Components/TwinStickShooter/TwinStickShooter"),
   ShooterCamera: () => import("./Components/ShooterCamera/ShooterCamera"),
-  // Soccer — pitch, ball, AI team play, stamina/movement.
-  Goal: () => import("./Components/Goal/Goal"),
-  BallPossession: () => import("./Components/BallPossession/BallPossession"),
-  BallReset: () => import("./Components/BallReset/BallReset"),
-  TeamSpawner: () => import("./Components/TeamSpawner/TeamSpawner"),
-  AISeek: () => import("./Components/AISeek/AISeek"),
-  AIInput: () => import("./Components/AIInput/AIInput"),
-  BallPursuit: () => import("./Components/BallPursuit/BallPursuit"),
-  AIBrakeNearBall: () =>
-    import("./Components/AIBrakeNearBall/AIBrakeNearBall"),
-  AIAvoidance: () => import("./Components/AIAvoidance/AIAvoidance"),
-  AIGoalSeek: () => import("./Components/AIGoalSeek/AIGoalSeek"),
-  AIKick: () => import("./Components/AIKick/AIKick"),
-  AIZone: () => import("./Components/AIZone/AIZone"),
-  AICoach: () => import("./Components/AICoach/AICoach"),
-  SoccerDirector: () => import("./Components/SoccerDirector/SoccerDirector"),
-  Stamina: () => import("./Components/Stamina/Stamina"),
-  Stride: () => import("./Components/Stride/Stride"),
-  AimIndicator: () => import("./Components/AimIndicator/AimIndicator"),
+  // NOTE: premium gameplay components (the soccer team-AI set, the Wingman 6-DOF
+  // flight stack, etc.) are NOT registered here — they are paid marketplace
+  // components a project acquires via the download flow and registers in its own
+  // per-game registry (see games' soccer + wingman cabinets, which vendor them
+  // under src/.../<game>/components). This free registry is the "build-a-room"
+  // core only: mesh/material loading, cameras, movement, lights, shadows, plus
+  // the free mechanic sets.
 };
 
 export const ARCADE_COMPONENT_NAMES = Object.keys(ARCADE_COMPONENT_REGISTRY);

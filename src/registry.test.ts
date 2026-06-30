@@ -12,7 +12,6 @@ const EXPECTED_NAMES = [
   'Movement',
   'KeyboardMover',
   'PlayerInput',
-  'PlayerInputBridge',
   'ArcCamera',
   'CameraFollow',
   'DirectionalLight',
@@ -50,25 +49,16 @@ const EXPECTED_NAMES = [
   'LineOfSight',
   'TwinStickShooter',
   'ShooterCamera',
-  // Soccer
-  'Goal',
-  'BallPossession',
-  'BallReset',
-  'TeamSpawner',
-  'AISeek',
-  'AIInput',
-  'BallPursuit',
-  'AIBrakeNearBall',
-  'AIAvoidance',
-  'AIGoalSeek',
-  'AIKick',
-  'AIZone',
-  'AICoach',
-  'SoccerDirector',
-  'Stamina',
-  'Stride',
-  'AimIndicator',
 ] as const;
+
+/**
+ * Pure-data components that intentionally ship WITHOUT their own System (the
+ * consuming system lives in a sibling component's module) — exempt from the
+ * "module exports <Name>System" assertion. Empty now that the premium 6-DOF
+ * flight stack (the only data-only set) is vendored per-game instead of shipped
+ * in the free registry.
+ */
+const DATA_ONLY_NAMES = new Set<string>([]);
 
 type ComponentClass = new (...args: never[]) => Component;
 type SystemClass = new (...args: never[]) => System;
@@ -114,12 +104,13 @@ describe('ARCADE_COMPONENT_REGISTRY', () => {
       expect(typeof ComponentCtor).toBe('function');
       expect(ComponentCtor!.prototype).toBeInstanceOf(Component);
     }
-    // Bumped — 48 modules x dynamic import + Solid transform can exceed the
+    // Bumped — 39 modules x dynamic import + Solid transform can exceed the
     // default 5 s under parallel-suite contention.
   }, 30_000);
 
   it('every resolved module exports <Name>System as a class extending System', async () => {
     for (const name of EXPECTED_NAMES) {
+      if (DATA_ONLY_NAMES.has(name)) continue; // pure-data components own no System
       const mod = await ARCADE_COMPONENT_REGISTRY[name]!();
       const systemExportName = `${name}System`;
       const SystemCtor = mod[systemExportName] as SystemClass | undefined;
