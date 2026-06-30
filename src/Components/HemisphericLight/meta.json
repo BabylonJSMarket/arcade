@@ -2,7 +2,15 @@
   "name": "HemisphericLight",
   "description": "Ambient hemisphere lighting with sky and ground color blending",
   "category": "lighting",
-  "components": ["HemisphericLightComponent"],
-  "systems": ["HemisphericLightSystem"],
-  "dependencies": []
+  "components": [
+    "HemisphericLightComponent"
+  ],
+  "systems": [
+    "HemisphericLightSystem"
+  ],
+  "dependencies": [],
+  "tags": [
+    "core",
+    "rendering"
+  ]
 }
