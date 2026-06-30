@@ -64,6 +64,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   TeamSpawner: () => import("./Components/TeamSpawner/TeamSpawner"),
   AISeek: () => import("./Components/AISeek/AISeek"),
   AIInput: () => import("./Components/AIInput/AIInput"),
+  BallPursuit: () => import("./Components/BallPursuit/BallPursuit"),
   AIBrakeNearBall: () =>
     import("./Components/AIBrakeNearBall/AIBrakeNearBall"),
   AIAvoidance: () => import("./Components/AIAvoidance/AIAvoidance"),

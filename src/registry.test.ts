@@ -57,6 +57,7 @@ const EXPECTED_NAMES = [
   'TeamSpawner',
   'AISeek',
   'AIInput',
+  'BallPursuit',
   'AIBrakeNearBall',
   'AIAvoidance',
   'AIGoalSeek',
