@@ -6,6 +6,11 @@ import {
   MovementInputEvents,
 } from './Movement';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import {
+  PhysicsComponent,
+  PhysicsInputEvents,
+  type PhysicsSetVelocityEvent,
+} from '../Physics/Physics';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 
@@ -217,5 +222,118 @@ describe('MovementSystem', () => {
     world.update(0.1);
     expect(renderer.calls.filter((c) => c.method === 'setMeshPosition')).toHaveLength(0);
     expect(mesh.position[0]).toBeCloseTo(1, 5);
+  });
+
+  // ── Physics-velocity mode ─────────────────────────────────────────────────
+  // When the entity ALSO carries a non-static Physics body, the rigid body owns
+  // the transform: Movement translates the core's horizontal velocity into a
+  // `physics.setVelocity` (so the capsule collides) instead of writing the mesh.
+  // These paths used to be covered only transitively by the soccer/wingman
+  // components' tests; cover them directly here.
+
+  function makePhysicsAgent(
+    pos: [number, number, number] = [0, 1, 0],
+    opts: { ai?: boolean } = {},
+  ) {
+    const entity = world.createEntity();
+    const mesh = new MeshPrimitiveComponent({ primitive: 'capsule', position: pos });
+    mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
+    renderer.meshWorldPositions.set(mesh.handle, [...pos]);
+    entity.add(mesh);
+    entity.add(new MovementComponent({ speed: 10, jumpForce: 8, feetOffset: 1 }));
+    entity.add(new PhysicsComponent({ mass: 1 })); // mass>0 → 'dynamic' → physics mode
+    // A live body so `physicsGetBodyState` returns kinematics (not null).
+    renderer.physicsBodies.set(entity.id, {
+      position: [...pos],
+      rotation: [0, 0, 0],
+      linearVelocity: [0, 0, 0],
+      angularVelocity: [0, 0, 0],
+    });
+    if (opts.ai) entity.addTag('ai');
+    return entity;
+  }
+
+  it('physics-velocity mode emits physics.setVelocity instead of moving the mesh', () => {
+    const entity = makePhysicsAgent();
+    const velSpy = vi.fn();
+    eventBus.on(PhysicsInputEvents.SET_VELOCITY, velSpy);
+
+    eventBus.emit(MovementInputEvents.SET_MOVEMENT_VECTOR, { entityId: entity.id, x: 1, z: 0 });
+    renderer.calls.length = 0;
+    world.update(0.1);
+
+    // The body owns the transform — Movement must NOT write the mesh here.
+    expect(renderer.calls.filter((c) => c.method === 'setMeshPosition')).toHaveLength(0);
+    // Horizontal intent becomes a body velocity in +X (speed 10).
+    expect(velSpy).toHaveBeenCalledTimes(1);
+    const e = velSpy.mock.calls[0][0] as PhysicsSetVelocityEvent;
+    expect(e.entityId).toBe(entity.id);
+    expect(e.vx).toBeCloseTo(10, 5);
+    expect(e.vz).toBeCloseTo(0, 5);
+  });
+
+  it('physics-velocity mode injects jumpForce as vertical velocity on the jump frame', () => {
+    const entity = makePhysicsAgent();
+    const velSpy = vi.fn();
+    eventBus.on(PhysicsInputEvents.SET_VELOCITY, velSpy);
+
+    eventBus.emit(MovementInputEvents.JUMP_REQUESTED, { entityId: entity.id });
+    world.update(0.016);
+
+    const e = velSpy.mock.calls.at(-1)![0] as PhysicsSetVelocityEvent;
+    expect(e.vy).toBeCloseTo(8, 5); // params.jumpForce, injected only this frame
+  });
+
+  it('folds an AI separation push (away from nearby bodies, capped) into the velocity', () => {
+    // Chaser at the origin; a crowd packed to its +X inside the 2.2u radius.
+    const ai = makePhysicsAgent([0, 1, 0], { ai: true });
+    // Neighbours across BOTH scanned tags ('ai' + 'player'); the cluster is tight
+    // enough that the repulsion saturates its cap.
+    for (const [x, tag] of [
+      [0.3, 'player'],
+      [0.5, 'ai'],
+      [0.7, 'player'],
+    ] as const) {
+      const n = world.createEntity();
+      const m = new MeshPrimitiveComponent({ primitive: 'capsule', position: [x, 1, 0] });
+      m.handle = renderer.createMesh(n.id, m.toPrimitiveSpec());
+      renderer.meshWorldPositions.set(m.handle, [x, 1, 0]);
+      n.add(m);
+      n.addTag(tag);
+    }
+    // A tagged body with no mesh handle — exercises the `!om?.handle` skip.
+    world.createEntity().addTag('player');
+
+    const velSpy = vi.fn();
+    eventBus.on(PhysicsInputEvents.SET_VELOCITY, velSpy);
+    // Drive straight into the crowd (+X); separation must fight it back.
+    eventBus.emit(MovementInputEvents.SET_MOVEMENT_VECTOR, { entityId: ai.id, x: 1, z: 0 });
+    world.update(0.016);
+
+    const e = velSpy.mock.calls.at(-1)![0] as PhysicsSetVelocityEvent;
+    // Neighbours all sit at +X → repulsion is -X, pulling vx below the raw
+    // 10 u/s intent, and the cap keeps it finite (not flung).
+    expect(e.vx).toBeLessThan(10);
+    expect(Number.isFinite(e.vx)).toBe(true);
+  });
+
+  it('a non-ai physics body gets no separation push (clean velocity passthrough)', () => {
+    // A player-tagged body right next to the agent must NOT perturb a non-ai
+    // mover — separationVelocity early-returns unless the mover is 'ai'.
+    const agent = makePhysicsAgent([0, 1, 0]);
+    const neighbour = world.createEntity();
+    const m = new MeshPrimitiveComponent({ primitive: 'capsule', position: [0.4, 1, 0] });
+    m.handle = renderer.createMesh(neighbour.id, m.toPrimitiveSpec());
+    renderer.meshWorldPositions.set(m.handle, [0.4, 1, 0]);
+    neighbour.add(m);
+    neighbour.addTag('player');
+
+    const velSpy = vi.fn();
+    eventBus.on(PhysicsInputEvents.SET_VELOCITY, velSpy);
+    eventBus.emit(MovementInputEvents.SET_MOVEMENT_VECTOR, { entityId: agent.id, x: 1, z: 0 });
+    world.update(0.1);
+
+    const e = velSpy.mock.calls.at(-1)![0] as PhysicsSetVelocityEvent;
+    expect(e.vx).toBeCloseTo(10, 5); // untouched by the adjacent body
   });
 });
