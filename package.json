@@ -1,6 +1,6 @@
 {
   "name": "@babylonjsmarket/arcade",
-  "version": "0.3.18",
+  "version": "0.3.19",
   "type": "module",
   "license": "MIT",
   "description": "Reusable arcade-style components (mesh, camera, lights, input, physics, scoring, animation) for the @babylonjsmarket/ecs framework",
@@ -90,7 +90,7 @@
     "prepublishOnly": "npm run build && npm run test:coverage"
   },
   "dependencies": {
-    "@babylonjsmarket/ecs": "^0.5.8",
+    "@babylonjsmarket/ecs": "^0.5.10",
     "@clack/prompts": "^0.10.0",
     "mri": "^1.2.0",
     "picocolors": "^1.1.1"
