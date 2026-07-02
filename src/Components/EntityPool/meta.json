@@ -14,5 +14,16 @@
   "tags": [
     "core",
     "spawning"
+  ],
+  "emits": [
+    "entityPool.acquired",
+    "entityPool.exhausted",
+    "entityPool.ready",
+    "entityPool.released",
+    "entityPool.spawned"
+  ],
+  "listens": [
+    "entityPool.release",
+    "entityPool.spawn"
   ]
 }

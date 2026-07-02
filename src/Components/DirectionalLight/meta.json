@@ -12,5 +12,14 @@
   "tags": [
     "core",
     "rendering"
+  ],
+  "emits": [
+    "directionallight.color.changed",
+    "directionallight.created",
+    "directionallight.direction.changed",
+    "directionallight.intensity.changed",
+    "directionallight.shadow.created",
+    "directionallightdebugger.hidden",
+    "directionallightdebugger.shown"
   ]
 }

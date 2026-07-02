@@ -14,5 +14,14 @@
   "tags": [
     "core",
     "rendering"
+  ],
+  "emits": [
+    "mesh.error",
+    "mesh.load",
+    "mesh.loaded",
+    "mesh.loading"
+  ],
+  "listens": [
+    "mesh.load"
   ]
 }

@@ -14,5 +14,18 @@
   "tags": [
     "core",
     "physics"
+  ],
+  "emits": [
+    "physics.body.created",
+    "physics.body.disposed"
+  ],
+  "listens": [
+    "physics.pause",
+    "physics.resume",
+    "physics.setCollidersVisible",
+    "physics.setGravity",
+    "physics.setRestitution",
+    "physics.setTimeStep",
+    "physics.setVelocity"
   ]
 }

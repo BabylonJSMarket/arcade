@@ -14,5 +14,15 @@
   "tags": [
     "core",
     "combat"
+  ],
+  "emits": [
+    "health.damaged",
+    "health.died",
+    "health.healed",
+    "health.respawned"
+  ],
+  "listens": [
+    "health.damage",
+    "health.heal"
   ]
 }

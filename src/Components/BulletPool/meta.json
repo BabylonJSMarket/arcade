@@ -16,5 +16,11 @@
     "core",
     "combat",
     "spawning"
+  ],
+  "emits": [
+    "bulletPool.ready"
+  ],
+  "listens": [
+    "bulletPool.fire"
   ]
 }

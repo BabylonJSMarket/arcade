@@ -15,5 +15,11 @@
   "tags": [
     "core",
     "ai"
+  ],
+  "emits": [
+    "lineofsight.debugrays.set"
+  ],
+  "listens": [
+    "lineofsight.debugrays.set"
   ]
 }

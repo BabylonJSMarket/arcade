@@ -14,5 +14,13 @@
   "tags": [
     "core",
     "camera"
+  ],
+  "emits": [
+    "arccamera.created",
+    "arccamera.rotated",
+    "arccamera.zoomed"
+  ],
+  "listens": [
+    "meshprimitive.created"
   ]
 }

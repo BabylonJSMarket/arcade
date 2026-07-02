@@ -12,5 +12,18 @@
   "tags": [
     "core",
     "rendering"
+  ],
+  "emits": [
+    "meshprimitive.created",
+    "meshprimitive.disposed",
+    "meshprimitive.material.applied"
+  ],
+  "listens": [
+    "meshprimitive.color.set",
+    "meshprimitive.create",
+    "meshprimitive.dispose",
+    "meshprimitive.position.set",
+    "meshprimitive.scale.set",
+    "meshprimitive.visible.set"
   ]
 }

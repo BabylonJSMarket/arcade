@@ -12,5 +12,11 @@
   "tags": [
     "core",
     "rendering"
+  ],
+  "emits": [
+    "hemisphericlight.created",
+    "hemisphericlight.intensity.changed",
+    "hemisphericlightdebugger.hidden",
+    "hemisphericlightdebugger.shown"
   ]
 }

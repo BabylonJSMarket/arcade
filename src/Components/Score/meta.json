@@ -12,5 +12,16 @@
   "tags": [
     "core",
     "ui"
+  ],
+  "emits": [
+    "score.add",
+    "score.changed",
+    "score.reset",
+    "score.resetRequest"
+  ],
+  "listens": [
+    "goal.scored",
+    "score.add",
+    "score.resetRequest"
   ]
 }

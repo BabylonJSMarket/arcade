@@ -2,7 +2,15 @@
   "name": "Skybox",
   "description": "Procedural gradient sky with sun disc, halo, and horizon haze. Optionally tracks a DirectionalLight so sky and shadows stay in sync.",
   "category": "rendering",
-  "components": ["SkyboxComponent"],
-  "systems": ["SkyboxSystem"],
-  "dependencies": []
+  "components": [
+    "SkyboxComponent"
+  ],
+  "systems": [
+    "SkyboxSystem"
+  ],
+  "dependencies": [],
+  "emits": [
+    "skybox.created",
+    "skybox.sun.changed"
+  ]
 }

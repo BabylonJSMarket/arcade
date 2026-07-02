@@ -22,5 +22,20 @@
     "core",
     "ai",
     "combat"
+  ],
+  "emits": [
+    "enemy.killed",
+    "entityPool.release",
+    "health.damage",
+    "score.add",
+    "skeletonAnimator.playOnce",
+    "skeletonAnimator.setLoop"
+  ],
+  "listens": [
+    "bullet.hit",
+    "health.died",
+    "lineofsight.acquired",
+    "lineofsight.lost",
+    "skeletonAnimator.completed"
   ]
 }

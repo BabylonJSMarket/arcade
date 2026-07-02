@@ -2,7 +2,11 @@
   "name": "Flash",
   "description": "Short-lived visual entity. Pair with MeshPrimitive for the visual; FlashSystem removes the entity once `lifetime` ticks down to zero. Use for muzzle flashes, impact bursts, pickup pops.",
   "category": "vfx",
-  "components": ["FlashComponent"],
-  "systems": ["FlashSystem"],
+  "components": [
+    "FlashComponent"
+  ],
+  "systems": [
+    "FlashSystem"
+  ],
   "dependencies": []
 }

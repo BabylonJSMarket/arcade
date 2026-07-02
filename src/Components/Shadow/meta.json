@@ -15,5 +15,16 @@
   "tags": [
     "core",
     "rendering"
+  ],
+  "emits": [
+    "shadow.caster.added",
+    "shadow.disabled",
+    "shadow.enabled",
+    "shadowdebugger.hidden",
+    "shadowdebugger.shown"
+  ],
+  "listens": [
+    "directionallight.created",
+    "meshprimitive.created"
   ]
 }
