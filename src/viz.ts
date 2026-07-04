@@ -48,7 +48,6 @@ export * from './Components/Score/Score.viz';
 export * from './Components/Scoreboard/Scoreboard.viz';
 export * from './Components/Shadow/Shadow.viz';
 export * from './Components/Animation/Animation.viz';
-export * from './Components/AnimateMeshy/AnimateMeshy.viz';
 export * from './Components/Mesh/Mesh.viz';
 export * from './Components/PinballTable/PinballTable.viz';
 export * from './Components/PinballBuilder/PinballBuilder.viz';
