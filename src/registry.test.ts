@@ -26,6 +26,7 @@ const EXPECTED_NAMES = [
   'Skybox',
   'EnvironmentTexture',
   'Animation',
+  'AnimateMeshy',
   'Mesh',
   // Pinball
   'Plunger',
