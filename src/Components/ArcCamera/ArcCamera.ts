@@ -115,12 +115,21 @@ export class ArcCameraSystem extends System {
         base = rt.freeBase;
       }
       if (base) {
+        // Capture the intended radius BEFORE re-targeting. On an ArcRotate
+        // camera, setCameraTarget keeps the world POSITION fixed and recomputes
+        // the radius from it — so re-aiming at a MOVING followed target grows
+        // `radius` every frame and the camera never repositions (the target
+        // recedes and gets smaller). Restoring the pre-target radius snaps the
+        // camera to the same distance from the NEW target — the chase — and
+        // preserves user zoom (locked or free), with no feedback into `distance`.
+        const preRadius = r.getCameraAngles(rt.handle).radius;
         r.setCameraTarget(
           rt.handle,
           base[0] + arc.targetOffset[0],
           base[1] + arc.targetOffset[1],
           base[2] + arc.targetOffset[2],
         );
+        r.setCameraRadius(rt.handle, preRadius);
       }
 
       const angles = r.getCameraAngles(rt.handle);
