@@ -18,6 +18,7 @@ export * from './Components/Flash/Flash';
 export * from './Components/Shadow/Shadow';
 export * from './Components/Skybox/Skybox';
 export * from './Components/EnvironmentTexture/EnvironmentTexture';
+export * from './Components/ToneMapping/ToneMapping';
 export * from './Components/Animation/Animation';
 export * from './Components/Mesh/Mesh';
 export * from './Components/Plunger/Plunger';

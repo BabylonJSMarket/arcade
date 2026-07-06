@@ -29,6 +29,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Shadow: () => import("./Components/Shadow/Shadow"),
   Skybox: () => import("./Components/Skybox/Skybox"),
   EnvironmentTexture: () => import("./Components/EnvironmentTexture/EnvironmentTexture"),
+  ToneMapping: () => import("./Components/ToneMapping/ToneMapping"),
   Animation: () => import("./Components/Animation/Animation"),
   Mesh: () => import("./Components/Mesh/Mesh"),
   // Pinball — flipper-driven physics tables.

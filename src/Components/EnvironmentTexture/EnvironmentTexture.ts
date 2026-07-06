@@ -12,9 +12,14 @@ import type { EventBus, Entity } from '@babylonjsmarket/ecs';
 import {
   EnvironmentTextureComponent,
   type EnvironmentTextureInput,
+  type EnvironmentPreset,
 } from './EnvironmentTexture.core';
 
-export { EnvironmentTextureComponent, type EnvironmentTextureInput };
+export {
+  EnvironmentTextureComponent,
+  type EnvironmentTextureInput,
+  type EnvironmentPreset,
+};
 
 interface EnvironmentTextureRuntime {
   initialized: boolean;

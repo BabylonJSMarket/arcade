@@ -25,6 +25,7 @@ const EXPECTED_NAMES = [
   'Shadow',
   'Skybox',
   'EnvironmentTexture',
+  'ToneMapping',
   'Animation',
   'Mesh',
   // Pinball

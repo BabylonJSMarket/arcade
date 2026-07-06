@@ -32,6 +32,27 @@ describe('EnvironmentTextureComponent (core)', () => {
     expect(copy.url).toBe('studio.env');
     expect(copy.level).toBe(1.5);
   });
+
+  it('the studio preset fills url + level', () => {
+    const c = new EnvironmentTextureComponent({ preset: 'studio' });
+    expect(c.url).toContain('studio.env');
+    expect(c.level).toBe(1.15);
+    expect(c.preset).toBe('studio');
+  });
+
+  it('explicit url / level override the preset', () => {
+    const c = new EnvironmentTextureComponent({ preset: 'studio', level: 2 });
+    expect(c.level).toBe(2);
+    expect(c.url).toContain('studio.env');
+  });
+
+  it('serialize keeps the preset', () => {
+    const copy = new EnvironmentTextureComponent(
+      new EnvironmentTextureComponent({ preset: 'studio' }).serialize(),
+    );
+    expect(copy.preset).toBe('studio');
+    expect(copy.level).toBe(1.15);
+  });
 });
 
 describe('EnvironmentTextureSystem — adapter integration', () => {
