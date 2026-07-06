@@ -1,0 +1,12 @@
+{
+  "name": "Jump",
+  "description": "A scripted jump arc — press a key (or emit jump.request) and the character rises then falls along a tunable parabola-with-hang over a fixed air time, back to the ground it left. Drives vertical offset through the entity's own transform (a followed Mesh's Y, else the proxy's), so it composes with any mover and needs no physics engine. Emits jump.started (with the air time) so an animator can land a jump clip exactly on touchdown.",
+  "category": "movement",
+  "components": [
+    "JumpComponent"
+  ],
+  "systems": [
+    "JumpSystem"
+  ],
+  "dependencies": []
+}

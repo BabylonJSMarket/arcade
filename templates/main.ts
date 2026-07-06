@@ -7,7 +7,7 @@
 // scene is loaded instead of the default. This is how `bjs download <asset>`
 // previews a downloaded asset — it drops public/<key>/scene.json and opens
 // /?scene=/<key>/scene.json. With no param, the default scene loads.
-import { ArcadeGame } from '@babylonjsmarket/arcade'
+import { ArcadeGame, registerBabylonToneMappingExtension } from '@babylonjsmarket/arcade'
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'
 import { mountArcadeViz } from '@babylonjsmarket/arcade/viz'
 import { mountViz } from '@babylonjsmarket/viz/solid'
@@ -30,6 +30,12 @@ const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 const sceneUrl = new URLSearchParams(window.location.search).get('scene')
 
 const adapter = new BabylonAdapter()
+
+// Built-in arcade adapter plugin: the ACES tone-mapping grade that
+// EnvironmentTexture{preset:'studio'} + ToneMapping rely on for the marketplace
+// figure look. Free arcade components aren't downloaded, so the auto-wire below
+// won't catch this one — register it explicitly.
+registerBabylonToneMappingExtension(adapter)
 
 // Auto-wire adapter plugins shipped by downloaded components. A component that
 // needs an engine feature the adapter doesn't expose — AnimateMeshy's runtime

@@ -587,7 +587,17 @@ ${threeImportmap}    <style>
           "import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'",
           `import { ${rc.adapter} } from '${rc.import}'`,
         )
-        .replace("new BabylonAdapter()", `new ${rc.adapter}()`);
+        .replace("new BabylonAdapter()", `new ${rc.adapter}()`)
+        // The ToneMapping grade is a Babylon-only plugin; drop its import + call
+        // for the other renderers (they have no scene image-processing seam).
+        .replace(
+          "import { ArcadeGame, registerBabylonToneMappingExtension } from '@babylonjsmarket/arcade'",
+          "import { ArcadeGame } from '@babylonjsmarket/arcade'",
+        )
+        .replace(
+          /\n\/\/ Built-in arcade adapter plugin:[\s\S]*?registerBabylonToneMappingExtension\(adapter\)\n/,
+          "\n",
+        );
     }
     write("src/main.ts", mainTs);
     // The scene set differs by kind: a single game ships one starter scene; an

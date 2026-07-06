@@ -12,6 +12,7 @@ const EXPECTED_NAMES = [
   'Movement',
   'KeyboardMover',
   'PlayerInput',
+  'Jump',
   'ArcCamera',
   'CameraFollow',
   'DirectionalLight',

@@ -16,6 +16,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Movement: () => import("./Components/Movement/Movement"),
   KeyboardMover: () => import("./Components/KeyboardMover/KeyboardMover"),
   PlayerInput: () => import("./Components/PlayerInput/PlayerInput"),
+  Jump: () => import("./Components/Jump/Jump"),
   ArcCamera: () => import("./Components/ArcCamera/ArcCamera"),
   CameraFollow: () => import("./Components/CameraFollow/CameraFollow"),
   DirectionalLight: () => import("./Components/DirectionalLight/DirectionalLight"),
