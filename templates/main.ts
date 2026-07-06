@@ -29,7 +29,28 @@ import { REGISTRY } from './registry'
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
 const sceneUrl = new URLSearchParams(window.location.search).get('scene')
 
-const game = new ArcadeGame(new BabylonAdapter(), { componentRegistry: REGISTRY })
+const adapter = new BabylonAdapter()
+
+// Auto-wire adapter plugins shipped by downloaded components. A component that
+// needs an engine feature the adapter doesn't expose — AnimateMeshy's runtime
+// retarget, for example — ships an `adapter/register.ts` exporting a
+// `register…Extension(adapter)` function. `bjs download` drops it under
+// `src/Components/<Name>/adapter/`; this installs every one on the adapter
+// BEFORE the scene loads, so the component's System finds its plugin at load
+// time. Projects with no such component match nothing here (a no-op).
+const adapterPlugins = import.meta.glob(
+  ['./Components/*/adapter/register.ts', './components/*/adapter/register.ts'],
+  { eager: true },
+)
+for (const mod of Object.values(adapterPlugins)) {
+  for (const [name, fn] of Object.entries(mod as Record<string, unknown>)) {
+    if (typeof fn === 'function' && /^register[A-Za-z]*Extension$/.test(name)) {
+      ;(fn as (a: unknown) => void)(adapter)
+    }
+  }
+}
+
+const game = new ArcadeGame(adapter, { componentRegistry: REGISTRY })
 await game.init(canvas)
 
 // Scene name namespaces persisted panel state. For a downloaded-asset preview
