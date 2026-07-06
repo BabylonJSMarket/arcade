@@ -488,6 +488,37 @@ describe('MeshSystem — instanced clone + follow', () => {
     );
   });
 
+  it('face lock freezes the follow yaw until released', async () => {
+    const entity = world.createEntity('Player');
+    entity.add(
+      new MeshComponent({ src: 'player.glb', instanced: true, follow: true, position: [0, 0.5, 0] }),
+    );
+    const mp = new MeshPrimitiveComponent({ primitive: 'capsule', position: [0, 1, 0] });
+    entity.add(mp);
+
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60); // instantiate
+
+    // Travel +Z → the follow yaw settles toward that heading.
+    mp.position[2] = 1;
+    world.update(1 / 60);
+    const beforeLock = callsOf('setMeshRotation').at(-1)!.args[2];
+
+    // Lock facing, then travel +X. The yaw must hold, not turn toward +X.
+    world.getEventBus().emitImmediate(MeshInputEvents.FACE_LOCK, { entityId: 'Player', locked: true });
+    mp.position[0] = 5;
+    world.update(1 / 60);
+    expect(callsOf('setMeshRotation').at(-1)!.args[2]).toBe(beforeLock);
+
+    // Release, travel +X again → the yaw resumes turning.
+    world.getEventBus().emitImmediate(MeshInputEvents.FACE_LOCK, { entityId: 'Player', locked: false });
+    mp.position[0] = 10;
+    world.update(1 / 60);
+    expect(callsOf('setMeshRotation').at(-1)!.args[2]).not.toBe(beforeLock);
+  });
+
   it('instanced load leaves the core in "loading" when no renderer is attached', () => {
     const eb = new EventBus();
     const w = new World({ eventBus: eb }); // no renderer

@@ -40,7 +40,19 @@ export const MeshEvents = {
 export const MeshInputEvents = {
   /** Kick a load for the matching entity. Payload: `{ entityId, src? }`. */
   LOAD: 'mesh.load',
+  /**
+   * Freeze / release a followed mesh's facing. While locked the follow holds
+   * its current yaw instead of turning toward movement — e.g. a strafe mode
+   * where the character keeps facing forward while stepping sideways.
+   * Payload: `{ entityId, locked }`.
+   */
+  FACE_LOCK: 'mesh.faceLock',
 } as const;
+
+export interface MeshFaceLockRequest {
+  entityId: string;
+  locked: boolean;
+}
 
 export interface MeshLoadRequest {
   entityId: string;
@@ -141,6 +153,8 @@ export class MeshSystem extends System {
   private templateAnimationNames = new Map<string, string[]>();
   /** Per-entity follow state (instanced + follow). Keyed by entityId. */
   private followState = new Map<string, MeshFollowState>();
+  /** Entity ids whose follow yaw is frozen (strafe / aim lock). */
+  private faceLocked = new Set<string>();
 
   private getRuntime(comp: MeshComponent): MeshRuntime {
     let rt = this.runtime.get(comp);
@@ -160,6 +174,10 @@ export class MeshSystem extends System {
   protected onInitialize(): void {
     this.listen(MeshInputEvents.LOAD, (e: MeshLoadRequest) => {
       this.handleLoadRequest(e);
+    });
+    this.listen(MeshInputEvents.FACE_LOCK, (e: MeshFaceLockRequest) => {
+      if (e.locked) this.faceLocked.add(e.entityId);
+      else this.faceLocked.delete(e.entityId);
     });
 
     for (const entity of this.entities) this.ensureInstance(entity);
@@ -214,6 +232,7 @@ export class MeshSystem extends System {
       }
     }
     this.dispatched.delete(id);
+    this.faceLocked.delete(id);
   }
 
   protected onShutdown(): void {
@@ -222,6 +241,7 @@ export class MeshSystem extends System {
     this.templateReady.clear();
     this.templateAnimationNames.clear();
     this.followState.clear();
+    this.faceLocked.clear();
   }
 
   private ensureInstance(entity: Entity): void {
@@ -272,15 +292,19 @@ export class MeshSystem extends System {
       fs = { prevX: px, prevZ: pz, yaw: comp.params.yawOffset };
       this.followState.set(entityId, fs);
     }
-    if (comp.params.faceMode === 'proxy') {
-      // The gameplay system already orients the proxy (e.g. a twin-stick player
-      // faces its aim). Copy its yaw rather than inferring one from movement.
-      fs.yaw = mp.rotation[1] + comp.params.yawOffset;
-    } else {
-      const dx = px - fs.prevX;
-      const dz = pz - fs.prevZ;
-      if (Math.hypot(dx, dz) > 1e-3) {
-        fs.yaw = Math.atan2(dx, dz) + comp.params.yawOffset;
+    // While face-locked, hold the current yaw (strafe / aim mode): skip the
+    // update but still track prevX/Z so movement doesn't snap on release.
+    if (!this.faceLocked.has(entityId)) {
+      if (comp.params.faceMode === 'proxy') {
+        // The gameplay system already orients the proxy (e.g. a twin-stick player
+        // faces its aim). Copy its yaw rather than inferring one from movement.
+        fs.yaw = mp.rotation[1] + comp.params.yawOffset;
+      } else {
+        const dx = px - fs.prevX;
+        const dz = pz - fs.prevZ;
+        if (Math.hypot(dx, dz) > 1e-3) {
+          fs.yaw = Math.atan2(dx, dz) + comp.params.yawOffset;
+        }
       }
     }
     fs.prevX = px;

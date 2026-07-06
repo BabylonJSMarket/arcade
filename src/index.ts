@@ -5,6 +5,7 @@ export * from './Components/MeshPrimitive/MeshPrimitive';
 export * from './Components/Movement/Movement';
 export * from './Components/KeyboardMover/KeyboardMover';
 export * from './Components/PlayerInput/PlayerInput';
+export * from './Components/Jump/Jump';
 export * from './Components/ArcCamera/ArcCamera';
 export * from './Components/CameraFollow/CameraFollow';
 export * from './Components/DirectionalLight/DirectionalLight';
