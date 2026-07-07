@@ -1,10 +1,6 @@
+import { ScoreEvents, ScoreInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  ScoreComponent,
-  ScoreSystem,
-  ScoreEvents,
-  ScoreInputEvents,
-} from './Score';
+import { ScoreComponent, ScoreSystem } from './Score';
 
 runMechanicContract({
   name: 'Score',

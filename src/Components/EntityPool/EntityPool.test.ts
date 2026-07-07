@@ -4,17 +4,13 @@
  * components it declares — mirroring the live ArcadeGame path (markers register
  * the names, then the pool builds from config).
  */
+import { EntityPoolEvents, EntityPoolInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { EventBus, World, SceneLoader, MockRendererAdapter } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent, MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive'
 import { HealthComponent, HealthSystem } from '../Health/Health'
 import { MeshComponent, MeshSystem } from '../Mesh/Mesh'
-import {
-  EntityPoolComponent,
-  EntityPoolSystem,
-  EntityPoolEvents,
-  EntityPoolInputEvents,
-} from './EntityPool'
+import { EntityPoolComponent, EntityPoolSystem } from './EntityPool';
 
 function setup(poolConfig: ConstructorParameters<typeof EntityPoolComponent>[0]) {
   const eventBus = new EventBus()

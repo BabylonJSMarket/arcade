@@ -6,6 +6,7 @@
  * underlying 3D object. Zero imports from @babylonjs or three.
  */
 
+import { MeshPrimitiveEvents, MeshPrimitiveInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
@@ -20,20 +21,9 @@ import {
 
 export { MeshPrimitiveComponent, type MeshPrimitiveInput, type MeshPrimitiveRuntime, type PrimitiveType };
 
-export const MeshPrimitiveEvents = {
-  CREATED: 'meshprimitive.created',
-  MATERIAL_APPLIED: 'meshprimitive.material.applied',
-  DISPOSED: 'meshprimitive.disposed',
-} as const;
 
-export const MeshPrimitiveInputEvents = {
-  CREATE: 'meshprimitive.create',
-  SET_POSITION: 'meshprimitive.position.set',
-  SET_SCALE: 'meshprimitive.scale.set',
-  SET_COLOR: 'meshprimitive.color.set',
-  SET_VISIBLE: 'meshprimitive.visible.set',
-  DISPOSE: 'meshprimitive.dispose',
-} as const;
+
+
 
 interface BabylonMeshExposer {
   kind: 'babylon';

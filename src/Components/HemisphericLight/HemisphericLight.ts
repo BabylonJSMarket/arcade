@@ -3,6 +3,7 @@
  * Pure data lives in HemisphericLight.core.ts. This System drives world.renderer.
  */
 
+import { HemisphericLightEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
@@ -11,10 +12,7 @@ import { HemisphericLightComponent, type HemisphericLightInput } from './Hemisph
 
 export { HemisphericLightComponent, type HemisphericLightInput };
 
-export const HemisphericLightEvents = {
-  CREATED: 'hemisphericlight.created',
-  INTENSITY_CHANGED: 'hemisphericlight.intensity.changed',
-} as const;
+
 
 interface HemisphericLightRuntime {
   handle?: LightHandle;

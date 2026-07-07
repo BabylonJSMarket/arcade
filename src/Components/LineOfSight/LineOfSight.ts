@@ -11,33 +11,16 @@
  * it draws each entity's fanned sight rays, green where they reach the target,
  * red where blocked.
  */
+import { LineOfSightEvents, LineOfSightInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { Entity } from '@babylonjsmarket/ecs'
 import type { LineHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
 import { collectObstacleBoxes } from '../Obstacle/Obstacle'
-import {
-  LineOfSightComponent,
-  LineOfSightEvents,
-  LineOfSightInputEvents,
-  hasLineOfSight,
-  inSightCone,
-  rayFanEndpoints,
-  rayReaches,
-} from './LineOfSight.core'
+import { LineOfSightComponent, hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches } from './LineOfSight.core';
 import type { Occluder } from './LineOfSight.core'
 
-export {
-  LineOfSightComponent,
-  LineOfSightEvents,
-  LineOfSightInputEvents,
-  hasLineOfSight,
-  inSightCone,
-  rayFanEndpoints,
-  rayReaches,
-  type LineOfSightInput,
-  type Occluder,
-} from './LineOfSight.core'
+export { LineOfSightComponent, hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches, type LineOfSightInput, type Occluder } from './LineOfSight.core';
 
 const CLEAR_COLOR: Vec3 = [0.3, 1, 0.4]
 const BLOCKED_COLOR: Vec3 = [1, 0.3, 0.3]

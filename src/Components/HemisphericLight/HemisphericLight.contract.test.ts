@@ -1,9 +1,6 @@
+import { HemisphericLightEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  HemisphericLightComponent,
-  HemisphericLightSystem,
-  HemisphericLightEvents,
-} from './HemisphericLight';
+import { HemisphericLightComponent, HemisphericLightSystem } from './HemisphericLight';
 
 runMechanicContract({
   name: 'HemisphericLight',

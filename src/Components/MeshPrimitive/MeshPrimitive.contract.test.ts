@@ -1,10 +1,6 @@
+import { MeshPrimitiveEvents, MeshPrimitiveInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  MeshPrimitiveComponent,
-  MeshPrimitiveSystem,
-  MeshPrimitiveEvents,
-  MeshPrimitiveInputEvents,
-} from './MeshPrimitive';
+import { MeshPrimitiveComponent, MeshPrimitiveSystem } from './MeshPrimitive';
 
 runMechanicContract({
   name: 'MeshPrimitive',

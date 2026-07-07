@@ -12,6 +12,7 @@
  * BLEND_UPDATED every frame for HUDs. No @babylonjs / three imports here.
  */
 
+import { AnimationEvents, AnimationInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -28,19 +29,9 @@ import {
 // Events
 // ============================================
 
-export const AnimationEvents = {
-  /** Fired the frame the dominant clip flips (e.g., idle → walk). */
-  STATE_CHANGED: 'animation.state.changed',
-  /** Fired every frame with the current blend weights. Useful for HUDs. */
-  BLEND_UPDATED: 'animation.blend.updated',
-  /** Fired once after the component has wired up to an animation set. */
-  READY: 'animation.ready',
-} as const;
 
-export const AnimationInputEvents = {
-  /** External producer (MovementSystem, StrideSystem, AI) pushes a speed. */
-  SET_SPEED: 'animation.speed.set',
-} as const;
+
+
 
 export interface AnimationSetSpeedRequest {
   entityId: string;

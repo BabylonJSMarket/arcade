@@ -1,10 +1,6 @@
+import { AnimationEvents, AnimationInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  AnimationComponent,
-  AnimationSystem,
-  AnimationEvents,
-  AnimationInputEvents,
-} from './Animation';
+import { AnimationComponent, AnimationSystem } from './Animation';
 import { DEFAULT_ANIMATION_PARAMS } from './Animation.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';

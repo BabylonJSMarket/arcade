@@ -1,10 +1,6 @@
+import { ScoreboardEvents, ScoreboardInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  ScoreboardComponent,
-  ScoreboardSystem,
-  ScoreboardEvents,
-  ScoreboardInputEvents,
-} from './Scoreboard';
+import { ScoreboardComponent, ScoreboardSystem } from './Scoreboard';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

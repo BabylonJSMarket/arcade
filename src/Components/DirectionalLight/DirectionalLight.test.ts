@@ -1,9 +1,6 @@
+import { DirectionalLightEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  DirectionalLightComponent,
-  DirectionalLightSystem,
-  DirectionalLightEvents,
-} from './DirectionalLight';
+import { DirectionalLightComponent, DirectionalLightSystem } from './DirectionalLight';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

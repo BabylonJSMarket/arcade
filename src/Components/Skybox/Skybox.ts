@@ -9,6 +9,7 @@
  * used; with a tag name, the System finds the first entity carrying that tag.
  */
 
+import { SkyboxEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
@@ -18,10 +19,7 @@ import { DirectionalLightComponent } from '../DirectionalLight/DirectionalLight'
 
 export { SkyboxComponent, type SkyboxInput };
 
-export const SkyboxEvents = {
-  CREATED: 'skybox.created',
-  SUN_CHANGED: 'skybox.sun.changed',
-} as const;
+
 
 interface SkyboxRuntime {
   handle?: SkyboxHandle;

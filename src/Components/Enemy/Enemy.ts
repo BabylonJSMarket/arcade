@@ -26,34 +26,14 @@
  * player is seen, wandering away from the crowd while it isn't. An enemy with no
  * LineOfSight component never emits, so it defaults to a plain chaser.
  */
+import { BulletEvents, EnemyEvents, EntityPoolInputEvents, HealthEvents, HealthInputEvents, LineOfSightEvents, ScoreInputEvents, SkeletonAnimatorEvents, SkeletonAnimatorInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { Entity } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { EntityPoolInputEvents } from '../EntityPool/EntityPool.core'
-import { SkeletonAnimatorInputEvents, SkeletonAnimatorEvents } from '../SkeletonAnimator/SkeletonAnimator.core'
-import { HealthEvents, HealthInputEvents } from '../Health/Health'
-import { ScoreInputEvents } from '../Score/Score'
-import { BulletEvents } from '../Bullet/Bullet.core'
 import { collectObstacleBoxes, resolveCircleVsBox } from '../Obstacle/Obstacle'
-import { LineOfSightEvents } from '../LineOfSight/LineOfSight.core'
-import {
-  EnemyComponent,
-  EnemyEvents,
-  decideLocomotion,
-  wanderHeading,
-  allDeathClips,
-  chooseDeathClip,
-} from './Enemy.core'
+import { EnemyComponent, decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip } from './Enemy.core';
 
-export {
-  EnemyComponent,
-  EnemyEvents,
-  decideLocomotion,
-  wanderHeading,
-  allDeathClips,
-  chooseDeathClip,
-  type EnemyInput,
-} from './Enemy.core'
+export { EnemyComponent, decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip, type EnemyInput } from './Enemy.core';
 
 // Max radians a wander heading is rotated off "straight away from the crowd",
 // so wanderers scatter instead of fleeing in a dead-straight radial line.

@@ -11,6 +11,7 @@
  * `SceneLoader.ImportMeshAsync` / `GLTFLoader.loadAsync` specifics.
  */
 
+import { MeshEvents, MeshInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -28,26 +29,9 @@ import {
 // Events
 // ============================================
 
-export const MeshEvents = {
-  /** A load request has been dispatched to the renderer. */
-  LOADING: 'mesh.loading',
-  /** The model finished loading — `meshId` is now valid for animation calls. */
-  LOADED: 'mesh.loaded',
-  /** The renderer rejected the load. `error` has the message. */
-  ERROR: 'mesh.error',
-} as const;
 
-export const MeshInputEvents = {
-  /** Kick a load for the matching entity. Payload: `{ entityId, src? }`. */
-  LOAD: 'mesh.load',
-  /**
-   * Freeze / release a followed mesh's facing. While locked the follow holds
-   * its current yaw instead of turning toward movement — e.g. a strafe mode
-   * where the character keeps facing forward while stepping sideways.
-   * Payload: `{ entityId, locked }`.
-   */
-  FACE_LOCK: 'mesh.faceLock',
-} as const;
+
+
 
 export interface MeshFaceLockRequest {
   entityId: string;

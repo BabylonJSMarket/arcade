@@ -3,6 +3,7 @@
  * Pure data lives in DirectionalLight.core.ts. This System drives world.renderer.
  */
 
+import { DirectionalLightEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
@@ -11,13 +12,7 @@ import { DirectionalLightComponent, type DirectionalLightInput } from './Directi
 
 export { DirectionalLightComponent, type DirectionalLightInput };
 
-export const DirectionalLightEvents = {
-  CREATED: 'directionallight.created',
-  DIRECTION_CHANGED: 'directionallight.direction.changed',
-  INTENSITY_CHANGED: 'directionallight.intensity.changed',
-  COLOR_CHANGED: 'directionallight.color.changed',
-  SHADOW_CREATED: 'directionallight.shadow.created',
-} as const;
+
 
 interface Snapshot {
   dir: [number, number, number];

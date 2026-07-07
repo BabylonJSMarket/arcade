@@ -1,9 +1,6 @@
+import { ArcCameraEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  ArcCameraComponent,
-  ArcCameraSystem,
-  ArcCameraEvents,
-} from './ArcCamera';
+import { ArcCameraComponent, ArcCameraSystem } from './ArcCamera';
 import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
 import { getArcCameraRuntime } from './ArcCamera.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';

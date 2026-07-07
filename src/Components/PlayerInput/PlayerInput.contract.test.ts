@@ -1,9 +1,6 @@
+import { PlayerInputInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  PlayerInputComponent,
-  PlayerInputSystem,
-  PlayerInputInputEvents,
-} from './PlayerInput';
+import { PlayerInputComponent, PlayerInputSystem } from './PlayerInput';
 
 runMechanicContract({
   name: 'PlayerInput',

@@ -13,17 +13,13 @@
  * MeshPrimitive proxy's Y when there's no Mesh.
  */
 
+import { JumpEvents, JumpInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus, Entity } from '@babylonjsmarket/ecs';
 import { MeshComponent } from '../Mesh/Mesh';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { KeyboardInputEvents } from '../../inputEvents';
-import {
-  JumpComponent,
-  JumpEvents,
-  JumpInputEvents,
-  type JumpStartedEvent,
-} from './Jump.core';
+import { JumpComponent, type JumpStartedEvent } from './Jump.core';
 
 export class JumpSystem extends System {
   protected query = { required: [JumpComponent] };

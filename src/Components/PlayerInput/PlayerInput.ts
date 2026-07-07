@@ -8,6 +8,7 @@
  * PlayerInput.core and the browser input APIs.
  */
 
+import { PlayerInputEvents, PlayerInputInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -22,16 +23,9 @@ import {
   type InputSource,
 } from './PlayerInput.core';
 
-export const PlayerInputEvents = {
-  ACTION_PRESSED: 'playerInput.actionPressed',
-  ACTION_RELEASED: 'playerInput.actionReleased',
-  MOVE_CHANGED: 'playerInput.moveChanged',
-  SOURCE_CHANGED: 'playerInput.sourceChanged',
-} as const;
 
-export const PlayerInputInputEvents = {
-  SET_ENABLED: 'playerInput.setEnabled',
-} as const;
+
+
 
 export interface PlayerInputActionEvent {
   entityId: string;

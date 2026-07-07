@@ -8,11 +8,12 @@
  * camera target toward it.
  */
 
+import { ArcCameraEvents, MeshPrimitiveEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { MeshPrimitiveEvents, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
 import {
   ArcCameraComponent,
   type ArcCameraInput,
@@ -22,13 +23,7 @@ import {
 
 export { ArcCameraComponent, type ArcCameraInput };
 
-export const ArcCameraEvents = {
-  CREATED: 'arccamera.created',
-  MOVED: 'arccamera.moved',
-  ROTATED: 'arccamera.rotated',
-  ZOOMED: 'arccamera.zoomed',
-  TARGET_CHANGED: 'arccamera.target.changed',
-} as const;
+
 
 export class ArcCameraSystem extends System {
   protected query = { required: [ArcCameraComponent] };

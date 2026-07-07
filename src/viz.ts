@@ -52,7 +52,4 @@ export * from './Components/Scoreboard/Scoreboard.viz';
 export * from './Components/Shadow/Shadow.viz';
 export * from './Components/Animation/Animation.viz';
 export * from './Components/Mesh/Mesh.viz';
-export * from './Components/PinballTable/PinballTable.viz';
-export * from './Components/PinballBuilder/PinballBuilder.viz';
-export * from './Components/Flipper/Flipper.viz';
 export * from './Components/LineOfSight/LineOfSight.viz';

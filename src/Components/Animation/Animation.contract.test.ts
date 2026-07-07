@@ -1,11 +1,7 @@
+import { AnimationEvents, AnimationInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import type { MechanicContractContext } from '@babylonjsmarket/ecs/testing';
-import {
-  AnimationComponent,
-  AnimationSystem,
-  AnimationEvents,
-  AnimationInputEvents,
-} from './Animation';
+import { AnimationComponent, AnimationSystem } from './Animation';
 
 /**
  * Animation routes SET_SPEED requests by entityId and emits BLEND_UPDATED

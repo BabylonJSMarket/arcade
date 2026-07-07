@@ -1,5 +1,6 @@
+import { SkyboxEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SkyboxComponent, SkyboxSystem, SkyboxEvents } from './Skybox';
+import { SkyboxComponent, SkyboxSystem } from './Skybox';
 import { DirectionalLightComponent, DirectionalLightSystem } from '../DirectionalLight/DirectionalLight';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';

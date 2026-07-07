@@ -5,17 +5,14 @@
  * demo unchanged — it only binds to the pure core.
  */
 
+import { ScoreInputEvents, ScoreboardInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import { vizStore } from '@babylonjsmarket/viz';
 import { ScoreboardPanel } from './Scoreboard.panel';
-import {
-  ScoreboardComponent,
-  ScoreboardInputEvents,
-} from './Scoreboard';
-import { ScoreInputEvents } from '../Score/Score';
+import { ScoreboardComponent } from './Scoreboard';
 import type { ScoreboardInstance } from './Scoreboard.core';
 
 export interface ScoreboardDebuggerInput {

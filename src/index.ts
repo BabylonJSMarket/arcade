@@ -1,6 +1,7 @@
 export * from './ArcadeGame';
 export * from './registry';
 export * from './inputEvents';
+export * from './events';
 export * from './Components/MeshPrimitive/MeshPrimitive';
 export * from './Components/Movement/Movement';
 export * from './Components/KeyboardMover/KeyboardMover';
@@ -22,21 +23,9 @@ export * from './Components/EnvironmentTexture/EnvironmentTexture';
 export * from './Components/ToneMapping/ToneMapping';
 export * from './Components/Animation/Animation';
 export * from './Components/Mesh/Mesh';
-export * from './Components/Plunger/Plunger';
-export * from './Components/PinballCamera/PinballCamera';
-export * from './Components/PinballLayout/PinballLayout';
-export * from './Components/PinballTable/PinballTable';
-export * from './Components/PinballBuilder/PinballBuilder';
-export * from './Components/PinballBuilderInput/PinballBuilderInput';
-export * from './Components/Bumper/Bumper';
-export * from './Components/Flipper/Flipper';
-export * from './Components/MouseHole/MouseHole';
-export * from './Components/Spinner/Spinner';
-export * from './Components/BulletPool/BulletPool';
-export * from './Components/Bullet/Bullet';
 export * from './Components/EntityPool/EntityPool';
 export * from './Components/Enemy/Enemy';
-export * from './Components/SkeletonAnimator/SkeletonAnimator';
-export * from './Components/EnemySpawner/EnemySpawner';
-export * from './Components/TwinStickShooter/TwinStickShooter';
-export * from './Components/ShooterCamera/ShooterCamera';
+// Obstacle is a free generic AABB collision box (static data + geometry helpers,
+// only depends on MeshPrimitive). The free Enemy / LineOfSight AI read it; the
+// premium shooter kit (vendored per game) also imports it from here.
+export * from './Components/Obstacle/Obstacle';

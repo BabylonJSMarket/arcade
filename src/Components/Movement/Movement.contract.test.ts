@@ -1,11 +1,7 @@
+import { MovementEvents, MovementInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import type { MechanicContractContext } from '@babylonjsmarket/ecs/testing';
-import {
-  MovementComponent,
-  MovementSystem,
-  MovementEvents,
-  MovementInputEvents,
-} from './Movement';
+import { MovementComponent, MovementSystem } from './Movement';
 
 /**
  * Movement routes its inputs by `entityId`. The contract battery mints a

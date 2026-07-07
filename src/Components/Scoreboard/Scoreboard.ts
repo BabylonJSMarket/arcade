@@ -14,6 +14,7 @@
  * never touches the 3D layer.
  */
 
+import { ScoreboardEvents, ScoreboardInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -32,17 +33,9 @@ import {
 // Events
 // ============================================
 
-export const ScoreboardEvents = {
-  /** Emitted after the core rebuilds its rows; payload carries the snapshot. */
-  UPDATED: 'scoreboard.updated',
-} as const;
 
-export const ScoreboardInputEvents = {
-  /** Public Score-system event — `{ ownerEntity, score, allScores }`. */
-  SCORE_CHANGED: 'score.changed',
-  /** Public Score-system event — clears every row to zero. */
-  SCORE_RESET: 'score.reset',
-} as const;
+
+
 
 export interface ScoreboardScoreUpdateEvent {
   ownerEntity?: string;

@@ -1,16 +1,9 @@
+import { BulletEvents, EnemyEvents, EntityPoolInputEvents, HealthEvents, HealthInputEvents, LineOfSightEvents, ScoreInputEvents, SkeletonAnimatorEvents, SkeletonAnimatorInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventBus, World, MockRendererAdapter } from '@babylonjsmarket/ecs';
 import { EnemyComponent, EnemySystem } from './Enemy';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import { BulletEvents } from '../Bullet/Bullet.core';
-import { HealthEvents } from '../Health/Health';
 import { ObstacleComponent } from '../Obstacle/Obstacle.core';
-import { SkeletonAnimatorInputEvents, SkeletonAnimatorEvents } from '../SkeletonAnimator/SkeletonAnimator.core';
-import { LineOfSightEvents } from '../LineOfSight/LineOfSight.core';
-import { EntityPoolInputEvents } from '../EntityPool/EntityPool.core';
-import { HealthInputEvents } from '../Health/Health';
-import { ScoreInputEvents } from '../Score/Score';
-import { EnemyEvents } from './Enemy.core';
 
 describe('EnemySystem knockback', () => {
   let eventBus: EventBus;

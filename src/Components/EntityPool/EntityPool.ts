@@ -9,25 +9,13 @@
  *
  * See EntityPool.core for the collision-proxy convention and reuse semantics.
  */
+import { EntityPoolEvents, EntityPoolInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { EventBus, Entity, World } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import {
-  EntityPoolComponent,
-  EntityPoolEvents,
-  EntityPoolInputEvents,
-  type EntityPoolSpawnEvent,
-  type EntityPoolReleaseEvent,
-} from './EntityPool.core'
+import { EntityPoolComponent, type EntityPoolSpawnEvent, type EntityPoolReleaseEvent } from './EntityPool.core';
 
-export {
-  EntityPoolComponent,
-  EntityPoolEvents,
-  EntityPoolInputEvents,
-  type EntityPoolInput,
-  type EntityPoolSpawnEvent,
-  type EntityPoolReleaseEvent,
-} from './EntityPool.core'
+export { EntityPoolComponent, type EntityPoolInput, type EntityPoolSpawnEvent, type EntityPoolReleaseEvent } from './EntityPool.core';
 
 export class EntityPoolSystem extends System {
   protected query = { required: [EntityPoolComponent] }

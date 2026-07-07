@@ -64,29 +64,6 @@ export class EntityPoolComponent extends Component {
   }
 }
 
-export const EntityPoolEvents = {
-  /** Emitted once per pool after it finishes pre-allocating. `{ pool, size }`. */
-  READY: 'entityPool.ready',
-  /** Emitted when a slot is acquired and placed. `{ pool, entityId, spawnerId? }`. */
-  SPAWNED: 'entityPool.spawned',
-  /**
-   * Emitted during reset (after config re-apply + positioning) so game systems
-   * can apply per-spawn dynamics. `{ pool, entityId, data }` (data = spawn event).
-   */
-  ACQUIRED: 'entityPool.acquired',
-  /** Emitted when an entity is parked back into the pool. `{ pool, entityId }`. */
-  RELEASED: 'entityPool.released',
-  /** Emitted when a spawn can't be served (every slot live). `{ pool }`. */
-  EXHAUSTED: 'entityPool.exhausted',
-} as const
-
-export const EntityPoolInputEvents = {
-  /** Place a live entity from a pool. `{ pool, x, y, z, spawnerId?, ...overrides }`. */
-  SPAWN: 'entityPool.spawn',
-  /** Park the entity `entityId` back into its pool. `{ entityId }`. */
-  RELEASE: 'entityPool.release',
-} as const
-
 export interface EntityPoolSpawnEvent {
   /** Which pool to acquire from. */
   pool: string

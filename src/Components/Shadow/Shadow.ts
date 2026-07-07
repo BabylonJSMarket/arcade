@@ -6,6 +6,7 @@
  * mesh.castShadow = true (adapter already enabled renderer.shadowMap).
  */
 
+import { DirectionalLightEvents, MeshPrimitiveEvents, ShadowEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
@@ -15,19 +16,11 @@ import type {
   ShadowCasterHandle,
 } from '@babylonjsmarket/ecs/renderer-types';
 import { ShadowComponent, type ShadowInput } from './Shadow.core';
-import { DirectionalLightEvents } from '../DirectionalLight/DirectionalLight';
-import {
-  MeshPrimitiveComponent,
-  MeshPrimitiveEvents,
-} from '../MeshPrimitive/MeshPrimitive';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
 
 export { ShadowComponent, type ShadowInput };
 
-export const ShadowEvents = {
-  SHADOW_ENABLED: 'shadow.enabled',
-  SHADOW_DISABLED: 'shadow.disabled',
-  SHADOW_CASTER_ADDED: 'shadow.caster.added',
-} as const;
+
 
 interface ShadowRuntime {
   casterHandle?: ShadowCasterHandle;

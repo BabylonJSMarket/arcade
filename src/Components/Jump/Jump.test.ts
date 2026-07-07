@@ -1,5 +1,6 @@
+import { JumpEvents, JumpInputEvents } from '../../events';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { JumpComponent, JumpSystem, JumpEvents, JumpInputEvents } from './Jump';
+import { JumpComponent, JumpSystem } from './Jump';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { MeshComponent } from '../Mesh/Mesh';
 import { EventBus, World, MockRendererAdapter } from '@babylonjsmarket/ecs';

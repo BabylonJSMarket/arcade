@@ -1,11 +1,6 @@
+import { MeshPrimitiveEvents, MeshPrimitiveInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  MeshPrimitiveComponent,
-  MeshPrimitiveSystem,
-  MeshPrimitiveEvents,
-  MeshPrimitiveInputEvents,
-  type PrimitiveType,
-} from './MeshPrimitive';
+import { MeshPrimitiveComponent, MeshPrimitiveSystem, type PrimitiveType } from './MeshPrimitive';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

@@ -33,37 +33,21 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   ToneMapping: () => import("./Components/ToneMapping/ToneMapping"),
   Animation: () => import("./Components/Animation/Animation"),
   Mesh: () => import("./Components/Mesh/Mesh"),
-  // Pinball — flipper-driven physics tables.
-  Plunger: () => import("./Components/Plunger/Plunger"),
-  PinballCamera: () => import("./Components/PinballCamera/PinballCamera"),
-  PinballLayout: () => import("./Components/PinballLayout/PinballLayout"),
-  PinballTable: () => import("./Components/PinballTable/PinballTable"),
-  PinballBuilder: () => import("./Components/PinballBuilder/PinballBuilder"),
-  PinballBuilderInput: () =>
-    import("./Components/PinballBuilderInput/PinballBuilderInput"),
-  Bumper: () => import("./Components/Bumper/Bumper"),
-  Flipper: () => import("./Components/Flipper/Flipper"),
-  MouseHole: () => import("./Components/MouseHole/MouseHole"),
-  Spinner: () => import("./Components/Spinner/Spinner"),
-  // Shooter — top-down arena, twin-stick, spawner, projectile.
-  BulletPool: () => import("./Components/BulletPool/BulletPool"),
-  Bullet: () => import("./Components/Bullet/Bullet"),
+  // Free generic AI + pooling primitives. (Obstacle is a free collision box too,
+  // but it's created programmatically / imported directly, never loaded by scene
+  // name, so it needs no resolver here.)
   EntityPool: () => import("./Components/EntityPool/EntityPool"),
   Enemy: () => import("./Components/Enemy/Enemy"),
-  SkeletonAnimator: () => import("./Components/SkeletonAnimator/SkeletonAnimator"),
-  EnemySpawner: () => import("./Components/EnemySpawner/EnemySpawner"),
-  ObstacleField: () => import("./Components/ObstacleField/ObstacleField"),
   LineOfSight: () => import("./Components/LineOfSight/LineOfSight"),
-  TwinStickShooter: () =>
-    import("./Components/TwinStickShooter/TwinStickShooter"),
-  ShooterCamera: () => import("./Components/ShooterCamera/ShooterCamera"),
-  // NOTE: premium gameplay components (the soccer team-AI set, the Wingman 6-DOF
-  // flight stack, etc.) are NOT registered here — they are paid marketplace
-  // components a project acquires via the download flow and registers in its own
-  // per-game registry (see games' soccer + wingman cabinets, which vendor them
-  // under src/.../<game>/components). This free registry is the "build-a-room"
-  // core only: mesh/material loading, cameras, movement, lights, shadows, plus
-  // the free mechanic sets.
+  // NOTE: premium gameplay components are NOT registered here — they are paid
+  // marketplace components a project acquires via the download flow and registers
+  // in its own per-game registry (see games' soccer / wingman / shooter / pinball
+  // cabinets, which vendor them under src/.../<game>/components). That now includes
+  // the whole PINBALL kit (table/flipper/bumper/plunger/…) and the SHOOTER kit
+  // (Bullet/BulletPool/TwinStickShooter/ShooterCamera/EnemySpawner/SkeletonAnimator/
+  // ObstacleField) — previously bundled free, now premium. This free registry is
+  // the "build-a-room" core only: mesh/material loading, cameras, movement, lights,
+  // shadows, plus the generic AI/pooling primitives above.
 };
 
 export const ARCADE_COMPONENT_NAMES = Object.keys(ARCADE_COMPONENT_REGISTRY);

@@ -22,17 +22,9 @@ import { Component } from '@babylonjsmarket/ecs';
 // Events
 // ============================================
 
-export const JumpEvents = {
-  /** Fired the frame the character leaves the ground. Payload: {@link JumpStartedEvent}. */
-  STARTED: 'jump.started',
-  /** Fired the frame the character lands. Payload: `{ entityId }`. */
-  LANDED: 'jump.landed',
-} as const;
 
-export const JumpInputEvents = {
-  /** Request a jump for an entity (alongside the configured key). Payload: `{ entityId? }`. */
-  JUMP: 'jump.request',
-} as const;
+
+
 
 export interface JumpStartedEvent {
   entityId: string;

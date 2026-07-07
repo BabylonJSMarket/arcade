@@ -29,28 +29,11 @@ const EXPECTED_NAMES = [
   'ToneMapping',
   'Animation',
   'Mesh',
-  // Pinball
-  'Plunger',
-  'PinballCamera',
-  'PinballLayout',
-  'PinballTable',
-  'PinballBuilder',
-  'PinballBuilderInput',
-  'Bumper',
-  'Flipper',
-  'MouseHole',
-  'Spinner',
-  // Top-down shooter
-  'BulletPool',
-  'Bullet',
+  // Free generic AI + pooling primitives (the pinball + shooter kits are now
+  // premium and vendored per game, so they're no longer in this registry).
   'EntityPool',
   'Enemy',
-  'SkeletonAnimator',
-  'EnemySpawner',
-  'ObstacleField',
   'LineOfSight',
-  'TwinStickShooter',
-  'ShooterCamera',
 ] as const;
 
 /**

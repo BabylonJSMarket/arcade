@@ -129,9 +129,10 @@ function resolveClosure(
  *  - `../Sibling/...` where Sibling was NOT ejected → the package subpath
  *    `@babylonjsmarket/arcade/Sibling`. Co-ejected siblings keep their relative
  *    path (it still resolves under src/components/).
- *  - `../../inputEvents` (arcade-core constants, two levels up to the package
- *    root in the source tree) → the package root `@babylonjsmarket/arcade`,
- *    which re-exports them. Otherwise the copied path would dangle.
+ *  - `../../events` and `../../inputEvents` (the shared event dictionary +
+ *    keyboard constants, two levels up to the package root in the source tree) →
+ *    the package root `@babylonjsmarket/arcade`, which re-exports them. Otherwise
+ *    the copied path would dangle.
  *
  * ecs/arcade/viz/solid/babylon package imports are left alone — they resolve
  * from node_modules in the ejected project.
@@ -143,7 +144,7 @@ export function rewriteImports(
 ): string {
   return src
     .replace(
-      /(['"])\.\.\/\.\.\/inputEvents\1/g,
+      /(['"])\.\.\/\.\.\/(?:events|inputEvents)\1/g,
       (_whole, quote) => `${quote}@babylonjsmarket/arcade${quote}`,
     )
     .replace(

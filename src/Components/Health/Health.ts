@@ -8,17 +8,11 @@
  * respawn-configured entities) snaps the host's MeshPrimitive back to the
  * configured spawn point with full HP.
  */
+import { HealthEvents, HealthInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { EventBus, Entity } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import {
-  HealthComponent,
-  HealthEvents,
-  HealthInputEvents,
-  type HealthDamageRequest,
-  type HealthHealRequest,
-  type HealthInput,
-} from './Health.core'
+import { HealthComponent, type HealthDamageRequest, type HealthHealRequest, type HealthInput } from './Health.core';
 
 export class HealthSystem extends System {
   protected query = { required: [HealthComponent] }
@@ -104,11 +98,4 @@ export class HealthSystem extends System {
   }
 }
 
-export {
-  HealthComponent,
-  HealthEvents,
-  HealthInputEvents,
-  type HealthDamageRequest,
-  type HealthHealRequest,
-  type HealthInput,
-} from './Health.core'
+export { HealthComponent, type HealthDamageRequest, type HealthHealRequest, type HealthInput } from './Health.core';

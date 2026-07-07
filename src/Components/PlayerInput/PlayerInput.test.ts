@@ -1,10 +1,6 @@
+import { PlayerInputEvents, PlayerInputInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import {
-  PlayerInputComponent,
-  PlayerInputSystem,
-  PlayerInputEvents,
-  PlayerInputInputEvents,
-} from './PlayerInput';
+import { PlayerInputComponent, PlayerInputSystem } from './PlayerInput';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

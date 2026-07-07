@@ -1,10 +1,6 @@
+import { ScoreboardEvents, ScoreboardInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  ScoreboardComponent,
-  ScoreboardSystem,
-  ScoreboardEvents,
-  ScoreboardInputEvents,
-} from './Scoreboard';
+import { ScoreboardComponent, ScoreboardSystem } from './Scoreboard';
 
 runMechanicContract({
   name: 'Scoreboard',

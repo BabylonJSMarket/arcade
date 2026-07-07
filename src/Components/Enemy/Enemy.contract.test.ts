@@ -1,3 +1,4 @@
+import { EnemyEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import { EnemyComponent, EnemySystem } from './Enemy';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';

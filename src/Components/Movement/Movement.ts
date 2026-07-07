@@ -17,17 +17,14 @@
  * Zero imports from @babylonjs or three. Identical under both adapters.
  */
 
+import { MovementEvents, MovementInputEvents, PhysicsInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import {
-  PhysicsComponent,
-  PhysicsInputEvents,
-  type PhysicsSetVelocityEvent,
-} from '../Physics/Physics';
+import { PhysicsComponent, type PhysicsSetVelocityEvent } from '../Physics/Physics';
 import {
   createMovement,
   DEFAULT_MOVEMENT_PARAMS,
@@ -39,23 +36,9 @@ import {
 // Events
 // ============================================
 
-export const MovementEvents = {
-  /** Emitted the frame the character leaves the ground via jump. */
-  JUMP_STARTED: 'movement.jump.started',
-  /** Emitted whenever the grounded state flips. Payload: { isGrounded }. */
-  GROUNDED_CHANGED: 'movement.grounded.changed',
-  /** Emitted the frame the character transitions from still to moving. */
-  STARTED_MOVING: 'movement.started',
-  /** Emitted the frame the character transitions from moving to still. */
-  STOPPED_MOVING: 'movement.stopped',
-} as const;
 
-export const MovementInputEvents = {
-  /** External move intent. Payload: `{ entityId, x, y?, z }`. XZ plane only. */
-  SET_MOVEMENT_VECTOR: 'input.movement.vector',
-  /** External jump request. Payload: `{ entityId }`. Edge-triggered. */
-  JUMP_REQUESTED: 'input.jump.requested',
-} as const;
+
+
 
 export interface MovementSetVectorEvent {
   entityId: string;

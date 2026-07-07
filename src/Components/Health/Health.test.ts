@@ -1,10 +1,6 @@
+import { HealthEvents, HealthInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  HealthComponent,
-  HealthSystem,
-  HealthEvents,
-  HealthInputEvents,
-} from './Health';
+import { HealthComponent, HealthSystem } from './Health';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';

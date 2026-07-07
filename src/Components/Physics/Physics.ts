@@ -10,6 +10,7 @@
  * Zero @babylonjs / three imports — those live in the adapters.
  */
 
+import { PhysicsEvents, PhysicsInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -21,33 +22,9 @@ import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 // Events
 // ============================================
 
-export const PhysicsEvents = {
-  /** Emitted once the adapter has successfully created a rigid body for the entity. */
-  BODY_CREATED: 'physics.body.created',
-  /** Emitted when an entity's rigid body has been disposed. */
-  BODY_DISPOSED: 'physics.body.disposed',
-} as const;
 
-export const PhysicsInputEvents = {
-  /** Directly set a body's linear velocity. Payload: { entityId, vx, vy, vz }. */
-  SET_VELOCITY: 'physics.setVelocity',
-  /** Pause all physics stepping. Payload: {}. */
-  PAUSE: 'physics.pause',
-  /** Resume physics stepping. Payload: {}. */
-  RESUME: 'physics.resume',
-  /**
-   * Reconfigure the engine's fixed simulation rate. Payload: { hz }. Higher
-   * Hz = smaller substep → fewer tunneling artifacts at the cost of CPU.
-   * Adapters without a configurable rate (Three/Mock) no-op.
-   */
-  SET_TIME_STEP: 'physics.setTimeStep',
-  /** Set the world gravity vector. Payload: { x, y, z }. */
-  SET_GRAVITY: 'physics.setGravity',
-  /** Set a body's restitution (bounciness). Payload: { entityId, restitution }. */
-  SET_RESTITUTION: 'physics.setRestitution',
-  /** Toggle wireframe outlines of every collider. Payload: { visible }. */
-  SET_COLLIDERS_VISIBLE: 'physics.setCollidersVisible',
-} as const;
+
+
 
 export interface PhysicsSetVelocityEvent {
   entityId: string;

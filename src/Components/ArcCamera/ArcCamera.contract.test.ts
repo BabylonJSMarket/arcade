@@ -1,9 +1,6 @@
+import { ArcCameraEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  ArcCameraComponent,
-  ArcCameraSystem,
-  ArcCameraEvents,
-} from './ArcCamera';
+import { ArcCameraComponent, ArcCameraSystem } from './ArcCamera';
 
 runMechanicContract({
   name: 'ArcCamera',

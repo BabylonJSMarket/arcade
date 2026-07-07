@@ -4,16 +4,14 @@
  * pure core.
  */
 
+import { MovementInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import { vizStore } from '@babylonjsmarket/viz';
 import { MovementPanel } from './Movement.panel';
-import {
-  MovementComponent,
-  MovementInputEvents,
-} from './Movement';
+import { MovementComponent } from './Movement';
 import type { MovementInstance } from './Movement.core';
 
 export interface MovementDebuggerInput {

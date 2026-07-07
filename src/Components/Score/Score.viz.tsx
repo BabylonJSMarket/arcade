@@ -4,16 +4,14 @@
  * mounts directly, without any of this ECS wiring.
  */
 
+import { ScoreInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import { vizStore } from '@babylonjsmarket/viz';
 import { ScorePanel } from './Score.panel';
-import {
-  ScoreComponent,
-  ScoreInputEvents,
-} from './Score';
+import { ScoreComponent } from './Score';
 import type { ScoreInstance } from './Score.core';
 
 export interface ScoreDebuggerInput {

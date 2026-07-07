@@ -1,9 +1,6 @@
+import { CameraFollowEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  CameraFollowComponent,
-  CameraFollowSystem,
-  CameraFollowEvents,
-} from './CameraFollow';
+import { CameraFollowComponent, CameraFollowSystem } from './CameraFollow';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
 import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.core';
 

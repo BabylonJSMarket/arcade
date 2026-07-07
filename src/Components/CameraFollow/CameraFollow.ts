@@ -10,6 +10,7 @@
  * `world.renderer`.
  */
 
+import { CameraFollowEvents, MeshPrimitiveEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -17,7 +18,6 @@ import type { Entity } from '@babylonjsmarket/ecs';
 import type { CameraHandle, MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import { MeshPrimitiveEvents } from '../MeshPrimitive/MeshPrimitive';
 import {
   createCameraFollow,
   type CameraFollowInstance,
@@ -25,9 +25,7 @@ import {
   DEFAULT_CAMERA_FOLLOW_PARAMS,
 } from './CameraFollow.core';
 
-export const CameraFollowEvents = {
-  TARGET_CHANGED: 'cameraFollow.targetChanged',
-} as const;
+
 
 export interface CameraFollowInput extends Partial<CameraFollowParams> {
   /** Entity id of the thing to follow. Must own a MeshPrimitive. */

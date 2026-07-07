@@ -1,11 +1,7 @@
+import { HealthEvents, HealthInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import type { MechanicContractContext } from '@babylonjsmarket/ecs/testing';
-import {
-  HealthComponent,
-  HealthSystem,
-  HealthEvents,
-  HealthInputEvents,
-} from './Health';
+import { HealthComponent, HealthSystem } from './Health';
 
 /**
  * HealthSystem routes its inputs by `entityId`. The contract battery mints

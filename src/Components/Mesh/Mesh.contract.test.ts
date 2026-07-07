@@ -1,11 +1,7 @@
+import { MeshEvents, MeshInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import type { MechanicContractContext } from '@babylonjsmarket/ecs/testing';
-import {
-  MeshComponent,
-  MeshSystem,
-  MeshEvents,
-  MeshInputEvents,
-} from './Mesh';
+import { MeshComponent, MeshSystem } from './Mesh';
 
 /**
  * Mesh routes LOAD requests by entityId. The contract battery spins a fresh

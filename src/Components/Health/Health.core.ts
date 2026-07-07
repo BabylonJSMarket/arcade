@@ -53,23 +53,6 @@ export class HealthComponent extends Component {
   }
 }
 
-export const HealthEvents = {
-  /** Fired after HP changes (damage absorbed or healed). */
-  DAMAGED: 'health.damaged',
-  HEALED: 'health.healed',
-  /** Fired the frame HP first hits 0, BEFORE any respawn happens. */
-  DIED: 'health.died',
-  /** Fired when a respawn-configured entity has been reset to full HP. */
-  RESPAWNED: 'health.respawned',
-} as const
-
-export const HealthInputEvents = {
-  /** Payload: { entityId: string, damage: number }. */
-  DAMAGE: 'health.damage',
-  /** Payload: { entityId: string, amount: number }. */
-  HEAL: 'health.heal',
-} as const
-
 export interface HealthDamageRequest {
   entityId: string
   damage: number

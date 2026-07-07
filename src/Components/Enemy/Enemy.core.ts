@@ -143,10 +143,6 @@ export class EnemyComponent extends Component {
   }
 }
 
-export const EnemyEvents = {
-  KILLED: 'enemy.killed',
-} as const
-
 /**
  * Locomotion decision with hysteresis: 'attack' within contactRange, 'walk'
  * beyond contactRange * hysteresis, and HOLDS the current state in the dead-band

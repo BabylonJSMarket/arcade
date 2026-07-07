@@ -7,6 +7,7 @@
  * sweet spot. The "show rays" toggle emits `lineofsight.debugrays.set`, which
  * LineOfSightSystem consumes to draw the per-robot sight rays.
  */
+import { LineOfSightInputEvents } from '../../events';
 import type { World, EventBus } from '@babylonjsmarket/ecs'
 import {
   definePanel,
@@ -15,7 +16,7 @@ import {
   type PanelHostInput,
   type PanelSpec,
 } from '@babylonjsmarket/viz'
-import { LineOfSightComponent, LineOfSightInputEvents } from './LineOfSight.core'
+import { LineOfSightComponent } from './LineOfSight.core';
 
 const PANEL_ID = 'line-of-sight'
 

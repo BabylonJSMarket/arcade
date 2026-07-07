@@ -1,9 +1,6 @@
+import { DirectionalLightEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import {
-  DirectionalLightComponent,
-  DirectionalLightSystem,
-  DirectionalLightEvents,
-} from './DirectionalLight';
+import { DirectionalLightComponent, DirectionalLightSystem } from './DirectionalLight';
 
 runMechanicContract({
   name: 'DirectionalLight',

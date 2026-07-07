@@ -5,16 +5,14 @@
  * through the EventBus.
  */
 
+import { AnimationInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import { vizStore } from '@babylonjsmarket/viz';
 import { AnimationPanel } from './Animation.panel';
-import {
-  AnimationComponent,
-  AnimationInputEvents,
-} from './Animation';
+import { AnimationComponent } from './Animation';
 import type { AnimationInstance } from './Animation.core';
 
 export interface AnimationDebuggerInput {

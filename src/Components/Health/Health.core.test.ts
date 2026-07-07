@@ -1,11 +1,6 @@
+import { HealthEvents, HealthInputEvents } from '../../events';
 import { describe, it, expect } from 'vitest';
-import {
-  HealthComponent,
-  HealthEvents,
-  HealthInputEvents,
-  type HealthDamageRequest,
-  type HealthHealRequest,
-} from './Health.core';
+import { HealthComponent, type HealthDamageRequest, type HealthHealRequest } from './Health.core';
 
 describe('HealthComponent', () => {
   it('applies defaults', () => {

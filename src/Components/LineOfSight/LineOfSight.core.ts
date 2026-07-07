@@ -62,16 +62,7 @@ export class LineOfSightComponent extends Component {
 }
 
 /** Emitted by LineOfSightSystem when an entity's visibility of its target flips. */
-export const LineOfSightEvents = {
-  ACQUIRED: 'lineofsight.acquired',
-  LOST: 'lineofsight.lost',
-} as const
-
 /** Listened to by LineOfSightSystem — toggles the ray-cast debug helpers. */
-export const LineOfSightInputEvents = {
-  SET_DEBUG_RAYS: 'lineofsight.debugrays.set',
-} as const
-
 /** An XZ point that blocks sightlines — in practice another body's position. */
 export interface Occluder {
   x: number

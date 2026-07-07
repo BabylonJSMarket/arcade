@@ -12,6 +12,7 @@
  * to the events emitted here.
  */
 
+import { ScoreEvents, ScoreInputEvents } from '../../events';
 import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
@@ -27,25 +28,9 @@ import {
 // Events
 // ============================================
 
-export const ScoreEvents = {
-  /** Fired when any player's score changes. */
-  CHANGED: 'score.changed',
-  /** Fired once when every bucket is cleared. */
-  RESET: 'score.reset',
-} as const;
 
-export const ScoreInputEvents = {
-  /** Direct request to award points. `{ ownerEntity, points? }`. */
-  ADD: 'score.add',
-  /** External request to clear every player's score. `{}`. */
-  RESET: 'score.resetRequest',
-  /**
-   * Score also listens to goal.scored so Goal mechanic scenes just work out
-   * of the box — no middle-man system needed to route points from the net
-   * into the scoreboard.
-   */
-  GOAL_SCORED: 'goal.scored',
-} as const;
+
+
 
 export interface ScoreAddRequest {
   ownerEntity: string;

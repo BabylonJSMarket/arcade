@@ -1,9 +1,6 @@
+import { HemisphericLightEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  HemisphericLightComponent,
-  HemisphericLightSystem,
-  HemisphericLightEvents,
-} from './HemisphericLight';
+import { HemisphericLightComponent, HemisphericLightSystem } from './HemisphericLight';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 
