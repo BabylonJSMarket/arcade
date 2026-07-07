@@ -35,6 +35,9 @@ export {
   type EventBusDebuggerInput,
 } from '@babylonjsmarket/viz';
 
+// Always-on controls key-hint overlay (bottom-left).
+export * from './ControlsHud';
+
 // Per-component panels shipped as source.
 export * from './Components/MeshPrimitive/MeshPrimitive.viz';
 export * from './Components/Movement/Movement.viz';

@@ -9,7 +9,7 @@
 // /?scene=/<key>/scene.json. With no param, the default scene loads.
 import { ArcadeGame, registerBabylonToneMappingExtension } from '@babylonjsmarket/arcade'
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'
-import { mountArcadeViz } from '@babylonjsmarket/arcade/viz'
+import { mountArcadeViz, mountControlsHud, hintsFromSceneTitle } from '@babylonjsmarket/arcade/viz'
 import { mountViz } from '@babylonjsmarket/viz/solid'
 // Debug-panel themes — the Esc gear menu lets you switch between them. Without
 // at least one theme the panels register and the hotkeys toggle them, but they
@@ -79,5 +79,13 @@ if (sceneUrl) {
 }
 
 game.start()
+
+// Controls HUD — a small key-hint overlay pinned bottom-left. Hints come from
+// the scene's optional `controls` list, or are parsed from its `sceneTitle`
+// when it already spells them out ("Walk (WASD), run (Shift), jump (Space)…").
+const hudScene: { controls?: { key: string; label: string }[]; sceneTitle?: string } | null =
+  sceneUrl ? await fetch(sceneUrl).then((r) => r.json()).catch(() => null) : (scene as never)
+const hudHints = hudScene?.controls ?? hintsFromSceneTitle(hudScene?.sceneTitle)
+if (hudHints.length) mountControlsHud(hudHints)
 
 window.addEventListener('resize', () => game.renderer.resize())
