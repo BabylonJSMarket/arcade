@@ -15,6 +15,7 @@ const EXPECTED_NAMES = [
   'Jump',
   'ArcCamera',
   'CameraFollow',
+  'FirstPersonCamera',
   'DirectionalLight',
   'HemisphericLight',
   'Physics',

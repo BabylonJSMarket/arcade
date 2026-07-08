@@ -771,6 +771,14 @@ exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`), then add
       doneMessage += `\n  ${pkgManager} run dev`;
       break;
   }
+  // The arcade room references marketplace assets (carpet + cabinet). Point the
+  // user at the two `bjs download` pulls so the room comes up textured instead
+  // of a bare floor. (The single-game and demo scaffolds use no such assets.)
+  if (!demo && kind === "arcade") {
+    doneMessage += "\n\nThen pull the room's carpet + cabinet (member CLI):";
+    doneMessage += "\n  bjs download arcade-carpet";
+    doneMessage += "\n  bjs download arcade-cabinet";
+  }
   prompts.outro(doneMessage);
 }
 

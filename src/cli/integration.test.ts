@@ -42,7 +42,23 @@ const ROOT_NODE_MODULES = path.join(REPO_ROOT, 'node_modules')
 const TSC_BIN = path.join(ROOT_NODE_MODULES, '.bin', 'tsc')
 const CLI_PATH = path.join(ARCADE_ROOT, 'dist', 'cli', 'index.js')
 
-const SHOULD_RUN = process.env.ARCADE_SKIP_INTEGRATION !== '1'
+// The scaffolded-project typecheck fabricates node_modules by symlinking the
+// monorepo ROOT install — tsc plus the ambient types the scaffold references
+// (vite/client for `import.meta.glob`, solid-js, the engine packages, …). If the
+// root hasn't been `npm install`ed those can't resolve and tsc fails for reasons
+// that have nothing to do with the scaffold, so SKIP the suite (with a warning)
+// rather than hard-fail. Run a full root install to exercise it; force-off with
+// ARCADE_SKIP_INTEGRATION=1.
+const ROOT_INSTALLED =
+  fs.existsSync(TSC_BIN) &&
+  fs.existsSync(path.join(ROOT_NODE_MODULES, 'vite', 'client.d.ts'))
+const SHOULD_RUN = process.env.ARCADE_SKIP_INTEGRATION !== '1' && ROOT_INSTALLED
+if (process.env.ARCADE_SKIP_INTEGRATION !== '1' && !ROOT_INSTALLED) {
+  console.warn(
+    '[integration] skipping scaffold typecheck — monorepo root node_modules is not ' +
+      'fully installed (need tsc + vite/client). Run `npm install` at the repo root.',
+  )
+}
 
 describe.skipIf(!SHOULD_RUN)('CLI integration — scaffolded projects build', () => {
   let scaffoldRoot = ''

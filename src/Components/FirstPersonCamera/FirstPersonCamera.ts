@@ -139,11 +139,12 @@ export class FirstPersonCameraSystem extends System {
     for (const entity of this.entities) {
       const comp = entity.get(FirstPersonCameraComponent);
       if (!comp) continue;
+      // Idempotent: creates the camera on the first frame it can (covers the
+      // case where the renderer wasn't ready when the entity was added), and
+      // returns early once the handle exists.
+      this.ensureCamera(comp);
       const rt = this.getRuntime(comp);
-      if (!rt.handle) {
-        this.ensureCamera(comp);
-        if (!rt.handle) continue;
-      }
+      if (!rt.handle) continue;
 
       rt.yaw += turn * comp.turnSpeed * dt;
 
