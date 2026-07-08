@@ -198,7 +198,7 @@ describe("arcade CLI", () => {
   });
 
   describe("arcade-room scene content", () => {
-    it("includes a textured carpet floor, walls, cabinets, lighting, and a camera", async () => {
+    it("includes a textured carpet floor, walls, cabinets, lighting, and a walk camera", async () => {
       await runCli(["my-arcade", "--overwrite"], tmpDir);
       const sceneTs = fs.readFileSync(
         path.join(tmpDir, "my-arcade", "src", "scenes", "arcade-room.ts"),
@@ -209,14 +209,15 @@ describe("arcade CLI", () => {
       // Textured PBR floor — the capability the arcade package adds.
       expect(sceneTs).toContain("Floor");
       expect(sceneTs).toContain("albedoTexture");
-      // Remote assets stream from the public BabylonJS Games host.
-      expect(sceneTs).toContain("babylonjsgames.com");
-      // Room shell + cabinets + camera.
+      // Assets are pulled locally via `bjs download` — no remote host dependency.
+      expect(sceneTs).not.toContain("babylonjsgames.com");
+      expect(sceneTs).toContain("/arcade/");
+      // Room shell + cabinets + first-person walk camera.
       for (const wall of ["Wall_N", "Wall_S", "Wall_E", "Wall_W"]) {
         expect(sceneTs).toContain(wall);
       }
       expect(sceneTs).toContain("Cabinet_1");
-      expect(sceneTs).toContain("ArcCamera");
+      expect(sceneTs).toContain("FirstPersonCamera");
     }, 60_000);
   });
 

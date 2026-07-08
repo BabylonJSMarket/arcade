@@ -19,6 +19,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Jump: () => import("./Components/Jump/Jump"),
   ArcCamera: () => import("./Components/ArcCamera/ArcCamera"),
   CameraFollow: () => import("./Components/CameraFollow/CameraFollow"),
+  FirstPersonCamera: () => import("./Components/FirstPersonCamera/FirstPersonCamera"),
   DirectionalLight: () => import("./Components/DirectionalLight/DirectionalLight"),
   HemisphericLight: () => import("./Components/HemisphericLight/HemisphericLight"),
   Physics: () => import("./Components/Physics/Physics"),

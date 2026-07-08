@@ -1,0 +1,22 @@
+{
+  "name": "FirstPersonCamera",
+  "description": "Walk-around, eye-height first-person camera driven by the keyboard (W/S walk, A/D turn, Q/E strafe), with optional room bounds",
+  "category": "core",
+  "components": [
+    "FirstPersonCameraComponent"
+  ],
+  "systems": [
+    "FirstPersonCameraSystem"
+  ],
+  "dependencies": [],
+  "tags": [
+    "core",
+    "camera",
+    "input"
+  ],
+  "emits": [],
+  "listens": [
+    "keyboard.keydown",
+    "keyboard.keyup"
+  ]
+}

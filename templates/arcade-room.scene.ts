@@ -1,58 +1,76 @@
 /**
  * Arcade Room — the starter scene for a multigame arcade.
  *
- * A simple, walk-up-able room (carpet floor, four walls + ceiling, warm
- * neon-ish lighting) with a row of cabinet machines along the back wall. It is
- * the ECS counterpart of the hand-built `ArcadeScene` demo: pure scene data,
- * composed entirely from components the @babylonjsmarket/arcade package already
- * knows how to instantiate.
+ * A real-world-scaled room you STAND IN and walk around with the keyboard: a
+ * textured carpet floor, four walls + ceiling, warm lighting, and a row of
+ * arcade cabinets along the back wall. It is pure scene data — every entity is
+ * composed from FREE @babylonjsmarket/arcade components, so it renders with no
+ * extra wiring.
  *
- * This is a STARTING POINT. The intended next step is to "fill" the room — each
- * cabinet points a player at a subdirectory game (a separate scene module added
- * to `src/scenes/index.ts`). See the cabinet block below and the README.
+ * Controls (FirstPersonCamera): W/S walk, A/D turn, Q/E strafe. You spawn just
+ * inside the door at standing eye height, facing the cabinets.
  *
- * Assets are streamed from the public BabylonJS Games asset host so a fresh
- * scaffold runs with zero local files. Drop your own optimized copies under
- * `public/arcade/` and flip `ASSET_BASE` to '' to serve them locally.
+ * ── Assets ──────────────────────────────────────────────────────────────────
+ * The carpet textures and the cabinet model are marketplace assets — pull them
+ * into this project's `public/` once with the CLI:
+ *
+ *     bjs download arcade-carpet     # → public/arcade/Carpet013_1K-JPG/*.webp
+ *     bjs download arcade-cabinet    # → public/arcade/QBERT_TEMPLATE.glb
+ *
+ * They land under `public/arcade/`, exactly where the paths below expect them.
+ * Until you download them the room still runs — you just get an untextured
+ * floor and no cabinets. Swap in your own art by editing the paths.
+ *
+ * This is a STARTING POINT. The intended next step is to "fill" the room — wire
+ * each cabinet to a subdirectory game (a separate scene module added to
+ * `src/scenes/index.ts`). See the cabinet block below and the README.
  */
 
-// Public asset host. The carpet PBR set + cabinet GLB live under `/arcade/`.
-const ASSET_BASE = 'https://babylonjsgames.com'
+// Where the room's assets live, relative to the site root. Assets downloaded
+// with `bjs download` land under `public/`, served from `/`. Point this at a
+// CDN if you host your own optimized copies.
+const ASSET_BASE = ''
 
-// Room footprint (metres). Floor spans [-W/2, W/2] × [-D/2, D/2]; walls are H tall.
-const W = 16
-const D = 12
-const H = 4
+// Room footprint (metres) — a cozy, real-world-scaled arcade. The floor spans
+// [-W/2, W/2] × [-D/2, D/2]; walls are H tall. A real arcade ceiling is ~3.5 m.
+const W = 12
+const D = 10
+const H = 3.5
 const T = 0.2 // wall thickness
 
-// Carpet PBR texture set (albedo + normal + roughness + AO), tiled across the
-// floor. This is the capability the arcade package adds on top of flat colors:
-// a MeshPrimitive whose `material` carries texture URLs renders as PBR.
+// Carpet PBR texture set, optimized to WebP by the asset pipeline (albedo +
+// normal + roughness + AO). Any one texture URL flips the floor's MeshPrimitive
+// to a PBR material. uScale/vScale tile the maps; the physical carpet swatch is
+// ~0.8 m, so tiles ≈ span / 0.8 keeps the pile at life size.
 const CARPET = `${ASSET_BASE}/arcade/Carpet013_1K-JPG/Carpet013_1K-JPG`
 const FLOOR_MATERIAL = {
-  albedoTexture: `${CARPET}_Color.jpg`,
-  normalTexture: `${CARPET}_NormalGL.jpg`,
-  roughnessTexture: `${CARPET}_Roughness.jpg`,
-  ambientTexture: `${CARPET}_AmbientOcclusion.jpg`,
+  albedoTexture: `${CARPET}_Color.webp`,
+  normalTexture: `${CARPET}_NormalGL.webp`,
+  roughnessTexture: `${CARPET}_Roughness.webp`,
+  ambientTexture: `${CARPET}_AmbientOcclusion.webp`,
   roughness: 0.9,
-  // ~1.25 tiles / metre, matching the hand-built room's carpet density.
-  uScale: 20,
-  vScale: 15,
+  uScale: Math.round(W / 0.8), // ~15 tiles across a 12 m floor
+  vScale: Math.round(D / 0.8), // ~12 tiles deep
 }
 
-// Cabinet model. One shared template (`instanced: true`) cloned per machine —
-// loads the GLB once no matter how many cabinets reference it. scale/rotation
-// are starting values; tune them to your own cabinet art.
+// Wall / ceiling material — matte dark so the neon-lit cabinets pop.
+const SURFACE = { diffuseColor: [0.12, 0.1, 0.16] as [number, number, number], specularColor: [0, 0, 0] as [number, number, number] }
+
+// Cabinet model. One shared template (`instanced: true`) is cloned per machine,
+// so the GLB loads once no matter how many cabinets reference it. It stands
+// ~1.73 m native; scale 1.1 → a real ~1.9 m cabinet, base seated on the floor.
+// rotation [0, π, 0] faces the screen into the room (toward the player spawn).
 const CABINET_GLB = `${ASSET_BASE}/arcade/QBERT_TEMPLATE.glb`
-const CABINET_Z = -D / 2 + 0.7 // hard against the back wall, facing into the room
+const CABINET_SCALE = 1.1
+const CABINET_Z = -D / 2 + 0.6 // hard against the back wall
 const cabinet = (x: number) => ({
   components: {
     Mesh: {
       src: CABINET_GLB,
       instanced: true,
       position: [x, 0, CABINET_Z],
-      rotation: [0, 0, 0],
-      scale: 1,
+      rotation: [0, Math.PI, 0],
+      scale: CABINET_SCALE,
       autoLoad: true,
     },
   },
@@ -62,7 +80,7 @@ export const ARCADE_ROOM = {
   name: 'ArcadeRoom',
   clearColor: [0.02, 0.02, 0.04, 1],
   entities: {
-    // Warm key light raking across the room, plus a cool ambient fill so the
+    // Warm key light raking across the room + a cool hemispheric fill so the
     // carpet's normal map reads without the room going pitch black.
     Sun: {
       tags: ['sun'],
@@ -74,7 +92,7 @@ export const ARCADE_ROOM = {
           shadowEnabled: true,
           shadowMapSize: 2048,
           shadowMinZ: 0.1,
-          shadowMaxZ: 60,
+          shadowMaxZ: 40,
         },
       },
     },
@@ -103,61 +121,58 @@ export const ARCADE_ROOM = {
         },
       },
     },
+    // Four walls (thin boxes). N/S run along x at ±D/2; E/W run along z at ±W/2.
     Wall_N: {
       components: {
-        MeshPrimitive: {
-          primitive: 'box', width: W, height: H, depth: T, position: [0, H / 2, -D / 2],
-          material: { diffuseColor: [0.12, 0.1, 0.16], specularColor: [0, 0, 0] },
-        },
+        MeshPrimitive: { primitive: 'box', width: W, height: H, depth: T, position: [0, H / 2, -D / 2], material: SURFACE },
         Shadow: { castShadow: false, receiveShadow: true },
       },
     },
     Wall_S: {
       components: {
-        MeshPrimitive: {
-          primitive: 'box', width: W, height: H, depth: T, position: [0, H / 2, D / 2],
-          material: { diffuseColor: [0.12, 0.1, 0.16], specularColor: [0, 0, 0] },
-        },
+        MeshPrimitive: { primitive: 'box', width: W, height: H, depth: T, position: [0, H / 2, D / 2], material: SURFACE },
         Shadow: { castShadow: false, receiveShadow: true },
       },
     },
     Wall_E: {
       components: {
-        MeshPrimitive: {
-          primitive: 'box', width: T, height: H, depth: D, position: [W / 2, H / 2, 0],
-          material: { diffuseColor: [0.12, 0.1, 0.16], specularColor: [0, 0, 0] },
-        },
+        MeshPrimitive: { primitive: 'box', width: T, height: H, depth: D, position: [W / 2, H / 2, 0], material: SURFACE },
         Shadow: { castShadow: false, receiveShadow: true },
       },
     },
     Wall_W: {
       components: {
-        MeshPrimitive: {
-          primitive: 'box', width: T, height: H, depth: D, position: [-W / 2, H / 2, 0],
-          material: { diffuseColor: [0.12, 0.1, 0.16], specularColor: [0, 0, 0] },
-        },
+        MeshPrimitive: { primitive: 'box', width: T, height: H, depth: D, position: [-W / 2, H / 2, 0], material: SURFACE },
         Shadow: { castShadow: false, receiveShadow: true },
       },
     },
 
     // A row of cabinets along the back wall. Add more, or wire each one to a
     // subdirectory game, by editing these entries (see README).
-    Cabinet_1: cabinet(-4.5),
-    Cabinet_2: cabinet(-1.5),
-    Cabinet_3: cabinet(1.5),
-    Cabinet_4: cabinet(4.5),
+    Cabinet_1: cabinet(-3.6),
+    Cabinet_2: cabinet(-1.8),
+    Cabinet_3: cabinet(0),
+    Cabinet_4: cabinet(1.8),
+    Cabinet_5: cabinet(3.6),
 
-    // Free-orbit camera framing the room. Drag to look around; wheel to dolly.
-    Camera: {
+    // First-person walk camera. You spawn just inside the front wall at
+    // standing eye height, facing the cabinets (-Z). Bounds keep you inside the
+    // room (inset ~0.5 m from the walls). W/S walk, A/D turn, Q/E strafe.
+    Player: {
       components: {
-        ArcCamera: {
-          follow: false,
-          distance: 15,
-          alpha: -1.1,
-          beta: 1.15,
-          minBeta: 0.2,
-          maxBeta: 1.45,
-          targetOffset: [0, 1.2, 0],
+        FirstPersonCamera: {
+          eyeHeight: 1.7,
+          position: [0, D / 2 - 1.5],
+          yaw: Math.PI, // face -Z, toward the back-wall cabinets
+          moveSpeed: 3,
+          turnSpeed: 1.8,
+          fov: 1.1,
+          bounds: {
+            minX: -W / 2 + 0.5,
+            maxX: W / 2 - 0.5,
+            minZ: -D / 2 + 0.5,
+            maxZ: D / 2 - 0.5,
+          },
         },
       },
     },

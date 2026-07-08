@@ -674,10 +674,18 @@ cabinets at them.`;
     ? `The starter game uses no external assets, so a fresh scaffold runs offline.
 Drop your own models/textures under \`public/\` and reference them from
 \`src/scenes/game.ts\`.`
-    : `The room streams its carpet textures and cabinet model from the public
-BabylonJS Games asset host, so a fresh scaffold runs with no local assets. To
-serve your own, drop optimized copies under \`public/arcade/\` and set
-\`ASSET_BASE = ''\` in \`src/scenes/arcade-room.ts\`.`;
+    : `You walk the room in first person — **W/S** move, **A/D** turn, **Q/E**
+strafe. The carpet + cabinet are marketplace assets; pull them into \`public/\`
+once with the member CLI:
+
+\`\`\`bash
+bjs download arcade-carpet     # → public/arcade/Carpet013_1K-JPG/*.webp
+bjs download arcade-cabinet    # → public/arcade/QBERT_TEMPLATE.glb
+\`\`\`
+
+The room still runs before you download them — you just get an untextured floor
+and no cabinets. Swap in your own art by editing the paths in
+\`src/scenes/arcade-room.ts\` (\`ASSET_BASE\` points them at \`public/\`).`;
   const readmeGrow = isGame
     ? `## Growing your game
 
