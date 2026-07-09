@@ -38,6 +38,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   // but it's created programmatically / imported directly, never loaded by scene
   // name, so it needs no resolver here.)
   EntityPool: () => import("./Components/EntityPool/EntityPool"),
+  Pool: () => import("./Components/Pool/Pool"),
   Enemy: () => import("./Components/Enemy/Enemy"),
   LineOfSight: () => import("./Components/LineOfSight/LineOfSight"),
   // NOTE: premium gameplay components are NOT registered here — they are paid

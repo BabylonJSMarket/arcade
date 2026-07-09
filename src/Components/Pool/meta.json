@@ -1,0 +1,33 @@
+{
+  "name": "Pool",
+  "description": "The blueprint-driven entity factory — one generic pool for every projectile, wave, or debris type, replacing per-type BulletPool / EnemyPool / MissilePool. Put a `Pool` marker component on a scene entity beside the components its instances should carry, and that entity becomes a BLUEPRINT: PoolSystem pre-allocates `size` parked copies of those components and hands them out with `world.acquire(name)` (or a `pool.spawn` event), so spawning never churns entities or meshes. Because the blueprint's other components are declared as ordinary top-level scene component keys, their Systems register through the normal scene-keyed path — so a pooled entity's behaviour (a bullet's impact System, a missile's guidance) runs with zero extra wiring. On acquire the slot's declared config is re-applied (HP/speed/lifetime snap back) and its tags reset to the blueprint's, then `pool.acquired` fires so the spawner can set per-spawn pose/velocity/owner. Renderer-agnostic: zero @babylonjs / three imports.",
+  "category": "core",
+  "components": [
+    "PoolComponent"
+  ],
+  "systems": [
+    "PoolSystem"
+  ],
+  "dependencies": [
+    "MeshPrimitive"
+  ],
+  "tags": [
+    "core",
+    "spawning",
+    "pool",
+    "factory",
+    "blueprint"
+  ],
+  "isFree": true,
+  "emits": [
+    "pool.ready",
+    "pool.spawned",
+    "pool.acquired",
+    "pool.released",
+    "pool.exhausted"
+  ],
+  "listens": [
+    "pool.spawn",
+    "pool.release"
+  ]
+}

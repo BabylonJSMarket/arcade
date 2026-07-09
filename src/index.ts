@@ -2,6 +2,7 @@ export * from './ArcadeGame';
 export * from './registry';
 export * from './inputEvents';
 export * from './events';
+export * from './Components/Pool/Pool';
 export * from './Components/MeshPrimitive/MeshPrimitive';
 export * from './Components/Movement/Movement';
 export * from './Components/KeyboardMover/KeyboardMover';

@@ -83,6 +83,31 @@ export const EntityPoolInputEvents = {
   RELEASE: 'entityPool.release',
 } as const
 
+// PoolEvents — from Pool (the blueprint-driven entity factory)
+export const PoolEvents = {
+  /** Emitted once per pool after it finishes pre-allocating its slots. `{ pool, size }`. */
+  READY: 'pool.ready',
+  /** Emitted when a slot is acquired (via SPAWN). `{ pool, entityId, spawnerId? }`. */
+  SPAWNED: 'pool.spawned',
+  /**
+   * Emitted during reset (after the blueprint config is re-applied) so game
+   * systems can apply per-spawn dynamics. `{ pool, entityId, data }`.
+   */
+  ACQUIRED: 'pool.acquired',
+  /** Emitted when a slot is parked back into the pool. `{ pool, entityId }`. */
+  RELEASED: 'pool.released',
+  /** Emitted when a spawn can't be served (every slot live). `{ pool }`. */
+  EXHAUSTED: 'pool.exhausted',
+} as const
+
+// PoolInputEvents — from Pool
+export const PoolInputEvents = {
+  /** Acquire + place a live entity from a pool. `{ pool, x, y, z, spawnerId?, ...overrides }`. */
+  SPAWN: 'pool.spawn',
+  /** Park the entity `entityId` back into its pool. `{ entityId }`. */
+  RELEASE: 'pool.release',
+} as const
+
 // HealthEvents — from Health
 export const HealthEvents = {
   /** Fired after HP changes (damage absorbed or healed). */

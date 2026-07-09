@@ -33,6 +33,7 @@ const EXPECTED_NAMES = [
   // Free generic AI + pooling primitives (the pinball + shooter kits are now
   // premium and vendored per game, so they're no longer in this registry).
   'EntityPool',
+  'Pool',
   'Enemy',
   'LineOfSight',
 ] as const;
