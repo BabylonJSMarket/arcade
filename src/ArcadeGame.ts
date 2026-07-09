@@ -167,16 +167,23 @@ export class ArcadeGame {
     const ComponentClass = mod[`${name}Component`] as
       | (new (data?: unknown) => Component)
       | undefined;
-    const SystemClass = mod[`${name}System`] as
-      | (new (eventBus: EventBus) => System)
-      | undefined;
 
     if (!ComponentClass) {
       console.warn(`[ArcadeGame] Module for "${name}" did not export ${name}Component.`);
       return;
     }
 
-    this.sceneLoader.registerComponent(name, ComponentClass, SystemClass);
+    // Register EVERY system this component drives, not just `${name}System`: a
+    // component may own several (e.g. a missile's guidance + impact, a convoy's
+    // chain + helm). Any export named `${name}…System` counts — so a
+    // pool-spawned component's systems come to life the moment its blueprint
+    // puts the key in a scene, with no per-component wiring.
+    const sysRe = new RegExp(`^${name}[A-Za-z0-9]*System$`);
+    const systems = Object.keys(mod)
+      .filter((k) => sysRe.test(k) && typeof mod[k] === "function")
+      .map((k) => mod[k] as new (eventBus: EventBus) => System);
+
+    this.sceneLoader.registerComponent(name, ComponentClass, systems);
     this.registered.add(name);
   }
 }
