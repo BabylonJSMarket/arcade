@@ -541,3 +541,26 @@ export const WaypointEvents = {
   /** The final gate was reached — the track is done. payload: { total }. */
   COMPLETED: 'wingman.track.completed',
 } as const;
+
+// SpaceShooterHealthEvents — the ship-death protocol for the space-shooter
+// subgenre (6-DOF dogfighters like the Wingman set). Emitted by the shared
+// `destroyShip` kill path in the premium SpaceShooterHealth component; listened
+// to by MissionDirector (win/loss), WaveDirector (wave progression) and
+// SpaceShooterScore (kill tally). Lives here — not in SpaceShooterHealth — so a
+// listener never imports the emitter's file (no-cross-component-event-import),
+// exactly like WaypointEvents above.
+export const SpaceShooterHealthEvents = {
+  /** A world-space explosion burst. payload: { x, y, z, vx, vy, vz }. */
+  EXPLOSION: 'wingman.explosion',
+  /** The player ship died. payload: { id }. */
+  PLAYER_KILLED: 'wingman.player.killed',
+  /** The player's primitives should blow apart at the death site.
+   *  payload: { x, y, z, vx, vy, vz }. */
+  PLAYER_BLOWNAPART: 'wingman.player.blownapart',
+  /** An enemy ship died. payload: { targetId }. */
+  ENEMY_KILLED: 'wingman.enemy.killed',
+  /** The freighter head (escort target) died. payload: { id }. */
+  FREIGHTER_KILLED: 'wingman.freighter.killed',
+  /** A freighter cargo car was lost. payload: { id }. */
+  FREIGHTER_CAR_LOST: 'wingman.freighter.car.lost',
+} as const;
