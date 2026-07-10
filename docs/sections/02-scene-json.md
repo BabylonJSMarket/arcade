@@ -36,6 +36,14 @@ That's a complete, loadable scene. Three entities, three components, one camera 
   // Required. The name used in instantiateScene(name, world).
   "name": "Level1",
 
+  // Optional. Display strings (shown by the scaffold's HUD / title).
+  "gameTitle": "My Game",
+  "sceneTitle": "Level 1",
+
+  // Optional. Background clear color as linear RGB(A) (a defaults to 1),
+  // applied to the renderer on load — e.g. a dark-space backdrop.
+  "clearColor": [0.01, 0.012, 0.04],
+
   // Optional. The entity name treated as the world-level entity.
   // Useful for global state (Score, save slots, etc.).
   "worldEntity": "World",
@@ -55,6 +63,9 @@ That's a complete, loadable scene. Three entities, three components, one camera 
 }
 ```
 
+You never list components or systems separately — the loader discovers both from
+the `components` keys your entities actually use.
+
 ## What `ArcadeGame.loadScene` does with this
 
 1. Reads the JSON
@@ -64,7 +75,7 @@ That's a complete, loadable scene. Three entities, three components, one camera 
    - `ArcCamera`     → `() => import('./Components/ArcCamera/ArcCamera')`
    - …
 4. Awaits all imports in parallel
-5. Registers each module's `<Name>Component` and `<Name>System` with the underlying SceneLoader
+5. Registers each module's `<Name>Component` and **every** `<Name>…System` it exports (a component may drive several — e.g. a missile's guidance + impact) with the underlying SceneLoader
 6. Calls `sceneLoader.loadSceneFromData(json)` and `sceneLoader.instantiateScene(name, world)`
 7. Adds the auto-created Systems to the World
 
@@ -113,6 +124,52 @@ A capsule the player controls with WASD, an orbiting camera, a sun, a floor with
 ```
 
 That JSON, with the 5-line `main.ts` from the installation page, is a complete playable scene.
+
+## Pools & blueprints — recycling spawned entities
+
+Bullets, enemy waves, debris — anything you spawn and destroy repeatedly — should be *pooled*: pre-allocated once and reused, so firing never churns entities or meshes. You declare a pool by putting a `Pool` marker component on a scene entity. That entity becomes a **blueprint**: its *other* components are the template each pooled instance carries.
+
+```json
+{
+  "Bullets": {
+    "components": {
+      "Pool":          { "size": 256 },
+      "MeshPrimitive": { "primitive": "sphere", "diameter": 0.4 },
+      "Bullet":        { "damage": 1 }
+    }
+  }
+}
+```
+
+At load, `PoolSystem` reads the `Pool` marker, pre-builds `size` parked copies of the blueprint's other components, then consumes the blueprint entity. A spawner brings one into play with `world.acquire("Bullets")` — which returns the entity, so the spawner can set its spawn pose:
+
+```ts
+const bullet = world.acquire("Bullets");   // un-parks a slot; config reset
+if (bullet) {
+  const mp = bullet.get(MeshPrimitiveComponent)!;
+  mp.position = [muzzleX, muzzleY, muzzleZ];
+  bullet.get(BulletComponent)!.ownerEntityId = shipId;
+}
+```
+
+Or, fully decoupled, fire a `pool.spawn` event (`{ pool: "Bullets", x, y, z }`) and read `pool.spawned` for the new entity id. A spent slot is returned with `world.removeEntity(bullet)` — a pooled entity is **recycled, not destroyed** — or a `pool.release` event.
+
+### Why a blueprint, and not a nested config
+
+The point of putting the template *in the scene* is **system registration**. `ArcadeGame` starts a component's System only when it sees that component **keyed on a scene entity**. A pooled `Bullet` is never authored directly — it only ever exists inside the pool — so if its type appeared nowhere in the scene, `BulletSystem` would never start, and your bullets would spawn at the muzzle and just hang there, dead.
+
+Because a blueprint's components (`Bullet`, `MeshPrimitive`, …) are ordinary top-level scene keys, their Systems register through the normal path. Pooled instances come alive with no extra wiring — and no "empty marker" entities.
+
+### Fields
+
+| Field | Default | Meaning |
+|---|---|---|
+| `Pool.size` | `16` | Slots to pre-allocate. Caps concurrent live instances; the oldest is recycled past this. |
+| `Pool.name` | the blueprint entity's id | The name spawners pass to `world.acquire(name)`. Set it only to decouple the pool name from the entity id. |
+
+### On acquire
+
+Each acquire resets the slot before it re-enters play: its tags snap back to exactly the blueprint's, every declared component's config is re-applied (so HP / speed / lifetime return to the blueprint values), a declared `MeshPrimitive` proxy is moved to the spawn `{x, y, z}`, and `pool.acquired` fires so the spawner can apply per-spawn dynamics. Runtime state the config didn't set (mesh handles, timers) is left intact.
 
 ## Per-component data shapes
 
