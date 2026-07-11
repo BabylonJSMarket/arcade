@@ -89,6 +89,8 @@
     "sync-templates:check": "node scripts/sync-templates.js --check",
     "try:scaffold": "node scripts/try-scaffold.mjs",
     "validate:scenes": "tsx scripts/validate-example-scenes.ts",
+    "validate:course-scenes": "tsx scripts/validate-course-scenes.ts",
+    "validate:scenes:all": "npm run validate:scenes && npm run validate:course-scenes",
     "prepublishOnly": "npm run build && npm run test:coverage"
   },
   "dependencies": {

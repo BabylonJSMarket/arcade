@@ -55,10 +55,12 @@ const CATALOG: string[] = [
   'Bumper', 'Flipper', 'MouseHole', 'PinballBuilder', 'PinballBuilderInput',
   'PinballCamera', 'PinballLayout', 'PinballTable', 'Plunger', 'Spinner',
   // shooter
-  'Bullet', 'BulletPool', 'Enemy', 'EnemySpawner', 'Health', 'LineOfSight',
+  'Bullet', 'Enemy', 'EnemySpawner', 'Health', 'LineOfSight',
   'MoneyField', 'Obstacle', 'PlayerWalkAnimator', 'ShooterCamera',
   'SkeletonAnimator', 'TwinStickShooter',
 ];
+// (BulletPool retired — no component dir / example.scene.json — so it's not in
+// the catalog anymore. Pooling is the generic Pool blueprint now.)
 
 /**
  * Components that ship no System (validated on Component presence instead).
@@ -88,6 +90,24 @@ const RESOLVERS: Record<string, LazyComponentResolver> = {
   ...ARCADE_COMPONENT_REGISTRY,
   ...EXTRA_RESOLVERS,
 };
+
+/**
+ * Resolve a component by name: the arcade free registry / extras first, then
+ * fall back to its published home under CodeLibrary/Components/<Name>/<Name>.ts.
+ * The pinball + shooter kits (Bumper, Flipper, TwinStickShooter, ShooterCamera,
+ * …) were vendored OUT of packages/arcade into the marketplace, so their modules
+ * no longer live in ../src/Components — but their example.scene.json sidecars
+ * still do, and the CATALOG still validates them. Without this fallback every
+ * premium component reads as "no resolver" and its system never registers.
+ */
+function resolverFor(name: string): LazyComponentResolver | undefined {
+  if (RESOLVERS[name]) return RESOLVERS[name];
+  for (const ext of ['.ts', '.tsx']) {
+    const file = resolvePath(COMPONENTS_DIR, name, `${name}${ext}`);
+    if (existsSync(file)) return () => import(file) as Promise<Record<string, unknown>>;
+  }
+  return undefined;
+}
 
 interface SceneJson {
   name: string;
@@ -126,7 +146,7 @@ async function registerNames(
 ): Promise<string[]> {
   const warnings: string[] = [];
   for (const name of names) {
-    const resolve = RESOLVERS[name];
+    const resolve = resolverFor(name);
     if (!resolve) {
       warnings.push(`no resolver for "${name}"`);
       continue;
