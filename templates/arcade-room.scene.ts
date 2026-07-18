@@ -2,13 +2,13 @@
  * Arcade Room — the starter scene for a multigame arcade.
  *
  * A real-world-scaled room you STAND IN and walk around with the keyboard: a
- * textured carpet floor, four walls + ceiling, warm lighting, and a row of
- * arcade cabinets along the back wall. It is pure scene data — every entity is
- * composed from FREE @babylonjsmarket/arcade components, so it renders with no
- * extra wiring.
+ * textured carpet floor, four walls + ceiling, warm lighting, and an arcade
+ * cabinet against the back wall facing you. It is pure scene data — every entity
+ * is composed from FREE @babylonjsmarket/arcade components, so it renders with
+ * no extra wiring.
  *
  * Controls (FirstPersonCamera): W/S walk, A/D turn, Q/E strafe. You spawn just
- * inside the door at standing eye height, facing the cabinets.
+ * inside the door at standing eye height, facing the cabinet.
  *
  * ── Assets ──────────────────────────────────────────────────────────────────
  * The carpet textures and the cabinet model are marketplace assets — pull them
@@ -59,7 +59,8 @@ const SURFACE = { diffuseColor: [0.12, 0.1, 0.16] as [number, number, number], s
 // Cabinet model. One shared template (`instanced: true`) is cloned per machine,
 // so the GLB loads once no matter how many cabinets reference it. It stands
 // ~1.73 m native; scale 1.1 → a real ~1.9 m cabinet, base seated on the floor.
-// rotation [0, π, 0] faces the screen into the room (toward the player spawn).
+// rotation [0, 0, 0] is the model's native facing — screen + controls toward
+// +Z, i.e. toward the player spawn. (A π turn would show the cabinet's back.)
 const CABINET_GLB = `${ASSET_BASE}/arcade/QBERT_TEMPLATE.glb`
 const CABINET_SCALE = 1.1
 const CABINET_Z = -D / 2 + 0.6 // hard against the back wall
@@ -69,7 +70,7 @@ const cabinet = (x: number) => ({
       src: CABINET_GLB,
       instanced: true,
       position: [x, 0, CABINET_Z],
-      rotation: [0, Math.PI, 0],
+      rotation: [0, 0, 0],
       scale: CABINET_SCALE,
       autoLoad: true,
     },
@@ -147,13 +148,10 @@ export const ARCADE_ROOM = {
       },
     },
 
-    // A row of cabinets along the back wall. Add more, or wire each one to a
-    // subdirectory game, by editing these entries (see README).
-    Cabinet_1: cabinet(-3.6),
-    Cabinet_2: cabinet(-1.8),
-    Cabinet_3: cabinet(0),
-    Cabinet_4: cabinet(1.8),
-    Cabinet_5: cabinet(3.6),
+    // One cabinet, centered against the back wall, facing the player. Add more
+    // — `Cabinet_2: cabinet(1.8)`, etc. — or wire each to a subdirectory game by
+    // editing these entries (see README).
+    Cabinet_1: cabinet(0),
 
     // First-person walk camera. You spawn just inside the front wall at
     // standing eye height, facing the cabinets (-Z). Bounds keep you inside the

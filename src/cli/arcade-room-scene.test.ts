@@ -17,10 +17,10 @@
  *
  * The four things a "cabinet + floor + walls" room must be true for:
  *   1. every component the scene names resolves (no `No resolver` warning),
- *   2. the room shell entities (floor, 4 walls, 5 cabinets, camera, lights) all
+ *   2. the room shell entities (floor, 4 walls, one cabinet, camera, lights) all
  *      instantiate,
  *   3. those entities reach the renderer — primitives for the floor/walls, a GLB
- *      load for the cabinets, a light, and a camera,
+ *      load for the cabinet, a light, and a camera,
  *   4. the world ticks without throwing.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -45,10 +45,6 @@ const ROOM_ENTITIES = [
   'Wall_E',
   'Wall_W',
   'Cabinet_1',
-  'Cabinet_2',
-  'Cabinet_3',
-  'Cabinet_4',
-  'Cabinet_5',
   'Player',
 ];
 
@@ -77,7 +73,7 @@ describe('arcade-room starter scene — loads through the real free registry', (
     expect(unresolved, `unresolved components:\n${unresolved.join('\n')}`).toEqual([]);
   });
 
-  it('instantiates the whole room shell: floor, four walls, five cabinets, camera, lights', async () => {
+  it('instantiates the whole room shell: floor, four walls, one cabinet, camera, lights', async () => {
     await game.loadScene(ROOM);
     const missing = ROOM_ENTITIES.filter((id) => !game.world.getEntity(id));
     expect(missing, `entities that never instantiated: ${missing.join(', ')}`).toEqual([]);
@@ -92,10 +88,11 @@ describe('arcade-room starter scene — loads through the real free registry', (
     const methods = renderer.calls.map((c) => c.method);
     // Floor / walls / ceiling are MeshPrimitive → createMesh.
     expect(methods, 'floor/walls never reached the renderer (no createMesh)').toContain('createMesh');
-    // Cabinets are a GLB Mesh → a model load. The template ships them `instanced`,
-    // so the load is `loadModelTemplate` (one shared template, cloned per cabinet);
-    // a non-instanced Mesh would be `loadMesh`. Accept either so the test tracks
-    // "the cabinet model was requested from the renderer", not the load strategy.
+    // The cabinet is a GLB Mesh → a model load. The template ships it `instanced`,
+    // so the load is `loadModelTemplate` (a shared template, cloned per instance —
+    // ready for you to add more cabinets); a non-instanced Mesh would be `loadMesh`.
+    // Accept either so the test tracks "the cabinet model was requested from the
+    // renderer", not the load strategy.
     expect(
       methods.some((m) => m === 'loadModelTemplate' || m === 'loadMesh'),
       'cabinet GLB never requested (no loadModelTemplate/loadMesh)',
