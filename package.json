@@ -70,8 +70,6 @@
     "src/inputEvents.ts",
     "templates",
     ".claude-payload",
-    ".claude-plugin",
-    "skills",
     "README.md"
   ],
   "publishConfig": {

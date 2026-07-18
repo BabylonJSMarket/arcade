@@ -1,6 +1,6 @@
 ---
 name: babylonjsmarket
-description: Author and review code that uses the @babylonjsmarket family — @babylonjsmarket/ecs (World, System, Entity, Component, EventBus, SceneLoader), /arcade and /arcade-pro (arcade Components + the `arcade` CLI), and /viz-pro. Invoke when writing or reviewing a class extending System or Component, scene JSON, a `.viz.tsx` debug panel (vizStore), event names on the bus, or when scaffolding a new Component+System — including any file importing from @babylonjsmarket/ecs, /arcade, /arcade-pro, or /viz-pro. Also use to discover/download components from the marketplace.
+description: Author and review code that uses the @babylonjsmarket family — @babylonjsmarket/ecs (World, System, Entity, Component, EventBus, SceneLoader), /arcade (arcade Components + the `arcade` CLI), and /viz. Invoke when writing or reviewing a class extending System or Component, scene JSON, a `.viz.tsx` debug panel (vizStore), event names on the bus, or when scaffolding a new Component+System — including any file importing from @babylonjsmarket/ecs, /arcade, or /viz. Also use to discover/download components from the marketplace.
 ---
 
 # @babylonjsmarket — ECS, arcade & viz authoring
@@ -26,13 +26,13 @@ It prints one `name@version` per installed `@babylonjsmarket/*` package (alphabe
 
 | If present | You may use | Authoritative types (verify here) |
 |---|---|---|
-| `@babylonjsmarket/ecs` | `World`, `System`, `Entity`, `Component`, `EventBus`, `SceneLoader`; subpaths `./babylon`, `./three`, `./testing` (`runMechanicContract`), `./renderer-types`, `./viz` | `node_modules/@babylonjsmarket/ecs/dist/**/*.d.ts` |
-| `@babylonjsmarket/arcade` *(or `@babylonjsmarket/arcade-pro`, a superset)* | arcade Components (`MeshPrimitive`, `Movement`, `Physics`, `Score`, `Enemy`, …), `@babylonjsmarket/arcade/viz` (`vizStore`, `mountArcadeViz`), the `arcade` CLI | `node_modules/@babylonjsmarket/arcade*/dist/**/*.d.ts` |
-| `@babylonjsmarket/viz-pro` | viz-pro panel/theme APIs: `./core`, `./solid`, `./ecs`, theme CSS | `node_modules/@babylonjsmarket/viz-pro/dist/**/*.d.ts` |
+| `@babylonjsmarket/ecs` | `World`, `System`, `Entity`, `Component`, `EventBus`, `SceneLoader`; subpaths `./babylon`, `./three`, `./babylon-lite`, `./testing` (`runMechanicContract`), `./renderer-types` | `node_modules/@babylonjsmarket/ecs/dist/**/*.d.ts` |
+| `@babylonjsmarket/arcade` | arcade Components (`MeshPrimitive`, `Movement`, `Physics`, `Score`, `Enemy`, …), `@babylonjsmarket/arcade/viz` (`vizStore`, `mountArcadeViz`), the `arcade` CLI | `node_modules/@babylonjsmarket/arcade/dist/**/*.d.ts` |
+| `@babylonjsmarket/viz` | standalone panel/theme APIs: `./core`, `./solid`, `./ecs`, theme CSS | `node_modules/@babylonjsmarket/viz/dist/**/*.d.ts` |
 
 Rules:
-- If `arcade`/`arcade-pro` is absent, do **not** suggest `vizStore` / `@babylonjsmarket/arcade/viz` panels or arcade Components — import the System base and types from `@babylonjsmarket/ecs` instead.
-- If `viz-pro` is absent, don't reach for viz-pro.
+- If `arcade` is absent, do **not** suggest `vizStore` / `@babylonjsmarket/arcade/viz` panels or arcade Components — import the System base and types from `@babylonjsmarket/ecs` instead.
+- If `viz` is absent, don't reach for `@babylonjsmarket/viz`.
 - If the detector prints `NONE`, the project doesn't consume this family — say so rather than scaffolding against it.
 
 ## 1. Core surface (what each package gives you)
@@ -222,7 +222,7 @@ export class FooSystem extends System {
 
 When the user names a component concept ("add Health", "scaffold a Cooldown component"):
 
-1. **Run §0 capability detection first.** If neither `@babylonjsmarket/ecs` nor `@babylonjsmarket/arcade`(`-pro`) is present, stop and tell the user to add one first. Scaffold against only what's present — if arcade is absent, import `System`/types from `@babylonjsmarket/ecs`, not arcade, and don't reference arcade Components or `@babylonjsmarket/arcade/viz`.
+1. **Run §0 capability detection first.** If neither `@babylonjsmarket/ecs` nor `@babylonjsmarket/arcade` is present, stop and tell the user to add one first. Scaffold against only what's present — if arcade is absent, import `System`/types from `@babylonjsmarket/ecs`, not arcade, and don't reference arcade Components or `@babylonjsmarket/arcade/viz`.
 2. **Derive names:** `Name` (PascalCase), `slug` (kebab), `lowerName` (camelCase).
 3. **Pick the output dir,** in order of preference: `src/components/{Name}/` if `src/components/` exists; else `src/games/<existing-game>/components/{Name}/` for a multi-game monorepo; else ask.
 4. **Duplicate check:** if `{outputDir}/{Name}.ts` already exists, stop — extend it in place rather than scaffold a duplicate.
@@ -238,7 +238,7 @@ A debug panel is a separate convention (§9) — sibling `{Name}.viz.tsx`, not s
 
 ## 9. Viz panels (`@babylonjsmarket/arcade/viz`)
 
-*(Only when `arcade`/`arcade-pro` is installed — see §0.)*
+*(Only when `arcade` is installed — see §0.)*
 
 Boot the viz layer once per game host:
 
@@ -335,7 +335,7 @@ Why the retry loop: panels often depend on another entity (a Camera, a Player) e
 | A destructive System (calls `world.removeEntity`) whose `query.required` is a single data component | It also matches — and destroys — bare `{Name}: {}` **marker** entities (e.g. a singleton carrying pool/config), silently. | Require a *real* sibling too (e.g. `[FlashComponent, MeshPrimitiveComponent]`) so markerless singletons never match. |
 | Storing pool/config/singleton state on the same entity that carries a self-removing marker (`Flash`, etc.) | When the marker's system removes that entity, your pool/config vanish with it. | Put persistent singleton state on its own entity with no self-removing marker. |
 | `createEntity`/`removeEntity` per spawn/death for anything that spawns/dies during gameplay | Per-frame entity+mesh alloc/dispose churns GC + GPU and re-triggers add/remove work. Biggest avoidable perf sink. | Pool it (§5). |
-| Aliasing `@babylonjsmarket/arcade` (or `ecs`/`viz-pro`) to its `src` in a downstream Vite/Astro app | Out-of-root package is served via `/@fs/` URLs and (with relative dynamic imports) loaded **twice** → two copies of every Component class → `entity.has(X)` silently false → systems never match. No error. | Consume the built `dist` (a normal node_modules dep = one module graph). See §11. |
+| Aliasing `@babylonjsmarket/arcade` (or `ecs`/`viz`) to its `src` in a downstream Vite/Astro app | Out-of-root package is served via `/@fs/` URLs and (with relative dynamic imports) loaded **twice** → two copies of every Component class → `entity.has(X)` silently false → systems never match. No error. | Consume the built `dist` (a normal node_modules dep = one module graph). See §11. |
 
 ## 11. Local dev, build & consumption (downstream apps like `games/`)
 
@@ -351,7 +351,7 @@ The packages are **compiled**; downstream apps import the built `dist` (the pack
 
 ## 12. Scaffolding a new arcade game
 
-*(Only when `arcade`/`arcade-pro` is installed — see §0.)*
+*(Only when `arcade` is installed — see §0.)*
 
 ```bash
 npm create @babylonjsmarket/arcade <dir>     # or: npx @babylonjsmarket/arcade init <dir>
