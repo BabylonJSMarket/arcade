@@ -43,7 +43,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   LineOfSight: () => import("./Components/LineOfSight/LineOfSight"),
   // NOTE: premium gameplay components are NOT registered here — they are paid
   // marketplace components a project acquires via the download flow and registers
-  // in its own per-game registry (see games' soccer / wingman / shooter / pinball
+  // in its own per-game registry (see games' soccer / spaceshooter / shooter / pinball
   // cabinets, which vendor them under src/.../<game>/components). That now includes
   // the whole PINBALL kit (table/flipper/bumper/plunger/…) and the SHOOTER kit
   // (Bullet/BulletPool/TwinStickShooter/ShooterCamera/EnemySpawner/SkeletonAnimator/

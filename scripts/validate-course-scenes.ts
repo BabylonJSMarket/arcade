@@ -7,7 +7,7 @@
  *   `bjs download scene <Name> --all`
  * which pulls a committed scene snapshot from the library. Those snapshots live
  * at:
- *   CodeLibrary/Scenes/<Name>/scene.json                     (wingman checkpoints, twinstick)
+ *   CodeLibrary/Scenes/<Name>/scene.json                     (spaceshooter checkpoints, twinstick)
  *   CodeLibrary/Components/<Name>/example.scene.json          (poker sidecar: PokerTableDirector)
  *
  * The real end-to-end proof that a catch-up scene renders is the heavy
@@ -30,7 +30,7 @@
  *
  * Run:
  *   npx tsx packages/arcade/scripts/validate-course-scenes.ts
- *   npx tsx packages/arcade/scripts/validate-course-scenes.ts WingmanFlight1-lesson-6   # one
+ *   npx tsx packages/arcade/scripts/validate-course-scenes.ts SpaceshooterFlight1-lesson-6   # one
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
@@ -170,7 +170,7 @@ async function registerNames(names: Iterable<string>, loader: SceneLoader): Prom
 // ----------------------------------------------------------------------------
 
 interface Target {
-  /** Scene key, e.g. `WingmanFlight1-lesson-6` or `PokerTableDirector`. */
+  /** Scene key, e.g. `SpaceshooterFlight1-lesson-6` or `PokerTableDirector`. */
   label: string;
   /** Absolute scene.json path, or null if the course references a scene with no source. */
   scenePath: string | null;

@@ -5,7 +5,7 @@
  * `world.acquire` / the `pool.spawn` event.
  *
  * (System REGISTRATION of the offspring — the reason the template lives in the
- * scene — is an ArcadeGame/scene-load concern proven by the wingman render, not
+ * scene — is an ArcadeGame/scene-load concern proven by the spaceshooter render, not
  * here; these tests wire the offspring systems by hand.)
  */
 import { PoolEvents, PoolInputEvents } from '../../events'

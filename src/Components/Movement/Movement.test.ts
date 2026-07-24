@@ -220,7 +220,7 @@ describe('MovementSystem', () => {
   // When the entity ALSO carries a non-static Physics body, the rigid body owns
   // the transform: Movement translates the core's horizontal velocity into a
   // `physics.setVelocity` (so the capsule collides) instead of writing the mesh.
-  // These paths used to be covered only transitively by the soccer/wingman
+  // These paths used to be covered only transitively by the soccer/spaceshooter
   // components' tests; cover them directly here.
 
   function makePhysicsAgent(
