@@ -34,8 +34,18 @@ const modules = {
   ...import.meta.glob('./components/*/*.ts'),
 } as Record<string, LazyComponentResolver>
 
-export const REGISTRY: Record<string, LazyComponentResolver> = Object.fromEntries(
-  Object.entries(modules).flatMap(([filePath, load]) => {
+// Debug panels. A `<Name>.viz.tsx` exports `<Name>DebuggerComponent` +
+// `<Name>DebuggerSystem`, which is exactly what the key `<Name>Debugger`
+// resolves to — so registering them is the same convention, one glob wider.
+// Without this a downloaded component ships its tuning panel and nothing can
+// ever put it in a scene.
+const vizModules = {
+  ...import.meta.glob('./Components/*/*.viz.tsx'),
+  ...import.meta.glob('./components/*/*.viz.tsx'),
+} as Record<string, LazyComponentResolver>
+
+export const REGISTRY: Record<string, LazyComponentResolver> = Object.fromEntries([
+  ...Object.entries(modules).flatMap(([filePath, load]) => {
     // filePath looks like './Components/<Name>/<File>.ts'. Keep only the main
     // component module: folder name === file basename, and not a `.core.ts`.
     const parts = filePath.split('/')
@@ -43,6 +53,13 @@ export const REGISTRY: Record<string, LazyComponentResolver> = Object.fromEntrie
     const dir = parts[parts.length - 2] ?? ''
     const base = file.replace(/\.ts$/, '')
     if (base !== dir) return [] // sibling file (.core, .test, panel, viz, ...)
-    return [[dir, load]]
+    return [[dir, load]] as Array<[string, LazyComponentResolver]>
   }),
-)
+  ...Object.entries(vizModules).flatMap(([filePath, load]) => {
+    const parts = filePath.split('/')
+    const file = parts[parts.length - 1] ?? ''
+    const dir = parts[parts.length - 2] ?? ''
+    if (file !== `${dir}.viz.tsx`) return []
+    return [[`${dir}Debugger`, load]] as Array<[string, LazyComponentResolver]>
+  }),
+])
