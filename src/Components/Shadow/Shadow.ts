@@ -4,9 +4,16 @@
  * ShadowComponent, attaches the mesh as a shadow caster through the active
  * renderer adapter. Babylon = ShadowGenerator.addShadowCaster. Three =
  * mesh.castShadow = true (adapter already enabled renderer.shadowMap).
+ *
+ * It also listens for mesh.loaded, and a loaded GLB **wins** over a primitive
+ * on the same entity. That is what lets an entity use a MeshPrimitive purely as
+ * a gameplay proxy — hidden with `visible: false` — while the model that rides
+ * on it casts the real shadow. Without the handover the shadow would vanish:
+ * a renderer skips invisible meshes when it draws the shadow map, so a hidden
+ * proxy casts nothing.
  */
 
-import { DirectionalLightEvents, MeshPrimitiveEvents, ShadowEvents } from '../../events';
+import { DirectionalLightEvents, MeshEvents, MeshPrimitiveEvents, ShadowEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
@@ -39,6 +46,8 @@ export class ShadowSystem extends System {
    * mirroring how mesh handles arrive on meshprimitive.created.
    */
   private lightHandles = new Map<string, LightHandle>();
+  /** Entities whose caster came from a loaded GLB — a proxy must not take it back. */
+  private modelBacked = new Set<string>();
   private runtime = new WeakMap<ShadowComponent, ShadowRuntime>();
   protected query = { required: [ShadowComponent] };
 
@@ -58,9 +67,23 @@ export class ShadowSystem extends System {
   protected onInitialize(): void {
     this.listen(MeshPrimitiveEvents.CREATED, (data: { entityId: string; handle: MeshHandle }) => {
       if (!data?.handle) return;
+      // A model already claimed this entity — leave its caster alone.
+      if (this.modelBacked.has(data.entityId)) return;
       this.meshHandles.set(data.entityId, data.handle);
       const entity = this.world?.getEntity(data.entityId);
       if (entity) this.apply(entity);
+    });
+
+    this.listen(MeshEvents.LOADED, (data: { entityId: string; handle?: MeshHandle }) => {
+      if (!data?.handle) return;
+      this.meshHandles.set(data.entityId, data.handle);
+      this.modelBacked.add(data.entityId);
+      const entity = this.world?.getEntity(data.entityId);
+      if (!entity) return;
+      // GLBs land asynchronously, so the proxy has usually already been wired
+      // up as the caster. Tear that down before re-applying to the model.
+      this.release(entity);
+      this.apply(entity);
     });
 
     this.listen(
@@ -90,6 +113,7 @@ export class ShadowSystem extends System {
   protected onShutdown(): void {
     this.meshHandles.clear();
     this.lightHandles.clear();
+    this.modelBacked.clear();
   }
 
   protected onEntityAdded(entity: Entity): void {
@@ -101,6 +125,11 @@ export class ShadowSystem extends System {
     // is hidden while parked so it casts nothing anyway, and re-attaching on
     // every reuse would churn the shadow generator's render list.
     if (!entity.active) return;
+    this.release(entity);
+  }
+
+  /** Detach any live caster and reset the runtime so `apply` can run again. */
+  private release(entity: Entity): void {
     const comp = entity.get(ShadowComponent);
     if (!comp) return;
     const rt = this.getRuntime(comp);

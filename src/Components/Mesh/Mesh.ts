@@ -345,6 +345,7 @@ export class MeshSystem extends System {
           entityId,
           meshId: res.meshId,
           animationNames: res.animationNames,
+          handle: res.handle,
         });
       })
       .catch((err: unknown) => {
@@ -418,6 +419,7 @@ export class MeshSystem extends System {
       entityId,
       meshId: entityId,
       animationNames,
+      handle,
     });
   }
 

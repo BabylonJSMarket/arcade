@@ -162,7 +162,11 @@ export const LineOfSightInputEvents = {
 export const MeshEvents = {
   /** A load request has been dispatched to the renderer. */
   LOADING: 'mesh.loading',
-  /** The model finished loading — `meshId` is now valid for animation calls. */
+  /**
+   * The model finished loading — `meshId` is now valid for animation calls,
+   * and `handle` is the renderer handle for the loaded root (Shadow attaches
+   * its caster to this so a GLB can shadow in place of a hidden proxy).
+   */
   LOADED: 'mesh.loaded',
   /** The renderer rejected the load. `error` has the message. */
   ERROR: 'mesh.error',

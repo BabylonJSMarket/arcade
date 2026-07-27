@@ -187,3 +187,73 @@ describe('ShadowSystem — adapter integration', () => {
     expect(renderer.calls.some((c) => c.method === 'detachShadowCaster')).toBe(false);
   });
 });
+
+describe('ShadowSystem — model takes the caster from the proxy', () => {
+  // A vehicle keeps its MeshPrimitive as a hidden gameplay proxy and rides a
+  // GLB on top. The renderer skips invisible meshes when drawing the shadow
+  // map, so the caster has to move from the proxy to the loaded model or the
+  // shadow disappears entirely.
+  let eventBus: EventBus;
+  let world: World;
+  let renderer: MockRendererAdapter;
+
+  beforeEach(() => {
+    eventBus = new EventBus();
+    renderer = new MockRendererAdapter();
+    world = new World({ eventBus, renderer });
+    world.addSystem(new DirectionalLightSystem(eventBus));
+    world.addSystem(new ShadowSystem(eventBus));
+    world.addSystem(new MeshPrimitiveSystem(eventBus));
+    world.initialize();
+    world.createEntity().add(new DirectionalLightComponent());
+  });
+
+  it('re-attaches the caster to the GLB handle when mesh.loaded arrives', () => {
+    const car = world.createEntity();
+    car.add(new MeshPrimitiveComponent({ visible: false }));
+    car.add(new ShadowComponent({ castShadow: true, receiveShadow: false }));
+
+    const before = renderer.calls.filter((c) => c.method === 'attachShadowCaster');
+    expect(before).toHaveLength(1);
+
+    eventBus.emit('mesh.loaded', {
+      entityId: car.id,
+      meshId: 'car-glb',
+      animationNames: [],
+      handle: 'model-handle',
+    });
+
+    expect(renderer.calls.some((c) => c.method === 'detachShadowCaster')).toBe(true);
+    const after = renderer.calls.filter((c) => c.method === 'attachShadowCaster');
+    expect(after).toHaveLength(2);
+    expect(after[1].args[1]).toBe('model-handle');
+  });
+
+  it('ignores a mesh.loaded that carries no handle', () => {
+    const car = world.createEntity();
+    car.add(new MeshPrimitiveComponent());
+    car.add(new ShadowComponent());
+
+    eventBus.emit('mesh.loaded', { entityId: car.id, meshId: 'x', animationNames: [] });
+
+    expect(renderer.calls.filter((c) => c.method === 'attachShadowCaster')).toHaveLength(1);
+    expect(renderer.calls.some((c) => c.method === 'detachShadowCaster')).toBe(false);
+  });
+
+  it('does not let a late primitive steal the caster back from the model', () => {
+    const car = world.createEntity();
+    car.add(new ShadowComponent());
+
+    eventBus.emit('mesh.loaded', {
+      entityId: car.id,
+      meshId: 'car-glb',
+      animationNames: [],
+      handle: 'model-handle',
+    });
+    eventBus.emit('meshprimitive.created', { entityId: car.id, handle: 'proxy-handle' });
+
+    const attaches = renderer.calls.filter((c) => c.method === 'attachShadowCaster');
+    expect(attaches).toHaveLength(1);
+    expect(attaches[0].args[1]).toBe('model-handle');
+  });
+});
