@@ -99,25 +99,45 @@ export class MeshPrimitiveSystem extends System {
     // car is driven early in the frame and recycled later in it. Flushing from
     // our own onUpdate keeps every write in its owner's window.
     this.pendingRestore.add(entity.id);
+    this.pendingVisible.set(entity.id, true);
   }
 
   /** Pooled entities reactivated this frame, awaiting a pose restore. */
   private pendingRestore = new Set<string>();
 
+  /**
+   * Net visibility for pooled entities that parked and/or reactivated this
+   * frame. A spawner that sweeps a car and immediately reuses it does BOTH in
+   * one frame; writing each as it happens is two systems on one handle, which
+   * is the race. Recording the net and writing once resolves it — and the last
+   * value recorded is the correct one either way.
+   */
+  private pendingVisible = new Map<string, boolean>();
+
   private flushRestores(): void {
-    if (!this.pendingRestore.size) return;
+    if (!this.pendingRestore.size && !this.pendingVisible.size) return;
     const r = this.world?.renderer;
+
     for (const id of this.pendingRestore) {
-      const entity = this.world?.getEntity(id);
-      const comp = entity?.get(MeshPrimitiveComponent);
+      const comp = this.world?.getEntity(id)?.get(MeshPrimitiveComponent);
       if (!comp) continue;
       const rt = this.getRuntime(comp);
       if (!rt.handle || !r) continue;
       r.setMeshPosition(rt.handle, comp.position[0], comp.position[1], comp.position[2]);
       r.setMeshRotation(rt.handle, comp.rotation[0], comp.rotation[1], comp.rotation[2]);
-      r.setMeshVisible(rt.handle, comp.visible);
     }
     this.pendingRestore.clear();
+
+    for (const [id, live] of this.pendingVisible) {
+      const comp = this.world?.getEntity(id)?.get(MeshPrimitiveComponent);
+      if (!comp) continue;
+      const rt = this.getRuntime(comp);
+      if (!rt.handle || !r) continue;
+      // Parked hides outright; reactivated shows whatever the component asks
+      // for, which for a hidden gameplay proxy is still hidden.
+      r.setMeshVisible(rt.handle, live && comp.visible);
+    }
+    this.pendingVisible.clear();
   }
 
   protected onEntityRemoved(entity: Entity): void {
@@ -129,7 +149,8 @@ export class MeshPrimitiveSystem extends System {
     // Parked (pooled, removed from play) — keep the mesh for reuse, just hide
     // it. Disposing here would re-churn the GPU work pooling exists to avoid.
     if (!entity.active) {
-      r?.setMeshVisible(rt.handle, false);
+      // Queued, not written — see pendingVisible.
+      this.pendingVisible.set(entity.id, false);
       return;
     }
     // Destroyed, or the MeshPrimitive component was removed — dispose for real.

@@ -565,6 +565,15 @@ describe('MeshPrimitiveSystem — park-aware (pooling)', () => {
     e.active = false;
     expect(comp.handle).toBe(handle); // kept, not disposed
     expect(renderer.calls.some((c) => c.method === 'disposeMesh')).toBe(false);
+
+    // The hide is queued like the restore. A spawner that sweeps a pooled
+    // entity and immediately reuses it does both in ONE frame, and writing
+    // each as it happens puts two systems on one handle — the race. Recording
+    // the net and writing once from our own update resolves it.
+    expect(
+      renderer.calls.some((c) => c.method === 'setMeshVisible' && c.args[1] === false),
+    ).toBe(false);
+    world.update(1 / 60);
     expect(
       renderer.calls.some((c) => c.method === 'setMeshVisible' && c.args[1] === false),
     ).toBe(true);

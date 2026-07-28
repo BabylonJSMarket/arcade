@@ -422,6 +422,8 @@ describe('MeshSystem — instanced clone + follow', () => {
     renderer.calls.length = 0;
     // Re-acquire: fs is undefined so the prevX/prevZ reseed is skipped (295 false).
     entity.active = true;
+    // Reveal is queued and flushed from our own update — see the park test.
+    world.update(1 / 60);
     expect(callsOf('setModelVisible').some((c) => c.args[1] === true)).toBe(true);
     expect(callsOf('instantiateModel')).toHaveLength(0);
   });
@@ -444,6 +446,11 @@ describe('MeshSystem — instanced clone + follow', () => {
     // (the pooling path). The clone is hidden and kept for reuse.
     parked.active = false;
     expect(callsOf('disposeModel')).toHaveLength(0);
+    // Visibility transitions are queued and flushed from our own update: a
+    // pooled entity parked and reacquired in ONE frame would otherwise get a
+    // hide and a show from two different systems' windows — a last-wins race.
+    expect(callsOf('setModelVisible').some((c) => c.args[1] === false)).toBe(false);
+    world.update(1 / 60);
     expect(callsOf('setModelVisible').some((c) => c.args[1] === false)).toBe(true);
 
     // True destroy: removeEntity on a non-pooled entity runs onEntityRemoved
@@ -571,8 +578,13 @@ describe('MeshSystem — instanced clone + follow', () => {
     entity.active = false;
     renderer.calls.length = 0;
 
-    // Re-acquire: reactivating re-adds the entity to the system.
+    // Re-acquire: reactivating re-adds the entity to the system. The reveal is
+    // queued with the rest of the visibility transitions and flushed from our
+    // own update — park-then-reacquire inside one frame then resolves to a
+    // single write with the correct net value.
     entity.active = true;
+    expect(callsOf('setModelVisible').some((c) => c.args[1] === true)).toBe(false);
+    world.update(1 / 60);
     expect(callsOf('setModelVisible').some((c) => c.args[1] === true)).toBe(true);
     // No new clone was created on re-acquire.
     expect(callsOf('instantiateModel')).toHaveLength(0);

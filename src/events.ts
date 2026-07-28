@@ -174,6 +174,15 @@ export const MeshEvents = {
 
 // MeshInputEvents — from Mesh
 export const MeshInputEvents = {
+  /**
+   * Show or hide the loaded model. Payload: `{ entityId, visible }`.
+   *
+   * The model is the vehicle's PICTURE when a MeshPrimitive beside it is a
+   * hidden gameplay proxy. Anything swapping a silhouette must hide THIS —
+   * hiding the proxy achieves nothing visible, and un-hiding it puts a bare
+   * collision box on screen.
+   */
+  SET_VISIBLE: 'mesh.visible.set',
   /** Kick a load for the matching entity. Payload: `{ entityId, src? }`. */
   LOAD: 'mesh.load',
   /**

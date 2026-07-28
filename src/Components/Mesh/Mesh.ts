@@ -137,6 +137,22 @@ export class MeshSystem extends System {
   private templateAnimationNames = new Map<string, string[]>();
   /** Per-entity follow state (instanced + follow). Keyed by entityId. */
   private followState = new Map<string, MeshFollowState>();
+
+  /** Net visibility for entities parked / reacquired this frame. */
+  private pendingVisible = new Map<string, boolean>();
+
+  private flushVisibility(): void {
+    if (!this.pendingVisible.size) return;
+    const r = this.world?.renderer;
+    for (const [id, visible] of this.pendingVisible) {
+      const comp = this.world?.getEntity(id)?.get(MeshComponent);
+      const handle = comp ? this.getRuntime(comp).handle : null;
+      if (!handle || !r) continue;
+      if (comp!.params.instanced) r.setModelVisible(handle, visible);
+      else r.setMeshVisible(handle, visible);
+    }
+    this.pendingVisible.clear();
+  }
   /** Entity ids whose follow yaw is frozen (strafe / aim lock). */
   private faceLocked = new Set<string>();
 
@@ -156,6 +172,19 @@ export class MeshSystem extends System {
   }
 
   protected onInitialize(): void {
+    this.listen(MeshInputEvents.SET_VISIBLE, (e: { entityId?: string; visible?: boolean }) => {
+      if (!e?.entityId || typeof e.visible !== 'boolean') return;
+      const entity = this.findEntityById(e.entityId);
+      const comp = entity?.get(MeshComponent);
+      if (!comp) return;
+      const handle = this.getRuntime(comp).handle;
+      if (!handle) return;
+      // Instanced clones are TransformNodes whose whole subtree toggles;
+      // a singly-loaded model is one mesh. The adapter draws that line.
+      if (comp.params.instanced) this.world?.renderer?.setModelVisible(handle, e.visible);
+      else this.world?.renderer?.setMeshVisible(handle, e.visible);
+    });
+
     this.listen(MeshInputEvents.LOAD, (e: MeshLoadRequest) => {
       this.handleLoadRequest(e);
     });
@@ -179,7 +208,10 @@ export class MeshSystem extends System {
     if (!comp?.params.instanced) return;
     const rt = this.runtime.get(comp);
     if (!rt?.handle) return;
-    this.world?.renderer?.setModelVisible(rt.handle, true);
+    // Queued, not written: a pooled entity parked and reacquired in one frame
+    // otherwise gets a hide and a show from two different systems' windows —
+    // two writers on one handle, which is a last-wins race.
+    this.pendingVisible.set(id, true);
     // A reused clone may have been faded out on its last death — restore opacity.
     this.world?.renderer?.setModelAlpha(id, 1);
     const fs = this.followState.get(id);
@@ -201,7 +233,7 @@ export class MeshSystem extends System {
           // Park-aware: a parked (pooled) entity keeps its clone + follow state
           // for reuse, just hidden. A true destroy disposes the clone.
           if (!entity.active) {
-            r?.setModelVisible(rt.handle, false);
+            this.pendingVisible.set(id, false);
             // Keep handle, followState, and `dispatched` so re-acquire reuses
             // them; return early without clearing per-session load state.
             return;
@@ -235,6 +267,7 @@ export class MeshSystem extends System {
   }
 
   protected onUpdate(_dt: number): void {
+    this.flushVisibility();
     for (const entity of this.entities) {
       const id = (entity as unknown as { id: string }).id;
       const comp = entity.get(MeshComponent);
