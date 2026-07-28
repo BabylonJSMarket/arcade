@@ -574,6 +574,17 @@ describe('MeshPrimitiveSystem — park-aware (pooling)', () => {
     e.active = true;
     expect(comp.handle).toBe(handle);
     expect(renderer.calls.filter((c) => c.method === 'createMesh').length).toBe(created);
+    // The pose restore is QUEUED, not written from the reactivation hook —
+    // that hook runs inside whichever system triggered the acquire, and writing
+    // there both misattributes the call and can collide with the owning
+    // system's own write in the same frame. It flushes from our own update.
+    expect(
+      renderer.calls.some(
+        (c) => c.method === 'setMeshPosition' && c.args[1] === 7 && c.args[3] === 7,
+      ),
+    ).toBe(false);
+
+    world.update(1 / 60);
     expect(
       renderer.calls.some(
         (c) => c.method === 'setMeshPosition' && c.args[1] === 7 && c.args[3] === 7,

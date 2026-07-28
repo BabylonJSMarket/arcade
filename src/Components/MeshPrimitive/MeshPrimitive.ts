@@ -91,13 +91,33 @@ export class MeshPrimitiveSystem extends System {
     // Reactivated from a pool: the mesh still exists (kept alive while parked).
     // Reposition + show it instead of recreating — `reset()` may have moved
     // comp.position while it was out of play.
+    //
+    // QUEUED, not written here. This hook runs inside whichever system's update
+    // triggered the acquire — the spawner's — so writing now puts a second
+    // system's mutation inside that window: it is misattributed to the spawner,
+    // and it lands in the same frame as the owning system's own write when a
+    // car is driven early in the frame and recycled later in it. Flushing from
+    // our own onUpdate keeps every write in its owner's window.
+    this.pendingRestore.add(entity.id);
+  }
+
+  /** Pooled entities reactivated this frame, awaiting a pose restore. */
+  private pendingRestore = new Set<string>();
+
+  private flushRestores(): void {
+    if (!this.pendingRestore.size) return;
     const r = this.world?.renderer;
-    const rt = this.getRuntime(comp);
-    if (rt.handle && r) {
+    for (const id of this.pendingRestore) {
+      const entity = this.world?.getEntity(id);
+      const comp = entity?.get(MeshPrimitiveComponent);
+      if (!comp) continue;
+      const rt = this.getRuntime(comp);
+      if (!rt.handle || !r) continue;
       r.setMeshPosition(rt.handle, comp.position[0], comp.position[1], comp.position[2]);
       r.setMeshRotation(rt.handle, comp.rotation[0], comp.rotation[1], comp.rotation[2]);
       r.setMeshVisible(rt.handle, comp.visible);
     }
+    this.pendingRestore.clear();
   }
 
   protected onEntityRemoved(entity: Entity): void {
@@ -118,7 +138,9 @@ export class MeshPrimitiveSystem extends System {
     comp.isCreated = false;
   }
 
-  protected onUpdate(_deltaTime: number): void {}
+  protected onUpdate(_deltaTime: number): void {
+    this.flushRestores();
+  }
 
   private createPrimitive(entity: Entity, comp: MeshPrimitiveComponent): void {
     const r = this.world?.renderer;
