@@ -180,10 +180,11 @@ export class MeshSystem extends System {
       if (!comp) return;
       const handle = this.getRuntime(comp).handle;
       if (!handle) return;
-      // Instanced clones are TransformNodes whose whole subtree toggles;
-      // a singly-loaded model is one mesh. The adapter draws that line.
-      if (comp.params.instanced) this.world?.renderer?.setModelVisible(handle, e.visible);
-      else this.world?.renderer?.setMeshVisible(handle, e.visible);
+      // Always the subtree toggle. `setMeshVisible` sets `isVisible`, which
+      // Babylon applies to ONE mesh — and a loaded GLB's handle is a root node
+      // with the actual geometry parented under it, so the car stayed on
+      // screen while its root dutifully turned invisible.
+      this.world?.renderer?.setModelVisible(handle, e.visible);
     });
 
     this.listen(MeshInputEvents.LOAD, (e: MeshLoadRequest) => {

@@ -617,16 +617,20 @@ describe('MeshSystem — mesh.visible.set', () => {
     world.initialize();
   });
 
-  it('hides a singly-loaded model through setMeshVisible', async () => {
+  it('hides a singly-loaded model by toggling its whole subtree', async () => {
     const e = await loaded(false);
     eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: false });
-    expect(callsOf('setMeshVisible').map((c) => c.args[1])).toEqual([false]);
+    // NOT setMeshVisible: that sets `isVisible`, which Babylon applies to one
+    // mesh, and a loaded GLB's handle is a root with the geometry parented
+    // under it. Hiding the root alone leaves the model on screen.
+    expect(callsOf('setModelVisible').map((c) => c.args[1])).toEqual([false]);
+    expect(callsOf('setMeshVisible')).toHaveLength(0);
   });
 
   it('shows it again', async () => {
     const e = await loaded(false);
     eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: true });
-    expect(callsOf('setMeshVisible').map((c) => c.args[1])).toEqual([true]);
+    expect(callsOf('setModelVisible').map((c) => c.args[1])).toEqual([true]);
   });
 
   it('toggles an instanced clone through setModelVisible instead', async () => {
@@ -635,7 +639,6 @@ describe('MeshSystem — mesh.visible.set', () => {
     // A clone is a TransformNode whose whole subtree toggles; the adapter
     // draws that line, so the two cases take different calls.
     expect(callsOf('setModelVisible').map((c) => c.args[1])).toEqual([false]);
-    expect(callsOf('setMeshVisible')).toHaveLength(0);
   });
 
   it('ignores a request with no entityId or a non-boolean visible', async () => {
@@ -662,6 +665,6 @@ describe('MeshSystem — mesh.visible.set', () => {
     renderer.calls.length = 0;
     // No handle yet — nothing to show or hide, and no crash.
     eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: false });
-    expect(callsOf('setMeshVisible')).toHaveLength(0);
+    expect(callsOf('setModelVisible')).toHaveLength(0);
   });
 });
