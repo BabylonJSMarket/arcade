@@ -148,8 +148,9 @@ export class MeshSystem extends System {
       const comp = this.world?.getEntity(id)?.get(MeshComponent);
       const handle = comp ? this.getRuntime(comp).handle : null;
       if (!handle || !r) continue;
-      if (comp!.params.instanced) r.setModelVisible(handle, visible);
-      else r.setMeshVisible(handle, visible);
+      // Only instanced clones queue here — they are the ones a pool parks and
+      // reacquires. A clone is a TransformNode whose whole subtree toggles.
+      r.setModelVisible(handle, visible);
     }
     this.pendingVisible.clear();
   }

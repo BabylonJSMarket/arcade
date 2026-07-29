@@ -590,3 +590,78 @@ describe('MeshSystem — instanced clone + follow', () => {
     expect(callsOf('instantiateModel')).toHaveLength(0);
   });
 });
+
+describe('MeshSystem — mesh.visible.set', () => {
+  let eventBus: EventBus;
+  let world: World;
+  let renderer: MockRendererAdapter;
+
+  const callsOf = (method: string) => renderer.calls.filter((c) => c.method === method);
+
+  const loaded = async (instanced: boolean) => {
+    const e = world.createEntity(instanced ? 'Clone' : 'Solo');
+    e.add(new MeshComponent({ src: 'car.glb', instanced }));
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60);
+    renderer.calls.length = 0;
+    return e;
+  };
+
+  beforeEach(() => {
+    eventBus = new EventBus();
+    renderer = new MockRendererAdapter();
+    world = new World({ eventBus, renderer, detectRaces: false });
+    world.addSystem(new MeshSystem(eventBus));
+    world.initialize();
+  });
+
+  it('hides a singly-loaded model through setMeshVisible', async () => {
+    const e = await loaded(false);
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: false });
+    expect(callsOf('setMeshVisible').map((c) => c.args[1])).toEqual([false]);
+  });
+
+  it('shows it again', async () => {
+    const e = await loaded(false);
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: true });
+    expect(callsOf('setMeshVisible').map((c) => c.args[1])).toEqual([true]);
+  });
+
+  it('toggles an instanced clone through setModelVisible instead', async () => {
+    const e = await loaded(true);
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: false });
+    // A clone is a TransformNode whose whole subtree toggles; the adapter
+    // draws that line, so the two cases take different calls.
+    expect(callsOf('setModelVisible').map((c) => c.args[1])).toEqual([false]);
+    expect(callsOf('setMeshVisible')).toHaveLength(0);
+  });
+
+  it('ignores a request with no entityId or a non-boolean visible', async () => {
+    await loaded(false);
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { visible: false });
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, {});
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: 'Solo' });
+    expect(renderer.calls).toHaveLength(0);
+  });
+
+  it('ignores an unknown entity, and one without a MeshComponent', async () => {
+    await loaded(false);
+    const bare = world.createEntity('Bare');
+    bare.add(new MeshPrimitiveComponent({ primitive: 'box' }));
+    renderer.calls.length = 0;
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: 'Nobody', visible: false });
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: bare.id, visible: false });
+    expect(renderer.calls).toHaveLength(0);
+  });
+
+  it('ignores an entity whose model has not loaded yet', () => {
+    const e = world.createEntity('Pending');
+    e.add(new MeshComponent({ src: 'car.glb' }));
+    renderer.calls.length = 0;
+    // No handle yet — nothing to show or hide, and no crash.
+    eventBus.emit(MeshInputEvents.SET_VISIBLE, { entityId: e.id, visible: false });
+    expect(callsOf('setMeshVisible')).toHaveLength(0);
+  });
+});
