@@ -580,6 +580,88 @@ export const WaypointEvents = {
   COMPLETED: 'spaceshooter.track.completed',
 } as const;
 
+// PartsEvents — the per-part damage protocol for ships built from destructible
+// parts. Emitted by the bullet-impact and kill paths; listened to by damage FX
+// (which sheds the mesh) and by HUD part-damage readouts. Lives here rather than in
+// Parts.core so a listener never imports the emitter's file
+// (no-cross-component-event-import).
+export const PartsEvents = {
+  /** A part dropped to 0 HP and detached. payload: { entityId, part, x, y, z, meshSuffixes }. */
+  DESTROYED: 'spaceshooter.part.destroyed',
+} as const;
+
+// MissionDirectorEvents — the run's outcome, broadcast by the mission brain. A HUD,
+// an end-of-run screen, an achievement tracker and a scene-reset director are all
+// legitimate listeners, so the names live here rather than in MissionDirector.core —
+// none of them should have to import the brain to know the run ended.
+export const MissionDirectorEvents = {
+  /** The run was won. payload: MissionSnapshot (status === 'won'). */
+  WON: 'mission.won',
+  /** The run was lost. payload: MissionSnapshot (status === 'lost'). */
+  LOST: 'mission.lost',
+  /** Any tracked figure moved. payload: MissionSnapshot. */
+  STATE_CHANGED: 'mission.stateChanged',
+} as const;
+
+// FreighterEvents — mission progress for a snake-style escort convoy. The LOSS side
+// already lives on SpaceShooterHealthEvents (FREIGHTER_KILLED / FREIGHTER_CAR_LOST,
+// emitted by the kill path); this is the WIN side, emitted when the convoy actually
+// arrives. Here rather than in FreighterChain.core so the mission brain can name it
+// without importing the component (no-cross-component-event-import).
+export const FreighterEvents = {
+  /** The convoy reached the final gate. payload: { freighterId, waypointIndex }. */
+  DELIVERED: 'spaceshooter.freighter.delivered',
+} as const;
+
+// MissileEvents — the detonation protocol for the premium Missile component,
+// emitted by its guidance/impact systems. Lives here rather than in Missile.core
+// so an FX or audio listener never has to import the emitter's file
+// (no-cross-component-event-import), exactly like SpaceShooterHealthEvents below.
+export const MissileEvents = {
+  /** A missile detonated on its target. payload: { missileId, targetId, x, y, z }. */
+  EXPLODED: 'spaceshooter.missile.exploded',
+  /** A missile flew past closest approach without detonating; ammo lost. payload: { missileId }. */
+  WASTED: 'spaceshooter.missile.wasted',
+} as const;
+
+// MissileLauncherEvents — the launch protocol, emitted on every shot for the
+// HUD, the launch-flash FX and audio. Here for the same reason as MissileEvents.
+export const MissileLauncherEvents = {
+  /** A missile left the rail. payload: { missileId, targetId, ammoRemaining, x, y, z }. */
+  FIRED: 'spaceshooter.missile.fired',
+} as const;
+
+// RoundResetEvents — the round-lifecycle protocol. Emitted by RoundReset, the
+// generic "you died, start over" component every game needs. The interesting one
+// is REQUEST: reloading a scene is a HOST capability (only whoever built the game
+// owns the canvas, the adapter and the registry), so a component cannot do it
+// itself. RoundReset asks; the host answers. Kept here rather than in
+// RoundReset.core so a listener never imports the emitter's file
+// (no-cross-component-event-import).
+export const RoundResetEvents = {
+  /**
+   * The round is over and the linger has started — the window where the wreck is
+   * still on screen and nothing has been torn down yet. The HUD draws its death
+   * overlay off this. payload: { lingerSeconds }.
+   */
+  PENDING: 'round.reset.pending',
+  /**
+   * The linger elapsed: rebuild the scene NOW. Imperative, because the host is
+   * being told to act, not informed that something happened. payload: {}.
+   */
+  REQUEST: 'round.reset.request',
+} as const;
+
+// RoundResetInputEvents — what RoundReset listens for. The canonical
+// cross-game death signal is `game.player.died`; a subgenre with its own name
+// for the same fact (the space shooter emits `spaceshooter.player.killed`) points
+// RoundReset at it with the component's `on` list rather than emitting a second,
+// duplicate event for one fact.
+export const RoundResetInputEvents = {
+  /** The player died and the round should end. payload: ignored. */
+  PLAYER_DIED: 'game.player.died',
+} as const;
+
 // SpaceShooterHealthEvents — the ship-death protocol for the space-shooter
 // subgenre (6-DOF dogfighters like the Spaceshooter set). Emitted by the shared
 // `destroyShip` kill path in the premium SpaceShooterHealth component; listened
