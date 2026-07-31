@@ -5,7 +5,7 @@
  * vision CONE (field of view) plus a ranged ray-cast that other bodies and
  * sight-blocking walls can occlude. The System in `LineOfSight.ts` runs the
  * check on a timer and emits `lineofsight.acquired` / `lineofsight.lost` — any
- * system (e.g. EnemySystem) reacts to those events; LineOfSight itself knows
+ * system (e.g. TwinStickEnemySystem) reacts to those events; LineOfSight itself knows
  * nothing about enemies, so it can be dropped on a turret, a guard, anything.
  *
  * All geometry here is pure (XZ plane) so it's unit-testable without a renderer.

@@ -9,7 +9,7 @@
  * - `blocksBullets` — full-height walls stop bullets; low cover lets them through.
  * - `blocksSight` — full-height walls break line of sight; low cover doesn't.
  *
- * Consumed by EnemySystem (movement + LOS), BulletSystem (bullet stops), and
+ * Consumed by TwinStickEnemySystem (movement + LOS), BulletSystem (bullet stops), and
  * TwinStickShooterSystem (player movement). The collision math below is pure so
  * it's unit-testable without a renderer.
  */

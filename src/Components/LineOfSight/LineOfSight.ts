@@ -6,7 +6,7 @@
  * (mirroring the visual yaw), then on a per-entity timer checks whether the
  * tagged target is within range + FOV cone and reachable past other bodies and
  * sight-blocking walls. On a visibility *change* it emits `lineofsight.acquired`
- * / `lineofsight.lost` — consumers (EnemySystem) react; this System never reads
+ * / `lineofsight.lost` — consumers (TwinStickEnemySystem) react; this System never reads
  * another component. When debug rays are toggled on (`lineofsight.debugrays.set`)
  * it draws each entity's fanned sight rays, green where they reach the target,
  * red where blocked.
