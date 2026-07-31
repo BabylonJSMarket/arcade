@@ -168,12 +168,12 @@ describe("arcade eject", () => {
       expect(exists("src/components/MeshPrimitive/MeshPrimitive.ts")).toBe(true);
     });
 
-    it("resolves a transitive closure (Enemy → Obstacle → MeshPrimitive)", async () => {
-      await runEject(["Enemy"]);
-      // Enemy imports Obstacle + MeshPrimitive; Obstacle also imports
+    it("resolves a transitive closure (TwinStickEnemy → Obstacle → MeshPrimitive)", async () => {
+      await runEject(["TwinStickEnemy"]);
+      // TwinStickEnemy imports Obstacle + MeshPrimitive; Obstacle also imports
       // MeshPrimitive — all must land via the transitive walk. Event constants
       // now come from the shared dictionary, so they no longer widen the closure.
-      for (const c of ["Enemy", "Obstacle", "MeshPrimitive"]) {
+      for (const c of ["TwinStickEnemy", "Obstacle", "MeshPrimitive"]) {
         expect(exists(`src/components/${c}/${c}.ts`), `${c} should be ejected`).toBe(true);
       }
     });
@@ -208,13 +208,13 @@ describe("arcade eject", () => {
       // knows package components). Instead verify the rewrite indirectly: eject
       // a component, then confirm any surviving `../X/` references point only at
       // co-ejected siblings (never a dangling relative path).
-      await runEject(["Enemy"]);
+      await runEject(["TwinStickEnemy"]);
       const ejected = new Set(
         fs.readdirSync(path.join(tmpDir, "src", "components")),
       );
       // Walk every ejected file: each `../Sibling/` relative import must target
       // a co-ejected sibling; non-ejected siblings must have become a package
-      // subpath. (Enemy's closure — Enemy/Obstacle/MeshPrimitive — is
+      // subpath. (TwinStickEnemy's closure — TwinStickEnemy/Obstacle/MeshPrimitive — is
       // self-contained, so all stay relative; this asserts the rewrite never
       // broke a path.)
       const walk = (dir: string): string[] => {

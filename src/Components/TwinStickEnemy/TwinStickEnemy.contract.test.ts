@@ -1,17 +1,17 @@
 import { EnemyEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
-import { EnemyComponent, EnemySystem } from './Enemy';
+import { TwinStickEnemyComponent, TwinStickEnemySystem } from './TwinStickEnemy';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 
 runMechanicContract({
   name: 'Enemy',
-  componentClass: EnemyComponent,
-  systemClass: EnemySystem,
+  componentClass: TwinStickEnemyComponent,
+  systemClass: TwinStickEnemySystem,
   sampleInput: { speed: 5, pointsOnKill: 250, targetTag: 'hero' },
-  // EnemySystem mutates the entity's sibling MeshPrimitive each frame.
+  // TwinStickEnemySystem mutates the entity's sibling MeshPrimitive each frame.
   companions: [MeshPrimitiveComponent],
   events: {
-    // EnemySystem.onInitialize subscribes to 'health.died' to drive the kill
+    // TwinStickEnemySystem.onInitialize subscribes to 'health.died' to drive the kill
     // cleanup flow (emit EnemyEvents.KILLED + 'score.add' + remove entity).
     input: ['health.died'],
     // Skipping events.output — KILLED / 'score.add' only fire after a

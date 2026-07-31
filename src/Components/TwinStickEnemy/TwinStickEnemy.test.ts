@@ -1,11 +1,11 @@
 import { BulletEvents, EnemyEvents, EntityPoolInputEvents, HealthEvents, HealthInputEvents, LineOfSightEvents, ScoreInputEvents, SkeletonAnimatorEvents, SkeletonAnimatorInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventBus, World, MockRendererAdapter } from '@babylonjsmarket/ecs';
-import { EnemyComponent, EnemySystem } from './Enemy';
+import { TwinStickEnemyComponent, TwinStickEnemySystem } from './TwinStickEnemy';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { ObstacleComponent } from '../Obstacle/Obstacle.core';
 
-describe('EnemySystem knockback', () => {
+describe('TwinStickEnemySystem knockback', () => {
   let eventBus: EventBus;
   let world: World;
   let renderer: MockRendererAdapter;
@@ -14,7 +14,7 @@ describe('EnemySystem knockback', () => {
     eventBus = new EventBus();
     renderer = new MockRendererAdapter();
     world = new World({ eventBus, renderer });
-    world.addSystem(new EnemySystem(eventBus));
+    world.addSystem(new TwinStickEnemySystem(eventBus));
     world.initialize();
   });
 
@@ -23,7 +23,7 @@ describe('EnemySystem knockback', () => {
     const mesh = new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 1.2, position: pos });
     mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
     entity.add(mesh);
-    entity.add(new EnemyComponent({ separationRadius: 1.0, ...extra }));
+    entity.add(new TwinStickEnemyComponent({ separationRadius: 1.0, ...extra }));
     return entity;
   }
 
@@ -92,7 +92,7 @@ describe('EnemySystem knockback', () => {
   });
 });
 
-describe('EnemySystem chase / wander (driven by LineOfSight events)', () => {
+describe('TwinStickEnemySystem chase / wander (driven by LineOfSight events)', () => {
   let eventBus: EventBus;
   let world: World;
   let renderer: MockRendererAdapter;
@@ -103,7 +103,7 @@ describe('EnemySystem chase / wander (driven by LineOfSight events)', () => {
     eventBus = new EventBus();
     renderer = new MockRendererAdapter();
     world = new World({ eventBus, renderer });
-    world.addSystem(new EnemySystem(eventBus));
+    world.addSystem(new TwinStickEnemySystem(eventBus));
     world.initialize();
   });
 
@@ -123,7 +123,7 @@ describe('EnemySystem chase / wander (driven by LineOfSight events)', () => {
     const mesh = new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 1.2, position: pos });
     mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
     entity.add(mesh);
-    entity.add(new EnemyComponent({ speed: 2.5, wanderSpeed: 1.8 }));
+    entity.add(new TwinStickEnemyComponent({ speed: 2.5, wanderSpeed: 1.8 }));
     return entity;
   }
 
@@ -187,7 +187,7 @@ describe('EnemySystem chase / wander (driven by LineOfSight events)', () => {
   });
 });
 
-describe('EnemySystem directional death clip', () => {
+describe('TwinStickEnemySystem directional death clip', () => {
   let eventBus: EventBus;
   let world: World;
   let renderer: MockRendererAdapter;
@@ -200,7 +200,7 @@ describe('EnemySystem directional death clip', () => {
     eventBus = new EventBus();
     renderer = new MockRendererAdapter();
     world = new World({ eventBus, renderer });
-    world.addSystem(new EnemySystem(eventBus));
+    world.addSystem(new TwinStickEnemySystem(eventBus));
     world.initialize();
     playOnce = [];
     eventBus.on(SkeletonAnimatorInputEvents.PLAY_ONCE, (d: { entityId: string; clip: string }) =>
@@ -222,7 +222,7 @@ describe('EnemySystem directional death clip', () => {
     const mesh = new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 1.2, position: pos });
     mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
     entity.add(mesh);
-    entity.add(new EnemyComponent({ fallBackClips: FALL_BACK, fallForwardClips: FALL_FORWARD }));
+    entity.add(new TwinStickEnemyComponent({ fallBackClips: FALL_BACK, fallForwardClips: FALL_FORWARD }));
     return entity;
   }
 
@@ -258,7 +258,7 @@ describe('EnemySystem directional death clip', () => {
   });
 });
 
-describe('EnemySystem death, score, and pooling', () => {
+describe('TwinStickEnemySystem death, score, and pooling', () => {
   let eventBus: EventBus;
   let world: World;
   let renderer: MockRendererAdapter;
@@ -270,7 +270,7 @@ describe('EnemySystem death, score, and pooling', () => {
     eventBus = new EventBus();
     renderer = new MockRendererAdapter();
     world = new World({ eventBus, renderer, detectRaces: false });
-    world.addSystem(new EnemySystem(eventBus));
+    world.addSystem(new TwinStickEnemySystem(eventBus));
     world.initialize();
     released = [];
     killed = [];
@@ -285,7 +285,7 @@ describe('EnemySystem death, score, and pooling', () => {
     const mesh = new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 1.2, position: pos });
     mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
     entity.add(mesh);
-    entity.add(new EnemyComponent(extra));
+    entity.add(new TwinStickEnemyComponent(extra));
     return entity;
   }
 
@@ -465,7 +465,7 @@ describe('EnemySystem death, score, and pooling', () => {
     const em = new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 0, position: [0, 0.5, 0] });
     em.handle = renderer.createMesh(enemy.id, em.toPrimitiveSpec());
     enemy.add(em);
-    enemy.add(new EnemyComponent({ speed: 6 }));
+    enemy.add(new TwinStickEnemyComponent({ speed: 6 }));
 
     world.update(0.016);
     for (let i = 0; i < 40; i++) world.update(0.1);
@@ -604,7 +604,7 @@ describe('EnemySystem death, score, and pooling', () => {
   });
 });
 
-describe('EnemySystem animated locomotion (walk / idle / attack)', () => {
+describe('TwinStickEnemySystem animated locomotion (walk / idle / attack)', () => {
   let eventBus: EventBus;
   let world: World;
   let renderer: MockRendererAdapter;
@@ -616,7 +616,7 @@ describe('EnemySystem animated locomotion (walk / idle / attack)', () => {
     eventBus = new EventBus();
     renderer = new MockRendererAdapter();
     world = new World({ eventBus, renderer, detectRaces: false });
-    world.addSystem(new EnemySystem(eventBus));
+    world.addSystem(new TwinStickEnemySystem(eventBus));
     world.initialize();
     setLoop = [];
     playOnce = [];
@@ -640,7 +640,7 @@ describe('EnemySystem animated locomotion (walk / idle / attack)', () => {
     const mesh = new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 1.2, position: pos });
     mesh.handle = renderer.createMesh(entity.id, mesh.toPrimitiveSpec());
     entity.add(mesh);
-    entity.add(new EnemyComponent({ walkClip: 'Walk', attackClip: 'Attack', ...extra }));
+    entity.add(new TwinStickEnemyComponent({ walkClip: 'Walk', attackClip: 'Attack', ...extra }));
     return entity;
   }
 

@@ -35,17 +35,19 @@ const EXPECTED_NAMES = [
   'EntityPool',
   'Pool',
   'Enemy',
+  'TwinStickEnemy',
   'LineOfSight',
 ] as const;
 
 /**
- * Pure-data components that intentionally ship WITHOUT their own System (the
- * consuming system lives in a sibling component's module) — exempt from the
- * "module exports <Name>System" assertion. Empty now that the premium 6-DOF
- * flight stack (the only data-only set) is vendored per-game instead of shipped
- * in the free registry.
+ * Pure-data components that intentionally ship WITHOUT their own System —
+ * exempt from the "module exports <Name>System" assertion. A marker states a
+ * fact about an entity and leaves acting on it to whoever cares, so there is no
+ * system to own it: `Enemy` is read by targeting, impact and scoring code in
+ * three different subgenres. (The swarm brain that used to hold that name, and
+ * its System, is `TwinStickEnemy`.)
  */
-const DATA_ONLY_NAMES = new Set<string>([]);
+const DATA_ONLY_NAMES = new Set<string>(['Enemy']);
 
 type ComponentClass = new (...args: never[]) => Component;
 type SystemClass = new (...args: never[]) => System;

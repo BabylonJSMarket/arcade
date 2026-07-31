@@ -40,6 +40,7 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   EntityPool: () => import("./Components/EntityPool/EntityPool"),
   Pool: () => import("./Components/Pool/Pool"),
   Enemy: () => import("./Components/Enemy/Enemy"),
+  TwinStickEnemy: () => import("./Components/TwinStickEnemy/TwinStickEnemy"),
   LineOfSight: () => import("./Components/LineOfSight/LineOfSight"),
   // NOTE: premium gameplay components are NOT registered here — they are paid
   // marketplace components a project acquires via the download flow and registers

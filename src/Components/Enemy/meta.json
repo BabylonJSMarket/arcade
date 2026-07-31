@@ -1,41 +1,19 @@
 {
   "name": "Enemy",
-  "description": "Chases the entity tagged `player`, separates from other enemies so they don't stack, and deals contact damage via `health.damage`. Takes bullet hits as `bullet.hit`; on death (HealthSystem's `health.died`) it emits `enemy.killed` and `score.add`. Pooled — instead of being destroyed it asks EntityPool to re-park its slot (`entityPool.release`). Optional SkeletonAnimator support drives walk/attack/death clips, directional fall animations, and a knockback slide that barrels the corpse into the swarm; chase vs wander is driven by LineOfSight's acquired/lost events.",
-  "category": "shooter",
+  "description": "The genre-neutral hostile marker: a real component class carrying no data, so targeting, scoring and impact code can ask `entity.get(EnemyComponent)` type-safely instead of string-matching an `'enemy'` tag a rename would silently break. There is no EnemySystem — a marker states a fact and leaves acting on it to whoever cares. The twin-stick swarm brain that used to hold this name is now `TwinStickEnemy`.",
+  "category": "gameplay",
   "components": [
     "EnemyComponent"
   ],
-  "systems": [
-    "EnemySystem"
-  ],
-  "dependencies": [
-    "MeshPrimitive",
-    "EntityPool",
-    "SkeletonAnimator",
-    "Health",
-    "Score",
-    "Bullet",
-    "Obstacle",
-    "LineOfSight"
-  ],
+  "systems": [],
+  "dependencies": [],
+  "isFree": true,
+  "creditCost": 1,
   "tags": [
-    "core",
-    "ai",
-    "combat"
+    "marker",
+    "enemy",
+    "ai"
   ],
-  "emits": [
-    "enemy.killed",
-    "entityPool.release",
-    "health.damage",
-    "score.add",
-    "skeletonAnimator.playOnce",
-    "skeletonAnimator.setLoop"
-  ],
-  "listens": [
-    "bullet.hit",
-    "health.died",
-    "lineofsight.acquired",
-    "lineofsight.lost",
-    "skeletonAnimator.completed"
-  ]
+  "emits": [],
+  "listens": []
 }

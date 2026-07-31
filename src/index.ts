@@ -26,7 +26,8 @@ export * from './Components/Animation/Animation';
 export * from './Components/Mesh/Mesh';
 export * from './Components/EntityPool/EntityPool';
 export * from './Components/Enemy/Enemy';
+export * from './Components/TwinStickEnemy/TwinStickEnemy';
 // Obstacle is a free generic AABB collision box (static data + geometry helpers,
-// only depends on MeshPrimitive). The free Enemy / LineOfSight AI read it; the
+// only depends on MeshPrimitive). The free TwinStickEnemy / LineOfSight AI read it; the
 // premium shooter kit (vendored per game) also imports it from here.
 export * from './Components/Obstacle/Obstacle';
