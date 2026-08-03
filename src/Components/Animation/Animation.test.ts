@@ -2,6 +2,8 @@ import { AnimationEvents, AnimationInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AnimationComponent, AnimationSystem } from './Animation';
 import { DEFAULT_ANIMATION_PARAMS } from './Animation.core';
+import { MeshComponent } from '../Mesh/Mesh';
+import { createMesh } from '../Mesh/Mesh.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 
@@ -86,18 +88,46 @@ describe('AnimationSystem', () => {
     );
   });
 
-  it('does NOT replay clips on the second frame — play is idempotent per session', () => {
+  it('waits for a sibling Mesh to finish loading before starting the clips', () => {
+    // The live-swap race: an entity added to a RUNNING world updates while its
+    // GLB is still in flight — a premature one-shot start would no-op in the
+    // adapter and mark the entity started with nothing playing.
+    const entity = world.createEntity('Hero');
+    const mesh = new MeshComponent({ src: '/hero.glb' });
+    mesh.instance = createMesh(mesh.params);
+    mesh.instance.beginLoad();
+    entity.add(mesh);
+    entity.add(new AnimationComponent());
+
+    world.update(1 / 60);
+    expect(renderer.calls.filter((c) => c.method === 'playAnimation')).toHaveLength(0);
+
+    mesh.instance.completeLoad('Hero', ['IDLE_RIFLE', 'WALK_RIFLE', 'RUN_RIFLE']);
+    world.update(1 / 60);
+    expect(renderer.calls.filter((c) => c.method === 'playAnimation')).toHaveLength(3);
+  });
+
+  it('keeps re-issuing play so clips grafted on later still start', () => {
+    // Restart is the ADAPTER's job to guard (it no-ops an already-playing clip);
+    // latching here would permanently miss a clip that appears after the first
+    // frame — which is exactly what retargeting does.
     const entity = world.createEntity();
     entity.add(new AnimationComponent());
     world.update(1 / 60);
-    const initialPlayCount = renderer.calls.filter(
-      (c) => c.method === 'playAnimation',
-    ).length;
     world.update(1 / 60);
-    const laterPlayCount = renderer.calls.filter(
-      (c) => c.method === 'playAnimation',
-    ).length;
-    expect(laterPlayCount).toBe(initialPlayCount);
+    const plays = renderer.calls.filter((c) => c.method === 'playAnimation');
+    expect(plays).toHaveLength(6); // 3 clips × 2 frames
+  });
+
+  it('announces READY exactly once, not once per frame', () => {
+    const ready = vi.fn();
+    eventBus.on(AnimationEvents.READY, ready);
+    const entity = world.createEntity();
+    entity.add(new AnimationComponent());
+    world.update(1 / 60);
+    world.update(1 / 60);
+    world.update(1 / 60);
+    expect(ready).toHaveBeenCalledTimes(1);
   });
 
   it('pushes updated weights through setAnimationWeight every frame', () => {

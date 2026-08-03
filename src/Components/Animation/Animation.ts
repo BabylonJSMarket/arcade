@@ -17,6 +17,7 @@ import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
+import { MeshComponent } from '../Mesh/Mesh';
 import {
   createAnimation,
   DEFAULT_ANIMATION_PARAMS,
@@ -140,15 +141,25 @@ export class AnimationSystem extends System {
       const comp = entity.get(AnimationComponent);
       if (!comp?.instance) continue;
 
-      // Start the clips once per session so adapter `play` calls aren't
-      // repeated every frame (both adapters guard against restart but this
-      // keeps the per-frame work minimal).
-      if (comp.autoPlay && !this.started.has(id) && r) {
+      // Wait for a sibling Mesh's GLB before touching clips — an entity added
+      // to a RUNNING world goes live while its model is still in flight.
+      const mesh = entity.get(MeshComponent);
+      const clipsReady = !mesh || mesh.instance?.getState().state === 'loaded';
+      if (comp.autoPlay && r && clipsReady) {
+        // Re-attempt each frame rather than latching after one pass: a clip can
+        // appear LATER than the mesh — a retargeting component (AnimateMeshy)
+        // grafts a shared library's clips on asynchronously, so a one-shot
+        // start would permanently miss walk/run and leave the character stuck
+        // in the single clip its GLB shipped with. `playAnimation` no-ops on an
+        // already-playing clip (every adapter guards restart) and on a clip
+        // that doesn't exist, so this stays a few map lookups per frame.
         r.playAnimation(id, comp.idleClip, true);
         r.playAnimation(id, comp.walkClip, true);
         r.playAnimation(id, comp.runClip, true);
-        this.started.add(id);
-        this.eventBus.emit(AnimationEvents.READY, { entityId: id });
+        if (!this.started.has(id)) {
+          this.started.add(id);
+          this.eventBus.emit(AnimationEvents.READY, { entityId: id });
+        }
       }
 
       const speed = this.entitySpeeds.get(id) ?? 0;
