@@ -15,6 +15,7 @@ import type { CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
 import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
 import { KeyboardInputEvents } from '../../inputEvents';
+import { AnimationInputEvents } from '../../events';
 
 export interface KeyboardMoverInput {
   /** World units per second at full input. */
@@ -129,6 +130,8 @@ export class KeyboardMoverSystem extends System {
       vz /= len;
     }
 
+    const inputMag = Math.hypot(vx, vz);
+
     for (const entity of this.entities) {
       const mover = entity.get(KeyboardMoverComponent);
       const mesh = entity.get(MeshPrimitiveComponent);
@@ -145,6 +148,14 @@ export class KeyboardMoverSystem extends System {
           r.setMeshRotation(mesh.handle, 0, this.currentYaw, 0);
         }
       }
+
+      // Drive a sibling Animation's locomotion blend: our current speed in
+      // world units/s (0 while standing → the idle clip). Harmless without an
+      // AnimationSystem listening.
+      this.eventBus.emit(AnimationInputEvents.SET_SPEED, {
+        entityId: String(entity.id),
+        speed: inputMag * mover.speed,
+      });
     }
   }
 

@@ -218,4 +218,25 @@ describe('KeyboardMover', () => {
     expect(mesh.rotation[1]).toBeCloseTo(Math.atan2(-1, 0), 3);
     expect(rot!.args[2]).toBeCloseTo(Math.atan2(-1, 0), 3);
   });
+
+  it('drives a sibling Animation blend via animation.speed.set (0 when idle)', () => {
+    const playerEntity = world.createEntity('Player');
+    const mesh = new MeshPrimitiveComponent({ primitive: 'capsule', position: [0, 0, 0] });
+    mesh.handle = renderer.createMesh(playerEntity.id, { kind: 'capsule' });
+    playerEntity.add(mesh);
+    playerEntity.add(new KeyboardMoverComponent({ speed: 10, faceMotion: false }));
+
+    const speeds: Array<{ entityId: string; speed: number }> = [];
+    eventBus.on('animation.speed.set', (e: { entityId: string; speed: number }) =>
+      speeds.push(e),
+    );
+
+    eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+    world.update(0.1);
+    expect(speeds.at(-1)).toEqual({ entityId: 'Player', speed: 10 });
+
+    eventBus.emit('keyboard.keyup', { code: 'KeyW' });
+    world.update(0.1);
+    expect(speeds.at(-1)).toEqual({ entityId: 'Player', speed: 0 });
+  });
 });
