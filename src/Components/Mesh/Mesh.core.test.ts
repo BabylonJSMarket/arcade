@@ -89,4 +89,41 @@ describe('Mesh core', () => {
     m.setParams({ src: '/b.glb', assetServerUrl: 'https://cdn/' });
     expect(m.getResolvedUrl()).toBe('https://cdn//b.glb');
   });
+
+  it('getResolvedSkin is null when no skin is set', () => {
+    expect(createMesh({ src: '/a.glb' }).getResolvedSkin()).toBeNull();
+  });
+
+  it('getResolvedSkin prefixes skin textures with assetServerUrl, like src', () => {
+    const m = createMesh({
+      src: '/arcade/cab.glb',
+      assetServerUrl: 'https://cdn',
+      skin: {
+        albedoTexture: '/arcade/skins/galaga.webp',
+        emissiveTexture: '/arcade/skins/galaga.webp',
+        extrasFlag: 'cabinetAtlas',
+      },
+    });
+    expect(m.getResolvedSkin()).toEqual({
+      albedoTexture: 'https://cdn/arcade/skins/galaga.webp',
+      emissiveTexture: 'https://cdn/arcade/skins/galaga.webp',
+      extrasFlag: 'cabinetAtlas',
+    });
+  });
+
+  it('getResolvedSkin omits emissiveTexture when the skin has none', () => {
+    const m = createMesh({
+      src: '/a.glb',
+      skin: { albedoTexture: '/skins/pacman.webp' },
+    });
+    expect(m.getResolvedSkin()).toEqual({ albedoTexture: '/skins/pacman.webp' });
+  });
+
+  it('getResolvedSkin treats a skin with no albedo as no skin at all', () => {
+    const m = createMesh({
+      src: '/a.glb',
+      skin: { albedoTexture: '' },
+    });
+    expect(m.getResolvedSkin()).toBeNull();
+  });
 });

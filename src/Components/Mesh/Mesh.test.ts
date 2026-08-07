@@ -116,6 +116,89 @@ describe('MeshSystem', () => {
     expect(later).toBe(first);
   });
 
+  it('applies a skin via setMeshSkin after a non-instanced load', async () => {
+    const entity = world.createEntity();
+    entity.add(
+      new MeshComponent({
+        src: '/arcade/cab.glb',
+        skin: { albedoTexture: '/arcade/skins/galaga.webp', extrasFlag: 'cabinetAtlas' },
+      }),
+    );
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    const skinCalls = renderer.calls.filter((c) => c.method === 'setMeshSkin');
+    expect(skinCalls).toHaveLength(1);
+    expect(skinCalls[0].args[1]).toEqual({
+      albedoTexture: '/arcade/skins/galaga.webp',
+      extrasFlag: 'cabinetAtlas',
+    });
+  });
+
+  it('never calls setMeshSkin when no skin is configured', async () => {
+    const entity = world.createEntity();
+    entity.add(new MeshComponent({ src: '/a.glb' }));
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(renderer.calls.some((c) => c.method === 'setMeshSkin')).toBe(false);
+  });
+
+  it('passes the skin INTO instantiateModel so the clone gets its own materials', async () => {
+    // Instanced clones share the template's materials unless the adapter is
+    // told up front to copy them — so the skin must ride along with the
+    // instantiate call, not be applied afterwards.
+    const entity = world.createEntity();
+    entity.add(
+      new MeshComponent({
+        src: '/arcade/cab.glb',
+        instanced: true,
+        skin: { albedoTexture: '/arcade/skins/frogger.webp', extrasFlag: 'cabinetAtlas' },
+      }),
+    );
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60); // template ready → instantiate
+    const calls = renderer.calls.filter((c) => c.method === 'instantiateModel');
+    expect(calls).toHaveLength(1);
+    expect((calls[0].args[2] as { skin?: unknown }).skin).toEqual({
+      albedoTexture: '/arcade/skins/frogger.webp',
+      extrasFlag: 'cabinetAtlas',
+    });
+    // And NOT applied a second time as a post-load repaint.
+    expect(renderer.calls.some((c) => c.method === 'setMeshSkin')).toBe(false);
+  });
+
+  it('two entities can wear different skins off the one shared template', async () => {
+    const a = world.createEntity();
+    const b = world.createEntity();
+    for (const [e, art] of [
+      [a, 'galaga'],
+      [b, 'pacman'],
+    ] as const) {
+      e.add(
+        new MeshComponent({
+          src: '/arcade/cab.glb',
+          instanced: true,
+          skin: { albedoTexture: `/arcade/skins/${art}.webp`, extrasFlag: 'cabinetAtlas' },
+        }),
+      );
+    }
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60);
+    const templateLoads = renderer.calls.filter((c) => c.method === 'loadModelTemplate');
+    const instantiates = renderer.calls.filter((c) => c.method === 'instantiateModel');
+    expect(templateLoads).toHaveLength(1); // one GLB fetch...
+    expect(instantiates).toHaveLength(2); // ...two differently-dressed clones
+    const skins = instantiates.map(
+      (c) => (c.args[2] as { skin?: { albedoTexture: string } }).skin?.albedoTexture,
+    );
+    expect(skins).toEqual(['/arcade/skins/galaga.webp', '/arcade/skins/pacman.webp']);
+  });
+
   it('does not call loadMesh when autoLoad is false', async () => {
     const entity = world.createEntity();
     entity.add(new MeshComponent({ src: '/a.glb', autoLoad: false }));

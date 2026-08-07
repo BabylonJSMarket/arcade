@@ -11,11 +11,12 @@
  * inside the door at standing eye height, facing the cabinet.
  *
  * ── Assets ──────────────────────────────────────────────────────────────────
- * The carpet textures and the cabinet model are marketplace assets — pull them
- * into this project's `public/` once with the CLI:
+ * The carpet textures, the cabinet model and the cabinet skins are marketplace
+ * assets — pull them into this project's `public/` once with the CLI:
  *
- *     bjs download arcade-carpet     # → public/arcade/Carpet013_1K-JPG/*.webp
- *     bjs download arcade-cabinet    # → public/arcade/QBERT_TEMPLATE.glb
+ *     bjs download arcade-carpet        # → public/arcade/Carpet013_1K-JPG/*.webp
+ *     bjs download arcade-cabinet       # → public/arcade/QBERT_TEMPLATE.glb
+ *     bjs download arcade-cabinet-skins # → public/arcade/cabinet-skins/*.webp
  *
  * They land under `public/arcade/`, exactly where the paths below expect them.
  * Until you download them the room still runs — you just get an untextured
@@ -64,7 +65,30 @@ const SURFACE = { diffuseColor: [0.12, 0.1, 0.16] as [number, number, number], s
 const CABINET_GLB = `${ASSET_BASE}/arcade/QBERT_TEMPLATE.glb`
 const CABINET_SCALE = 1.1
 const CABINET_Z = -D / 2 + 0.6 // hard against the back wall
-const cabinet = (x: number) => ({
+
+// Skins shipped by `bjs download arcade-cabinet-skins`. Use any of these names
+// with `cabinet()` below.
+//
+// A skin is a whole cabinet's worth of art on ONE 2048² sheet — marquee, screen,
+// control panel, side art and bezel all live in it, and the model's materials
+// each index their own region of it. That is why a row of machines can look
+// completely different while still being one downloaded GLB rendered from one
+// shared template: only the sheet changes.
+export const CABINET_SKINS = [
+  'asteroids', 'centipede', 'dig-dug', 'donkey-kong', 'frogger',
+  'galaga', 'missile-command', 'mortal-kombat', 'pacman', 'roboball',
+  'spaceshooter', 'spy-hunter', 'street-fighter', 'terminator-2', 'tmnt',
+] as const
+
+/**
+ * One machine at `x` along the back wall, running `skin`.
+ *
+ * `extrasFlag: 'cabinetAtlas'` is the important bit: the cabinet's asset tags
+ * exactly those materials that read from the atlas, so the swap re-dresses the
+ * artwork and leaves the chrome, black plastic and joystick alone. Pass no skin
+ * to get the model's own Q*bert art.
+ */
+const cabinet = (x: number, skin?: (typeof CABINET_SKINS)[number]) => ({
   components: {
     Mesh: {
       src: CABINET_GLB,
@@ -73,6 +97,14 @@ const cabinet = (x: number) => ({
       rotation: [0, 0, 0],
       scale: CABINET_SCALE,
       autoLoad: true,
+      ...(skin
+        ? {
+            skin: {
+              albedoTexture: `${ASSET_BASE}/arcade/cabinet-skins/${skin}.webp`,
+              extrasFlag: 'cabinetAtlas',
+            },
+          }
+        : {}),
     },
   },
 })
@@ -148,10 +180,16 @@ export const ARCADE_ROOM = {
       },
     },
 
-    // One cabinet, centered against the back wall, facing the player. Add more
-    // — `Cabinet_2: cabinet(1.8)`, etc. — or wire each to a subdirectory game by
-    // editing these entries (see README).
-    Cabinet_1: cabinet(0),
+    // A row of five machines against the back wall, facing the player, each
+    // running a different game. Spacing is ~1.9 m — enough that you can walk
+    // up to any one of them. Add more, change the line-up to any name from
+    // CABINET_SKINS, or wire each cabinet to a subdirectory game by editing
+    // these entries (see README).
+    Cabinet_1: cabinet(-3.8, 'galaga'),
+    Cabinet_2: cabinet(-1.9, 'frogger'),
+    Cabinet_3: cabinet(0, 'donkey-kong'),
+    Cabinet_4: cabinet(1.9, 'pacman'),
+    Cabinet_5: cabinet(3.8, 'asteroids'),
 
     // First-person walk camera. You spawn just inside the front wall at
     // standing eye height, facing the cabinets (-Z). Bounds keep you inside the

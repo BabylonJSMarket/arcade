@@ -9,7 +9,7 @@
  * are plain tuples. The System reads this and talks to `world.renderer`.
  */
 
-import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+import type { MeshSkinSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 
 export type MeshLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -57,6 +57,16 @@ export interface MeshParams {
    * motion is kept. Default false.
    */
   lockRootMotion: boolean;
+  /**
+   * Re-skin this mesh: swap its atlas texture(s) so one model can wear many
+   * looks (see `MeshSkinSpec`). `null` (default) leaves the model's own art.
+   *
+   * Paths here are resolved against `assetServerUrl` exactly like `src`, so a
+   * skin downloaded next to its model is referenced the same way. Combine with
+   * `instanced: true` to get a row of the SAME model each wearing a different
+   * skin off one shared template.
+   */
+  skin: MeshSkinSpec | null;
 }
 
 export interface MeshOutputs {
@@ -85,6 +95,11 @@ export interface MeshInstance {
   reset(): void;
   /** Full URL the System should pass to the adapter: assetServerUrl + src. */
   getResolvedUrl(): string;
+  /**
+   * The `skin` with its texture paths resolved against `assetServerUrl`, ready
+   * to hand to the adapter. `null` when no skin is set.
+   */
+  getResolvedSkin(): MeshSkinSpec | null;
 }
 
 export const DEFAULT_MESH_PARAMS: MeshParams = {
@@ -99,6 +114,7 @@ export const DEFAULT_MESH_PARAMS: MeshParams = {
   faceMode: 'velocity',
   yawOffset: 0,
   lockRootMotion: false,
+  skin: null,
 };
 
 export function createMesh(params: Partial<MeshParams> = {}): MeshInstance {
@@ -164,6 +180,16 @@ export function createMesh(params: Partial<MeshParams> = {}): MeshInstance {
     },
     getResolvedUrl() {
       return active.assetServerUrl + active.src;
+    },
+    getResolvedSkin() {
+      const skin = active.skin;
+      if (!skin?.albedoTexture) return null;
+      const base = active.assetServerUrl;
+      return {
+        ...skin,
+        albedoTexture: base + skin.albedoTexture,
+        ...(skin.emissiveTexture ? { emissiveTexture: base + skin.emissiveTexture } : {}),
+      };
     },
   };
 }

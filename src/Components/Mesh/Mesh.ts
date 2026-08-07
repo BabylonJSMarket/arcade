@@ -85,6 +85,7 @@ export class MeshComponent extends Component {
       faceMode: data.faceMode ?? DEFAULT_MESH_PARAMS.faceMode,
       yawOffset: data.yawOffset ?? DEFAULT_MESH_PARAMS.yawOffset,
       lockRootMotion: data.lockRootMotion ?? DEFAULT_MESH_PARAMS.lockRootMotion,
+      skin: data.skin ?? DEFAULT_MESH_PARAMS.skin,
     };
   }
 
@@ -101,6 +102,7 @@ export class MeshComponent extends Component {
       faceMode: this.params.faceMode,
       yawOffset: this.params.yawOffset,
       lockRootMotion: this.params.lockRootMotion,
+      skin: this.params.skin ? { ...this.params.skin } : null,
     };
   }
 }
@@ -374,6 +376,10 @@ export class MeshSystem extends System {
       scale: params.scale,
     })
       .then((res) => {
+        // Non-instanced meshes own their materials outright, so the skin is a
+        // plain repaint once the model exists.
+        const skin = inst.getResolvedSkin();
+        if (skin) r.setMeshSkin(res.handle, skin);
         inst.completeLoad(res.meshId, res.animationNames);
         this.getRuntime(comp).handle = res.handle;
         this.eventBus.emit(MeshEvents.LOADED, {
@@ -438,10 +444,15 @@ export class MeshSystem extends System {
     if (!this.templateReady.has(url)) return;
 
     const animationNames = this.templateAnimationNames.get(url) ?? [];
+    // A skin rides along with the instantiate call rather than being applied
+    // after: the adapter has to give this clone its OWN materials before it can
+    // repaint them, and it only knows to do that if it's told up front.
+    const skin = inst.getResolvedSkin();
     const handle = r.instantiateModel(entityId, url, {
       position: params.position,
       rotation: params.rotation,
       scale: params.scale,
+      ...(skin ? { skin } : {}),
     });
     this.getRuntime(comp).handle = handle;
     // Clone starts hidden — reveal it.
