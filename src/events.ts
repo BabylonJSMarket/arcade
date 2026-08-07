@@ -133,6 +133,13 @@ export const HemisphericLightEvents = {
   INTENSITY_CHANGED: 'hemisphericlight.intensity.changed',
 } as const;
 
+// PointLightEvents — from PointLight
+export const PointLightEvents = {
+  CREATED: 'pointlight.created',
+  INTENSITY_CHANGED: 'pointlight.intensity.changed',
+  MOVED: 'pointlight.moved',
+} as const;
+
 // JumpEvents — from Jump
 export const JumpEvents = {
   /** Fired the frame the character leaves the ground. Payload: {@link JumpStartedEvent}. */

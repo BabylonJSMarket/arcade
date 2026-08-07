@@ -18,6 +18,7 @@ const EXPECTED_NAMES = [
   'FirstPersonCamera',
   'DirectionalLight',
   'HemisphericLight',
+  'PointLight',
   'Physics',
   'Score',
   'Scoreboard',

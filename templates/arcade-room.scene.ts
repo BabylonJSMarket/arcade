@@ -7,8 +7,8 @@
  * is composed from FREE @babylonjsmarket/arcade components, so it renders with
  * no extra wiring.
  *
- * Controls (FirstPersonCamera): W/S walk, A/D turn, Q/E strafe. You spawn just
- * inside the door at standing eye height, facing the cabinet.
+ * Controls (FirstPersonCamera): W/S or ↑/↓ walk, A/D or ←/→ turn, Q/E strafe.
+ * You spawn just inside the door at standing eye height, facing the cabinets.
  *
  * ── Assets ──────────────────────────────────────────────────────────────────
  * The carpet textures, the cabinet model and the cabinet skins are marketplace
@@ -52,10 +52,89 @@ const FLOOR_MATERIAL = {
   roughness: 0.9,
   uScale: Math.round(W / 0.8), // ~15 tiles across a 12 m floor
   vScale: Math.round(D / 0.8), // ~12 tiles deep
+  // Sun + fill + five neon lights = 7. Babylon's default cap is 4, and lights
+  // past the cap are silently dropped — without this the carpet simply never
+  // catches the neon.
+  maxSimultaneousLights: 8,
 }
 
 // Wall / ceiling material — matte dark so the neon-lit cabinets pop.
-const SURFACE = { diffuseColor: [0.12, 0.1, 0.16] as [number, number, number], specularColor: [0, 0, 0] as [number, number, number] }
+const SURFACE = {
+  diffuseColor: [0.12, 0.1, 0.16] as [number, number, number],
+  specularColor: [0, 0, 0] as [number, number, number],
+  // See FLOOR_MATERIAL — the walls are what the neon actually washes over, so
+  // they need the raised cap most of all.
+  maxSimultaneousLights: 8,
+}
+
+// ── Neon ────────────────────────────────────────────────────────────────────
+// A neon sign is TWO entities that have to agree, and it's worth knowing why:
+//
+//   1. an emissive panel — the tube itself. Emissive means "draw this bright";
+//      it does NOT light anything around it.
+//   2. a PointLight just in front of it — the glow actually landing on the
+//      wall, the carpet and the sides of nearby cabinets.
+//
+// Skip the light and the sign looks like a sticker; skip the panel and you get
+// unexplained colour with no source. Together they're what turns a dark box
+// into an arcade.
+const NEON_W = 1.8
+const NEON_H = 0.34
+const NEON_Y = 2.5 // above the cabinets, below the ceiling
+// Just off the wall — a light AT the wall mostly lights the wall's back face.
+const NEON_LIGHT_OFFSET = 0.45
+const NEON_INTENSITY = 6
+const NEON_RANGE = 7
+
+/**
+ * One sign on the back (-Z) wall at `x`, and one on a side wall when `side` is
+ * given. `color` drives BOTH the panel's emissive and the light, which is what
+ * sells it as one object.
+ */
+const neonPanel = (
+  x: number,
+  z: number,
+  color: [number, number, number],
+  rotY = 0,
+) => ({
+  components: {
+    MeshPrimitive: {
+      primitive: 'plane',
+      width: NEON_W,
+      height: NEON_H,
+      position: [x, NEON_Y, z],
+      rotation: [0, rotY, 0],
+      material: {
+        // Near-black albedo + hot emissive = a glowing tube rather than a
+        // pastel panel: emissive ADDS on top of the lit base colour.
+        diffuseColor: [0.02, 0.02, 0.02] as [number, number, number],
+        emissiveColor: color,
+        specularColor: [0, 0, 0] as [number, number, number],
+      },
+    },
+  },
+})
+
+const neonGlow = (
+  x: number,
+  z: number,
+  color: [number, number, number],
+) => ({
+  components: {
+    PointLight: {
+      position: [x, NEON_Y, z],
+      diffuse: color,
+      intensity: NEON_INTENSITY,
+      range: NEON_RANGE,
+    },
+  },
+})
+
+// Hot pink / electric cyan / violet — the classic arcade palette. Reuse these
+// or pick your own; the panel and its light must share a colour.
+const NEON_PINK: [number, number, number] = [1.0, 0.15, 0.55]
+const NEON_CYAN: [number, number, number] = [0.15, 0.9, 1.0]
+const NEON_VIOLET: [number, number, number] = [0.75, 0.3, 1.0]
 
 // Cabinet model. One shared template (`instanced: true`) is cloned per machine,
 // so the GLB loads once no matter how many cabinets reference it. It stands
@@ -120,7 +199,9 @@ export const ARCADE_ROOM = {
       components: {
         DirectionalLight: {
           direction: [-0.3, -0.85, -0.4],
-          intensity: 1.1,
+          // Low: an arcade is a dark room. This only keeps the geometry
+          // readable so the neon has something to fall on.
+          intensity: 0.35,
           diffuse: [1.0, 0.86, 0.72],
           shadowEnabled: true,
           shadowMapSize: 2048,
@@ -129,10 +210,13 @@ export const ARCADE_ROOM = {
         },
       },
     },
+    // Deliberately dim. The neon below is the room's real light source, and a
+    // bright ambient fill would wash its colour straight off the walls — turn
+    // this up only if you remove the signs.
     Fill: {
       components: {
         HemisphericLight: {
-          intensity: 0.45,
+          intensity: 0.18,
           diffuse: [0.55, 0.6, 0.85],
           groundColor: [0.14, 0.12, 0.18],
         },
@@ -190,6 +274,21 @@ export const ARCADE_ROOM = {
     Cabinet_3: cabinet(0, 'donkey-kong'),
     Cabinet_4: cabinet(1.9, 'pacman'),
     Cabinet_5: cabinet(3.8, 'asteroids'),
+
+    // Neon: three signs on the back wall and one on each side wall, each a
+    // panel + a matching light (see the neon block above). The side signs face
+    // inward, so their planes are turned ±90°.
+    Neon_Back_L: neonPanel(-3.6, -D / 2 + T, NEON_PINK),
+    Neon_Back_L_Glow: neonGlow(-3.6, -D / 2 + NEON_LIGHT_OFFSET, NEON_PINK),
+    Neon_Back_C: neonPanel(0, -D / 2 + T, NEON_CYAN),
+    Neon_Back_C_Glow: neonGlow(0, -D / 2 + NEON_LIGHT_OFFSET, NEON_CYAN),
+    Neon_Back_R: neonPanel(3.6, -D / 2 + T, NEON_VIOLET),
+    Neon_Back_R_Glow: neonGlow(3.6, -D / 2 + NEON_LIGHT_OFFSET, NEON_VIOLET),
+
+    Neon_Left: neonPanel(-W / 2 + T, -1, NEON_CYAN, Math.PI / 2),
+    Neon_Left_Glow: neonGlow(-W / 2 + NEON_LIGHT_OFFSET, -1, NEON_CYAN),
+    Neon_Right: neonPanel(W / 2 - T, -1, NEON_PINK, -Math.PI / 2),
+    Neon_Right_Glow: neonGlow(W / 2 - NEON_LIGHT_OFFSET, -1, NEON_PINK),
 
     // First-person walk camera. You spawn just inside the front wall at
     // standing eye height, facing the cabinets (-Z). Bounds keep you inside the

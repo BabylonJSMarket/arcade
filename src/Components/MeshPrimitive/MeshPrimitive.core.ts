@@ -90,6 +90,12 @@ export interface MeshPrimitiveInput {
     roughness?: number;
     uScale?: number;
     vScale?: number;
+    /**
+     * How many lights may light this surface at once. Renderers cap this
+     * (Babylon: 4) and silently DROP the extras, so a room lit by several
+     * small lights needs it raised on the big surfaces they fall on.
+     */
+    maxSimultaneousLights?: number;
   };
 
   visible?: boolean;
@@ -199,6 +205,7 @@ export class MeshPrimitiveComponent extends Component {
         roughness: m.roughness,
         uScale: m.uScale,
         vScale: m.vScale,
+        maxSimultaneousLights: m.maxSimultaneousLights,
       };
       void m.ambientColor; // legacy key ignored; ambient is driven by scene lights now
     }
@@ -239,6 +246,7 @@ export class MeshPrimitiveComponent extends Component {
           roughness: this.material.roughness,
           uScale: this.material.uScale,
           vScale: this.material.vScale,
+          maxSimultaneousLights: this.material.maxSimultaneousLights,
         }
       : undefined;
     return {
