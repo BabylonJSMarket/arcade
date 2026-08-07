@@ -675,16 +675,24 @@ cabinets at them.`;
 Drop your own models/textures under \`public/\` and reference them from
 \`src/scenes/game.ts\`.`
     : `You walk the room in first person — **W/S** move, **A/D** turn, **Q/E**
-strafe. The carpet + cabinet are marketplace assets; pull them into \`public/\`
-once with the member CLI:
+strafe. The carpet, cabinet and skins are marketplace assets; pull them into
+\`public/\` once with the member CLI:
 
 \`\`\`bash
-bjs download arcade-carpet     # → public/arcade/Carpet013_1K-JPG/*.webp
-bjs download arcade-cabinet    # → public/arcade/QBERT_TEMPLATE.glb
+bjs download arcade-carpet        # → public/arcade/Carpet013_1K-JPG/*.webp
+bjs download arcade-cabinet       # → public/arcade/QBERT_TEMPLATE.glb
+bjs download arcade-cabinet-skins # → public/arcade/cabinet-skins/*.webp
 \`\`\`
 
-The room still runs before you download them — you just get an untextured floor
-and no cabinets. Swap in your own art by editing the paths in
+The five machines along the back wall are all the SAME cabinet mesh wearing
+different skins — one 2048² sheet each, holding that game's marquee, screen,
+control panel and side art. So a varied arcade costs one model, and adding a
+sixth machine is one line in \`src/scenes/arcade-room.ts\` (see
+\`CABINET_SKINS\` for the full line-up).
+
+The room still runs before you download them — you just get an untextured floor,
+no cabinets, and (without the skins) machines wearing the model's own Q*bert
+art. Swap in your own art by editing the paths in
 \`src/scenes/arcade-room.ts\` (\`ASSET_BASE\` points them at \`public/\`).`;
   const readmeGrow = isGame
     ? `## Growing your game
@@ -771,13 +779,16 @@ exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`), then add
       doneMessage += `\n  ${pkgManager} run dev`;
       break;
   }
-  // The arcade room references marketplace assets (carpet + cabinet). Point the
-  // user at the two `bjs download` pulls so the room comes up textured instead
-  // of a bare floor. (The single-game and demo scaffolds use no such assets.)
+  // The arcade room references marketplace assets (carpet, cabinet, skins).
+  // Point the user at all three `bjs download` pulls so the room comes up
+  // textured with its full line-up of machines instead of a bare floor — miss
+  // the skins and every cabinet's art 404s. (The single-game and demo scaffolds
+  // use no such assets.)
   if (!demo && kind === "arcade") {
-    doneMessage += "\n\nThen pull the room's carpet + cabinet (member CLI):";
+    doneMessage += "\n\nThen pull the room's assets (member CLI):";
     doneMessage += "\n  bjs download arcade-carpet";
     doneMessage += "\n  bjs download arcade-cabinet";
+    doneMessage += "\n  bjs download arcade-cabinet-skins";
   }
   prompts.outro(doneMessage);
 }
