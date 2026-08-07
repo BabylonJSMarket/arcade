@@ -1,0 +1,22 @@
+{
+  "name": "CabinetLink",
+  "description": "Makes an arcade cabinet clickable: single click walks the player over, double click launches its game",
+  "category": "interaction",
+  "components": [
+    "CabinetLinkComponent"
+  ],
+  "systems": [
+    "CabinetLinkSystem"
+  ],
+  "dependencies": [],
+  "tags": [
+    "core",
+    "input"
+  ],
+  "emits": [
+    "cabinetlink.focused",
+    "cabinetlink.launch",
+    "firstpersoncamera.goto"
+  ],
+  "listens": []
+}

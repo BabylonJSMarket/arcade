@@ -167,7 +167,11 @@ export const CABINET_SKINS = [
  * artwork and leaves the chrome, black plastic and joystick alone. Pass no skin
  * to get the model's own Q*bert art.
  */
-const cabinet = (x: number, skin?: (typeof CABINET_SKINS)[number]) => ({
+const cabinet = (
+  x: number,
+  skin?: (typeof CABINET_SKINS)[number],
+  game?: string,
+) => ({
   components: {
     Mesh: {
       src: CABINET_GLB,
@@ -184,6 +188,18 @@ const cabinet = (x: number, skin?: (typeof CABINET_SKINS)[number]) => ({
             },
           }
         : {}),
+    },
+    // Makes the machine clickable: one click walks you over, two starts the
+    // game. `facing: 0` matches the Mesh rotation above (screen toward +Z), so
+    // CabinetLink knows which side to stand you on. Point `game` at a folder
+    // under src/games/ — `npm create @babylonjsmarket/arcade <name>` run inside
+    // this project creates one and wires it up.
+    CabinetLink: {
+      game: game ?? '',
+      title: game ?? skin ?? 'Cabinet',
+      facing: 0,
+      standoff: 1.3,
+      interactive: !!game,
     },
   },
 })

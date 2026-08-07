@@ -453,3 +453,52 @@ describe('ArcadeGame — start / stop', () => {
     expect(renderer.calls.some((c) => c.method === 'stopLoop')).toBe(false);
   });
 });
+
+describe('ArcadeGame — switching scenes', () => {
+  const sceneWith = (name: string, entity: string) => ({
+    name,
+    entities: { [entity]: { components: { Stub: {} } } },
+  });
+
+  let game: ArcadeGame;
+
+  beforeEach(() => {
+    game = new ArcadeGame(new MockRendererAdapter(), {
+      componentRegistry: { Stub: () => Promise.resolve(makeStubModule('Stub')) },
+    });
+  });
+
+  it('replace: true tears the previous scene down so ids can be reused', async () => {
+    // A second scene in a multigame arcade legitimately has its own `Sun`,
+    // `Floor`, `Camera`… Without replace those collide with the first scene's.
+    await game.loadScene(sceneWith('room', 'Sun'));
+    await expect(game.loadScene(sceneWith('game', 'Sun'), { replace: true })).resolves.not.toThrow();
+    expect(game.world.getEntity('Sun')).toBeDefined();
+  });
+
+  it('without replace, loading a colliding scene still throws (unchanged default)', async () => {
+    await game.loadScene(sceneWith('room', 'Sun'));
+    await expect(game.loadScene(sceneWith('game', 'Sun'))).rejects.toThrow(/already exists/i);
+  });
+
+  it('does not leave the previous scene’s entities behind', async () => {
+    await game.loadScene(sceneWith('room', 'RoomOnly'));
+    await game.loadScene(sceneWith('game', 'GameOnly'), { replace: true });
+    expect(game.world.getEntity('RoomOnly')).toBeUndefined();
+    expect(game.world.getEntity('GameOnly')).toBeDefined();
+  });
+
+  it('does not stack the previous scene’s systems under the new one', async () => {
+    await game.loadScene(sceneWith('room', 'A'));
+    const afterFirst = game.world.getSystems().length;
+    await game.loadScene(sceneWith('game', 'B'), { replace: true });
+    // Same scene shape, so the same number of systems — not double.
+    expect(game.world.getSystems().length).toBe(afterFirst);
+  });
+
+  it('unloadScene empties the world on its own', async () => {
+    await game.loadScene(sceneWith('room', 'Sun'));
+    game.unloadScene();
+    expect(game.world.getEntity('Sun')).toBeUndefined();
+  });
+});

@@ -133,6 +133,31 @@ export const HemisphericLightEvents = {
   INTENSITY_CHANGED: 'hemisphericlight.intensity.changed',
 } as const;
 
+// CabinetLinkEvents — from CabinetLink
+export const CabinetLinkEvents = {
+  /** A cabinet was single-clicked; the player is walking over. */
+  FOCUSED: 'cabinetlink.focused',
+  /**
+   * A cabinet was double-clicked: start its game. Payload carries the `game`
+   * key and its `route`. The host app decides what that means (the create-arcade
+   * scaffold pushes the route and swaps scenes), so this component never
+   * touches the router.
+   */
+  LAUNCH: 'cabinetlink.launch',
+} as const;
+
+// FirstPersonCameraEvents — from FirstPersonCamera
+export const FirstPersonCameraEvents = {
+  /**
+   * Ask the walking camera to WALK ITSELF to a spot: `{ x, z, yaw? }`. It
+   * paths there at its own moveSpeed/turnSpeed rather than teleporting, and any
+   * movement key cancels it — the player is never trapped in an animation.
+   */
+  GOTO: 'firstpersoncamera.goto',
+  /** Emitted once the camera reaches (or is released from) a GOTO target. */
+  ARRIVED: 'firstpersoncamera.arrived',
+} as const;
+
 // PointLightEvents — from PointLight
 export const PointLightEvents = {
   CREATED: 'pointlight.created',

@@ -64,6 +64,12 @@ export class ArcadeGame {
   private readonly resolvers: Record<string, LazyComponentResolver>;
   private readonly registered = new Set<string>();
   private running = false;
+  /**
+   * Systems the CURRENT scene added, so switching scenes can tear exactly
+   * those down. Tracked here because the world also holds systems the host app
+   * added itself, which must survive a scene change.
+   */
+  private sceneSystems: System[] = [];
 
   constructor(renderer: RendererAdapter, options: ArcadeGameOptions = {}) {
     this.renderer = renderer;
@@ -84,16 +90,27 @@ export class ArcadeGame {
     await this.renderer.init(canvas, opts);
   }
 
-  async loadSceneFromUrl(url: string): Promise<void> {
+  async loadSceneFromUrl(url: string, opts: { replace?: boolean } = {}): Promise<void> {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`ArcadeGame: failed to fetch scene from ${url}: ${response.status}`);
     }
     const sceneData = (await response.json()) as SceneJson;
-    await this.loadScene(sceneData);
+    await this.loadScene(sceneData, opts);
   }
 
-  async loadScene(sceneData: SceneJson): Promise<void> {
+  /**
+   * Load a scene.
+   *
+   * `replace: true` tears the CURRENT scene down first — every entity, and the
+   * systems that scene brought with it. That is what a multigame arcade needs:
+   * without it a second scene collides with the first (two entities called
+   * `Sun`) and the old scene's systems keep running underneath the new one.
+   * It defaults to false so a first load, and any single-scene app, behaves
+   * exactly as before.
+   */
+  async loadScene(sceneData: SceneJson, opts: { replace?: boolean } = {}): Promise<void> {
+    if (opts.replace) this.unloadScene();
     const names = collectComponentNames(sceneData);
     await Promise.all(Array.from(names).map((name) => this.registerByName(name)));
     this.sceneLoader.loadSceneFromData(sceneData as Parameters<SceneLoader["loadSceneFromData"]>[0]);
@@ -122,6 +139,7 @@ export class ArcadeGame {
     });
     for (const system of systems) {
       this.world.addSystem(system);
+      this.sceneSystems.push(system);
     }
 
     // Ensure the world (and therefore every system just added) is initialized
@@ -133,6 +151,18 @@ export class ArcadeGame {
     this.sceneLoader.instantiateScene(sceneData.name, this.world, {
       createSystems: false,
     });
+  }
+
+  /**
+   * Tear down the current scene: its entities, then the systems it brought.
+   * Systems the host app added itself are left alone.
+   */
+  unloadScene(): void {
+    this.world.removeAllEntities();
+    for (const system of this.sceneSystems) {
+      this.world.removeSystem(system);
+    }
+    this.sceneSystems = [];
   }
 
   /**

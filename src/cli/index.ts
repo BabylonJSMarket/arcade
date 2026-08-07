@@ -138,9 +138,11 @@ const argv = mri<{
   demo?: boolean;
   renderer?: string;
   kind?: string;
+  newProject?: boolean;
+  "new-project"?: boolean;
 }>(argsAfterSubcommand, {
   alias: { h: "help" },
-  boolean: ["help", "overwrite", "demo"],
+  boolean: ["help", "overwrite", "demo", "new-project"],
   string: ["renderer", "kind"],
 });
 const cwd = process.cwd();
@@ -174,9 +176,146 @@ Options:
                              Rapier). Omit to pick interactively.
       --demo                 scaffold the renderer-adapter comparison demo: one
                              scene rendered side-by-side by the Babylon, Three
-                             and Babylon Lite adapters (instead of a game/arcade)`;
+                             and Babylon Lite adapters (instead of a game/arcade)
+      --new-project          force a brand-new project even when run INSIDE an
+                             existing arcade (where the default is to add a game
+                             to it)
+
+Run inside an existing arcade, this ADDS A GAME to it rather than scaffolding a
+new project: a scene JSON under public/games/<name>/, a code seam under
+src/games/<name>/, an entry in src/games/index.ts, and the first free cabinet
+in the arcade room pointed at it. Components and assets stay shared, so every
+game draws on the same downloaded pool.`;
 
 const defaultTargetDir = "babylonjs-arcade";
+
+/**
+ * True if `dir` is an existing create-arcade ARCADE project — a package.json
+ * that depends on @babylonjsmarket/arcade, next to the arcade room scene.
+ *
+ * Both halves matter: the dependency alone also matches a single-game scaffold
+ * (which has no cabinets to point at), and the scene alone could be any folder.
+ */
+function isArcadeProject(dir: string): boolean {
+  const pkgPath = path.join(dir, "package.json");
+  if (!fs.existsSync(pkgPath)) return false;
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    if (!deps["@babylonjsmarket/arcade"]) return false;
+  } catch {
+    return false;
+  }
+  return fs.existsSync(path.join(dir, "src", "scenes", "arcade-room.ts"));
+}
+
+/** `my-cool-game` → `My Cool Game`, for the cabinet marquee / HUD title. */
+function titleCase(name: string): string {
+  return name
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * Add a game to the arcade we're standing in, rather than scaffolding a new
+ * project. Writes the scene JSON + code seam, registers it, and points the
+ * first cabinet that doesn't already front a game at it.
+ */
+function addGameToArcade(root: string, rawName: string): void {
+  const name = formatTargetDir(rawName);
+  const title = titleCase(name);
+  const sceneDir = path.join(root, "public", "games", name);
+  const codeDir = path.join(root, "src", "games", name);
+  const registryPath = path.join(root, "src", "games", "index.ts");
+
+  if (fs.existsSync(sceneDir) || fs.existsSync(codeDir)) {
+    prompts.log.error(
+      `A game called "${name}" already exists in this arcade. Pick another name, or delete public/games/${name} and src/games/${name}.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const fill = (tpl: string) => tpl.replace(/__NAME__/g, name).replace(/__TITLE__/g, title);
+
+  fs.mkdirSync(sceneDir, { recursive: true });
+  fs.writeFileSync(path.join(sceneDir, "scene.json"), fill(readTemplate("game.scene.json")));
+  fs.mkdirSync(codeDir, { recursive: true });
+  fs.writeFileSync(path.join(codeDir, "index.ts"), fill(readTemplate("game-entry.ts")));
+
+  // The registry may not exist yet in an arcade scaffolded before games were a
+  // thing — lay down the template first so there is always something to edit.
+  if (!fs.existsSync(registryPath)) {
+    fs.mkdirSync(path.dirname(registryPath), { recursive: true });
+    fs.writeFileSync(registryPath, readTemplate("games-index.ts"));
+  }
+  const registered = registerGame(registryPath, name, title);
+  const wired = wireFreeCabinet(path.join(root, "src", "scenes", "arcade-room.ts"), name);
+
+  prompts.log.success(`Added game "${name}" to this arcade.`);
+  const lines = [
+    `  public/games/${name}/scene.json   the entities — edit + reload, no rebuild`,
+    `  src/games/${name}/index.ts        this game's Systems, when it needs any`,
+    registered
+      ? `  src/games/index.ts               registered as "${name}"`
+      : `  src/games/index.ts               COULD NOT auto-register — add the entry by hand`,
+    wired
+      ? `  src/scenes/arcade-room.ts        cabinet "${wired}" now launches it`
+      : `  src/scenes/arcade-room.ts        no free cabinet found — pass the game name to a cabinet(...) call`,
+  ];
+  prompts.note(lines.join("\n"), "Files");
+  prompts.outro(
+    `Run \`npm run dev\`, walk up to the cabinet, and double-click it — or open /games/${name}/ directly.`,
+  );
+}
+
+/**
+ * Insert a GAMES entry into src/games/index.ts. Returns false if the file
+ * doesn't look like the template we know how to edit, so the caller can tell
+ * the user to do it by hand instead of silently doing nothing.
+ */
+function registerGame(registryPath: string, name: string, title: string): boolean {
+  let src: string;
+  try {
+    src = fs.readFileSync(registryPath, "utf8");
+  } catch {
+    return false;
+  }
+  if (src.includes(`'${name}':`) || src.includes(`"${name}":`)) return true; // already there
+  const marker = "export const GAMES: Record<string, ArcadeGameEntry> = {";
+  const at = src.indexOf(marker);
+  if (at === -1) return false;
+  const insertAt = at + marker.length;
+  const entry = `\n  '${name}': { name: '${name}', title: '${title}', sceneUrl: '/games/${name}/scene.json' },`;
+  fs.writeFileSync(registryPath, src.slice(0, insertAt) + entry + src.slice(insertAt));
+  return true;
+}
+
+/**
+ * Point the first cabinet that doesn't already front a game at `name`, by
+ * adding the third argument to its `cabinet(x, skin)` call. Returns the skin of
+ * the cabinet claimed, or null if every cabinet is taken / the file was edited
+ * past recognition.
+ */
+function wireFreeCabinet(scenePath: string, name: string): string | null {
+  let src: string;
+  try {
+    src = fs.readFileSync(scenePath, "utf8");
+  } catch {
+    return null;
+  }
+  // `Cabinet_3: cabinet(0, 'donkey-kong'),` — two args means no game yet.
+  const free = /(cabinet\(\s*-?[\d.]+\s*,\s*'([a-z0-9-]+)'\s*)\)/;
+  const m = free.exec(src);
+  if (!m) return null;
+  fs.writeFileSync(scenePath, src.replace(free, `$1, '${name}')`));
+  return m[2];
+}
 
 async function init() {
   const argTargetDir = argv._[0]
@@ -189,6 +328,33 @@ async function init() {
   const help = argv.help;
   if (help) {
     console.log(helpMessage);
+    return;
+  }
+
+  // Standing inside an arcade already? Then "create" means ADD A GAME TO IT —
+  // same folder, same components, same downloaded assets — not a nested second
+  // project. `--new-project` opts back out. (`--demo` is its own thing, and a
+  // fresh scaffold into a subdirectory that isn't this arcade still works: we
+  // only take this path when no directory argument was given, or it names the
+  // arcade itself.)
+  const inArcade = !demo && !argv["new-project"] && isArcadeProject(cwd);
+  const targetIsElsewhere =
+    argTargetDir !== undefined &&
+    path.resolve(cwd, argTargetDir) !== path.resolve(cwd) &&
+    fs.existsSync(path.resolve(cwd, argTargetDir));
+  if (inArcade && !targetIsElsewhere) {
+    let gameName = argTargetDir;
+    if (!gameName) {
+      const answer = await prompts.text({
+        message: "Name for the new game in this arcade:",
+        placeholder: "my-game",
+        validate: (v) => (v && v.trim() ? undefined : "Give the game a name"),
+      });
+      if (prompts.isCancel(answer)) return prompts.cancel("Operation cancelled");
+      gameName = formatTargetDir(answer as string);
+    }
+    prompts.intro(`Adding a game to the arcade in ${cwd}`);
+    addGameToArcade(cwd, gameName);
     return;
   }
 
@@ -608,6 +774,9 @@ ${threeImportmap}    <style>
     } else {
       write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
       write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
+      // The games registry — empty until `npm create @babylonjsmarket/arcade`
+      // is run INSIDE the project, which adds one.
+      write("src/games/index.ts", readTemplate("games-index.ts"));
     }
   }
 

@@ -24,6 +24,8 @@ import '@babylonjsmarket/viz/themes/unity.css'
 import '@babylonjsmarket/viz/themes/unreal.css'
 import '@babylonjsmarket/viz/themes/godot.css'
 import { SCENES, DEFAULT_SCENE } from './scenes'
+import { GAMES, gameFromPath } from './games'
+import { CabinetLinkEvents } from '@babylonjsmarket/arcade'
 import { REGISTRY } from './registry'
 
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -79,6 +81,49 @@ if (sceneUrl) {
 }
 
 game.start()
+
+// ── Arcade router ──────────────────────────────────────────────────────────
+// The arcade is ONE running app. Walking into a game swaps the scene and
+// pushes `/games/<name>/`; it does not reload the page — so the engine, the
+// loaded assets and every downloaded component stay warm, and coming back to
+// the room is instant. The URL is still real: shareable, bookmarkable, and the
+// browser Back button walks you back out to the arcade floor.
+//
+// Vite's dev server needs no extra config for this (it falls back to index.html
+// for unknown paths); a static host needs the usual SPA rewrite to index.html.
+async function showRoute(pathname: string): Promise<void> {
+  // `replace` tears the previous scene down first — without it the room's
+  // entities and the game's collide (two `Sun`s) and both scenes' systems run
+  // at once.
+  const entry = gameFromPath(pathname)
+  if (entry) {
+    await game.loadSceneFromUrl(entry.sceneUrl, { replace: true })
+  } else {
+    await game.loadScene(SCENES[DEFAULT_SCENE], { replace: true })
+  }
+}
+
+// Double-clicking a cabinet emits LAUNCH (see the CabinetLink component). The
+// component deliberately doesn't know about routing — this is where the app
+// decides what "start the game" means.
+game.eventBus.on(CabinetLinkEvents.LAUNCH, (e: { game: string; route: string }) => {
+  if (!GAMES[e.game]) {
+    console.warn(`[arcade] cabinet points at unknown game "${e.game}" — is it in src/games/index.ts?`)
+    return
+  }
+  history.pushState({ game: e.game }, '', e.route)
+  void showRoute(e.route)
+})
+
+window.addEventListener('popstate', () => {
+  void showRoute(window.location.pathname)
+})
+
+// Deep link: someone opened /games/<name>/ directly, so start there rather than
+// in the room. (`?scene=` previews win over this — they're a different mode.)
+if (!sceneUrl && gameFromPath(window.location.pathname)) {
+  await showRoute(window.location.pathname)
+}
 
 // Controls HUD — a small key-hint overlay pinned bottom-left. Hints come from
 // the scene's optional `controls` list, or are parsed from its `sceneTitle`

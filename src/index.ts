@@ -13,6 +13,7 @@ export * from './Components/CameraFollow/CameraFollow';
 export * from './Components/DirectionalLight/DirectionalLight';
 export * from './Components/HemisphericLight/HemisphericLight';
 export * from './Components/PointLight/PointLight';
+export * from './Components/CabinetLink/CabinetLink';
 export * from './Components/Physics/Physics';
 export * from './Components/Score/Score';
 export * from './Components/Scoreboard/Scoreboard';

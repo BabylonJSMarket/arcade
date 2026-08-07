@@ -19,6 +19,7 @@ const EXPECTED_NAMES = [
   'DirectionalLight',
   'HemisphericLight',
   'PointLight',
+  'CabinetLink',
   'Physics',
   'Score',
   'Scoreboard',

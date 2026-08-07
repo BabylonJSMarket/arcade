@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FirstPersonCameraComponent, FirstPersonCameraSystem } from './FirstPersonCamera';
 import { EventBus, World } from '@babylonjsmarket/ecs';
+import { FirstPersonCameraEvents } from '../../events';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 
 /** Last recorded call to a given adapter method, or undefined. */
@@ -161,6 +162,73 @@ describe('FirstPersonCamera', () => {
     const call = lastCall(r, 'createPerspectiveCamera');
     expect(call).toBeDefined();
     expect((call!.args[1] as { position: number[] }).position).toEqual([2, 1.8, 3]);
+  });
+
+  describe('GOTO — walking itself to a spot', () => {
+    /** Run `frames` updates and read the final camera position. */
+    const settle = (frames: number) => {
+      for (let i = 0; i < frames; i++) world.update(1 / 60);
+      const call = lastCall(renderer, 'setCameraPose');
+      return (call!.args[1] as number[]);
+    };
+
+    it('walks to the requested spot and settles on the requested facing', () => {
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 6, turnSpeed: 8 }));
+      world.update(1 / 60);
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 0, z: 4, yaw: Math.PI });
+      const pos = settle(180);
+      expect(pos[0]).toBeCloseTo(0, 1);
+      expect(pos[2]).toBeCloseTo(4, 1);
+    });
+
+    it('emits ARRIVED once it gets there', () => {
+      const arrived: unknown[] = [];
+      eventBus.on(FirstPersonCameraEvents.ARRIVED, (p) => arrived.push(p));
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 6, turnSpeed: 8 }));
+      world.update(1 / 60);
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 0, z: 2 });
+      settle(180);
+      expect(arrived).toHaveLength(1);
+      expect((arrived[0] as { cancelled: boolean }).cancelled).toBe(false);
+    });
+
+    it('a movement key CANCELS the walk — the player always wins', () => {
+      const arrived: unknown[] = [];
+      eventBus.on(FirstPersonCameraEvents.ARRIVED, (p) => arrived.push(p));
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 2, turnSpeed: 8 }));
+      world.update(1 / 60);
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 0, z: 20 });
+      settle(5);
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+      const posAtCancel = settle(1);
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyS' }));
+      const after = settle(60);
+
+      expect(arrived).toHaveLength(1);
+      expect((arrived[0] as { cancelled: boolean }).cancelled).toBe(true);
+      // It is no longer driving itself toward z = 20 — S walked it back instead.
+      expect(after[2]).toBeLessThan(posAtCancel[2] + 0.5);
+    });
+
+    it('stays inside its bounds while auto-walking', () => {
+      const e = world.createEntity('Camera');
+      e.add(
+        new FirstPersonCameraComponent({
+          position: [0, 0],
+          moveSpeed: 8,
+          turnSpeed: 8,
+          bounds: { minX: -1, maxX: 1, minZ: -1, maxZ: 1 },
+        }),
+      );
+      world.update(1 / 60);
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 50, z: 50 });
+      const pos = settle(120);
+      expect(pos[0]).toBeLessThanOrEqual(1.0001);
+      expect(pos[2]).toBeLessThanOrEqual(1.0001);
+    });
   });
 
   it('removes its DOM listeners on shutdown', () => {

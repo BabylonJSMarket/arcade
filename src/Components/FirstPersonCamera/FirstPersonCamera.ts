@@ -13,6 +13,7 @@ import { System } from '@babylonjsmarket/ecs';
 import type { Entity, EventBus } from '@babylonjsmarket/ecs';
 import type { CameraHandle, Quaternion, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { KeyboardInputEvents } from '../../inputEvents';
+import { FirstPersonCameraEvents } from '../../events';
 import { FirstPersonCameraComponent } from './FirstPersonCamera.core';
 
 export { FirstPersonCameraComponent } from './FirstPersonCamera.core';
@@ -34,6 +35,20 @@ interface FirstPersonCameraRuntime {
   x: number;
   z: number;
   yaw: number;
+  /** Active GOTO target, if the camera is currently walking itself somewhere. */
+  goto?: { x: number; z: number; yaw?: number };
+}
+
+/** Close enough to a GOTO target to call it arrived (metres / radians). */
+const ARRIVE_DISTANCE = 0.05;
+const ARRIVE_ANGLE = 0.02;
+
+/** Shortest signed angle from `a` to `b`, so a turn never takes the long way. */
+function angleDelta(a: number, b: number): number {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
 }
 
 export class FirstPersonCameraSystem extends System {
@@ -59,6 +74,14 @@ export class FirstPersonCameraSystem extends System {
 
   protected onInitialize(): void {
     this.listen(KeyboardInputEvents.KEYDOWN, (e: { code: string }) => this.setKey(e.code, 1));
+    // Walk-me-there requests (e.g. clicking a cabinet). Event-driven so nothing
+    // needs a reference to this System.
+    this.listen(FirstPersonCameraEvents.GOTO, (e: { x: number; z: number; yaw?: number }) => {
+      for (const entity of this.entities) {
+        const comp = entity.get(FirstPersonCameraComponent);
+        if (comp) this.getRuntime(comp).goto = { x: e.x, z: e.z, yaw: e.yaw };
+      }
+    });
     this.listen(KeyboardInputEvents.KEYUP, (e: { code: string }) => this.setKey(e.code, 0));
 
     // Bridge DOM keyboard events to the bus so scaffolded projects walk around
@@ -119,6 +142,57 @@ export class FirstPersonCameraSystem extends System {
     });
   }
 
+  /**
+   * Advance one frame toward the active GOTO target: turn to face the walk
+   * direction, then walk. Clears `rt.goto` on arrival.
+   *
+   * Turn-then-walk (rather than sliding sideways) is deliberate — it's the same
+   * tank motion the keys produce, so an auto-walk looks like the player did it.
+   */
+  private stepToward(
+    comp: FirstPersonCameraComponent,
+    rt: FirstPersonCameraRuntime,
+    dt: number,
+  ): void {
+    const target = rt.goto;
+    if (!target) return;
+    const dx = target.x - rt.x;
+    const dz = target.z - rt.z;
+    const distance = Math.hypot(dx, dz);
+
+    if (distance > ARRIVE_DISTANCE) {
+      // Face the walk direction first; only move once roughly aligned, so the
+      // camera doesn't crab sideways across the room.
+      const want = Math.atan2(dx, dz); // yaw 0 faces +Z
+      const turnStep = comp.turnSpeed * dt;
+      const dYaw = angleDelta(rt.yaw, want);
+      rt.yaw += Math.abs(dYaw) <= turnStep ? dYaw : Math.sign(dYaw) * turnStep;
+
+      if (Math.abs(dYaw) < 0.35) {
+        const step = Math.min(comp.moveSpeed * dt, distance);
+        rt.x += (dx / distance) * step;
+        rt.z += (dz / distance) * step;
+        if (comp.bounds) {
+          rt.x = clamp(rt.x, comp.bounds.minX, comp.bounds.maxX);
+          rt.z = clamp(rt.z, comp.bounds.minZ, comp.bounds.maxZ);
+        }
+      }
+      return;
+    }
+
+    // Arrived on the floor plane. Settle the final facing, if one was asked for.
+    if (target.yaw !== undefined) {
+      const dYaw = angleDelta(rt.yaw, target.yaw);
+      if (Math.abs(dYaw) > ARRIVE_ANGLE) {
+        const turnStep = comp.turnSpeed * dt;
+        rt.yaw += Math.abs(dYaw) <= turnStep ? dYaw : Math.sign(dYaw) * turnStep;
+        return;
+      }
+      rt.yaw = target.yaw;
+    }
+    rt.goto = undefined;
+  }
+
   private setKey(code: string, value: 0 | 1): void {
     if (FORWARD_KEYS.has(code)) this.forward = value;
     else if (BACK_KEYS.has(code)) this.back = value;
@@ -145,6 +219,38 @@ export class FirstPersonCameraSystem extends System {
       this.ensureCamera(comp);
       const rt = this.getRuntime(comp);
       if (!rt.handle) continue;
+
+      // A GOTO walks the camera to a spot on its own. The player always wins:
+      // ANY movement key cancels it, so you can never be stuck watching the
+      // camera drive itself somewhere you didn't want to go.
+      if (rt.goto) {
+        if (turn !== 0 || fwd !== 0 || strafe !== 0) {
+          rt.goto = undefined;
+          this.eventBus.emit(FirstPersonCameraEvents.ARRIVED, {
+            entityId: entity.id,
+            x: rt.x,
+            z: rt.z,
+            yaw: rt.yaw,
+            cancelled: true,
+          });
+        } else {
+          this.stepToward(comp, rt, dt);
+          if (!rt.goto) {
+            this.eventBus.emit(FirstPersonCameraEvents.ARRIVED, {
+              entityId: entity.id,
+              x: rt.x,
+              z: rt.z,
+              yaw: rt.yaw,
+              cancelled: false,
+            });
+          }
+          this._pos[0] = rt.x;
+          this._pos[1] = comp.eyeHeight;
+          this._pos[2] = rt.z;
+          r.setCameraPose(rt.handle, this._pos, yawQuaternion(rt.yaw, this._quat));
+          continue;
+        }
+      }
 
       rt.yaw += turn * comp.turnSpeed * dt;
 
