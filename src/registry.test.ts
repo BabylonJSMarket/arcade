@@ -20,6 +20,7 @@ const EXPECTED_NAMES = [
   'HemisphericLight',
   'PointLight',
   'CabinetLink',
+  'NeonSign',
   'Physics',
   'Score',
   'Scoreboard',

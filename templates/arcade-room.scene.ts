@@ -68,73 +68,43 @@ const SURFACE = {
 }
 
 // ── Neon ────────────────────────────────────────────────────────────────────
-// A neon sign is TWO entities that have to agree, and it's worth knowing why:
+// The room's name in neon. A NeonSign is ONE entity that owns both halves of
+// the effect — the glowing lettering, and the coloured light it throws — so
+// they can never drift apart. Emissive text alone reads as a sticker; a light
+// with no visible source reads as a bug.
 //
-//   1. an emissive panel — the tube itself. Emissive means "draw this bright";
-//      it does NOT light anything around it.
-//   2. a PointLight just in front of it — the glow actually landing on the
-//      wall, the carpet and the sides of nearby cabinets.
+// The signs are world-FIXED, not billboards: a sign screwed to a wall doesn't
+// swivel to follow you, and the side-wall ones are legitimately edge-on until
+// you turn to look at them.
 //
-// Skip the light and the sign looks like a sticker; skip the panel and you get
-// unexplained colour with no source. Together they're what turns a dark box
-// into an arcade.
-const NEON_W = 1.8
-const NEON_H = 0.34
+// Change ARCADE_NAME and the room is yours.
+const ARCADE_NAME = "BJ's Arcade"
 const NEON_Y = 2.5 // above the cabinets, below the ceiling
-// Just off the wall — a light AT the wall mostly lights the wall's back face.
-const NEON_LIGHT_OFFSET = 0.45
-const NEON_INTENSITY = 6
-const NEON_RANGE = 7
 
-/**
- * One sign on the back (-Z) wall at `x`, and one on a side wall when `side` is
- * given. `color` drives BOTH the panel's emissive and the light, which is what
- * sells it as one object.
- */
-const neonPanel = (
-  x: number,
-  z: number,
-  color: [number, number, number],
-  rotY = 0,
-) => ({
-  components: {
-    MeshPrimitive: {
-      primitive: 'plane',
-      width: NEON_W,
-      height: NEON_H,
-      position: [x, NEON_Y, z],
-      rotation: [0, rotY, 0],
-      material: {
-        // Near-black albedo + hot emissive = a glowing tube rather than a
-        // pastel panel: emissive ADDS on top of the lit base colour.
-        diffuseColor: [0.02, 0.02, 0.02] as [number, number, number],
-        emissiveColor: color,
-        specularColor: [0, 0, 0] as [number, number, number],
-      },
-    },
-  },
-})
-
-const neonGlow = (
-  x: number,
-  z: number,
-  color: [number, number, number],
-) => ({
-  components: {
-    PointLight: {
-      position: [x, NEON_Y, z],
-      diffuse: color,
-      intensity: NEON_INTENSITY,
-      range: NEON_RANGE,
-    },
-  },
-})
-
-// Hot pink / electric cyan / violet — the classic arcade palette. Reuse these
-// or pick your own; the panel and its light must share a colour.
 const NEON_PINK: [number, number, number] = [1.0, 0.15, 0.55]
 const NEON_CYAN: [number, number, number] = [0.15, 0.9, 1.0]
 const NEON_VIOLET: [number, number, number] = [0.75, 0.3, 1.0]
+
+/** One sign, at `position`, turned by `rotY` to face into the room. */
+const neonSign = (
+  text: string,
+  position: [number, number, number],
+  color: [number, number, number],
+  rotY = 0,
+  size = 0.5,
+) => ({
+  components: {
+    NeonSign: {
+      text,
+      color,
+      position,
+      rotation: [0, rotY, 0],
+      size,
+      glow: 6,
+      range: 7,
+    },
+  },
+})
 
 // Cabinet model. One shared template (`instanced: true`) is cloned per machine,
 // so the GLB loads once no matter how many cabinets reference it. It stands
@@ -291,20 +261,15 @@ export const ARCADE_ROOM = {
     Cabinet_4: cabinet(1.9, 'pacman'),
     Cabinet_5: cabinet(3.8, 'asteroids'),
 
-    // Neon: three signs on the back wall and one on each side wall, each a
-    // panel + a matching light (see the neon block above). The side signs face
-    // inward, so their planes are turned ±90°.
-    Neon_Back_L: neonPanel(-3.6, -D / 2 + T, NEON_PINK),
-    Neon_Back_L_Glow: neonGlow(-3.6, -D / 2 + NEON_LIGHT_OFFSET, NEON_PINK),
-    Neon_Back_C: neonPanel(0, -D / 2 + T, NEON_CYAN),
-    Neon_Back_C_Glow: neonGlow(0, -D / 2 + NEON_LIGHT_OFFSET, NEON_CYAN),
-    Neon_Back_R: neonPanel(3.6, -D / 2 + T, NEON_VIOLET),
-    Neon_Back_R_Glow: neonGlow(3.6, -D / 2 + NEON_LIGHT_OFFSET, NEON_VIOLET),
+    // The name over the machines, and a smaller sign on each side wall. Add
+    // more, or re-word them — the text is just data.
+    Neon_Main: neonSign(ARCADE_NAME, [0, NEON_Y, -D / 2 + T], NEON_CYAN, 0, 0.62),
+    Neon_Back_L: neonSign('PLAY', [-4.2, NEON_Y, -D / 2 + T], NEON_PINK, 0, 0.4),
+    Neon_Back_R: neonSign('WIN', [4.2, NEON_Y, -D / 2 + T], NEON_VIOLET, 0, 0.4),
 
-    Neon_Left: neonPanel(-W / 2 + T, -1, NEON_CYAN, Math.PI / 2),
-    Neon_Left_Glow: neonGlow(-W / 2 + NEON_LIGHT_OFFSET, -1, NEON_CYAN),
-    Neon_Right: neonPanel(W / 2 - T, -1, NEON_PINK, -Math.PI / 2),
-    Neon_Right_Glow: neonGlow(W / 2 - NEON_LIGHT_OFFSET, -1, NEON_PINK),
+    // Side walls: turned a quarter-turn so they face across the room.
+    Neon_Left: neonSign(ARCADE_NAME, [-W / 2 + T, NEON_Y, -1], NEON_PINK, Math.PI / 2, 0.45),
+    Neon_Right: neonSign(ARCADE_NAME, [W / 2 - T, NEON_Y, -1], NEON_CYAN, -Math.PI / 2, 0.45),
 
     // First-person walk camera. You spawn just inside the front wall at
     // standing eye height, facing the cabinets (-Z). Bounds keep you inside the

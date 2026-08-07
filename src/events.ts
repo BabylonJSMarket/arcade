@@ -133,6 +133,13 @@ export const HemisphericLightEvents = {
   INTENSITY_CHANGED: 'hemisphericlight.intensity.changed',
 } as const;
 
+// NeonSignEvents — from NeonSign
+export const NeonSignEvents = {
+  CREATED: 'neonsign.created',
+  /** The sign's text changed; payload `{ entityId, text }`. */
+  TEXT_CHANGED: 'neonsign.text.changed',
+} as const;
+
 // CabinetLinkEvents — from CabinetLink
 export const CabinetLinkEvents = {
   /** A cabinet was single-clicked; the player is walking over. */

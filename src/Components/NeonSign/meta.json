@@ -1,0 +1,10 @@
+{
+  "name": "NeonSign",
+  "description": "Glowing neon lettering on a wall, plus the coloured light it throws into the room",
+  "category": "lighting",
+  "components": ["NeonSignComponent"],
+  "systems": ["NeonSignSystem"],
+  "dependencies": [],
+  "tags": ["core", "rendering"],
+  "emits": ["neonsign.created", "neonsign.text.changed"]
+}
