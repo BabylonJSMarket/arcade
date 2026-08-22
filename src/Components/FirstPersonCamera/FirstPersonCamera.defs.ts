@@ -1,10 +1,11 @@
 /**
  * FirstPersonCamera — definitions.
  *
- * The FirstPersonCamera component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * FirstPersonCamera in a query or react to what it emits: this file carries no System, so
- * naming FirstPersonCamera never drags its behaviour into your bundle.
+ * Holds the `FirstPersonCameraComponent` class and the shapes its data and
+ * events travel in. No System lives here, which is the point: another
+ * component can name FirstPersonCamera in a query, or type an event it
+ * listens for, without pulling FirstPersonCamera's behaviour into its own
+ * bundle. Import from here, not from FirstPersonCamera.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';

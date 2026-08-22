@@ -1,10 +1,11 @@
 /**
  * Scoreboard — definitions.
  *
- * The Scoreboard component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * Scoreboard in a query or react to what it emits: this file carries no System, so
- * naming Scoreboard never drags its behaviour into your bundle.
+ * Holds the `ScoreboardComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name Scoreboard in a query, or type an event it listens for, without
+ * pulling Scoreboard's behaviour into its own bundle. Import from here, not
+ * from Scoreboard.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';

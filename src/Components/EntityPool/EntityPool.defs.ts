@@ -1,13 +1,15 @@
 /**
  * EntityPool — definitions.
  *
- * The EntityPool component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * EntityPool in a query or react to what it emits: this file carries no System, so
- * naming EntityPool never drags its behaviour into your bundle.
+ * Holds the `EntityPoolComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name EntityPool in a query, or type an event it listens for, without
+ * pulling EntityPool's behaviour into its own bundle. Import from here, not
+ * from EntityPool.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
+
 export interface EntityPoolInput {
   /** Pool name; also the pooled-entity name prefix (`enemy-0`, …). */
   pool?: string

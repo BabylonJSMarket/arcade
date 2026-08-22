@@ -1,13 +1,15 @@
 /**
  * LineOfSight — definitions.
  *
- * The LineOfSight component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * LineOfSight in a query or react to what it emits: this file carries no System, so
- * naming LineOfSight never drags its behaviour into your bundle.
+ * Holds the `LineOfSightComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name LineOfSight in a query, or type an event it listens for, without
+ * pulling LineOfSight's behaviour into its own bundle. Import from here, not
+ * from LineOfSight.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
+
 export interface LineOfSightInput {
   /** Tag of the entity to look for. */
   targetTag?: string

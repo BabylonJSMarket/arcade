@@ -1,13 +1,15 @@
 /**
  * HealthBar — definitions.
  *
- * The HealthBar component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * HealthBar in a query or react to what it emits: this file carries no System, so
- * naming HealthBar never drags its behaviour into your bundle.
+ * Holds the `HealthBarComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name HealthBar in a query, or type an event it listens for, without
+ * pulling HealthBar's behaviour into its own bundle. Import from here, not
+ * from HealthBar.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
+
 export interface HealthBarInput {
   /** World-space width of the bar at full HP. */
   width?: number

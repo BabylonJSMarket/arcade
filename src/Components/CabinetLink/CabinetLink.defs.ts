@@ -1,14 +1,16 @@
 /**
  * CabinetLink — definitions.
  *
- * The CabinetLink component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * CabinetLink in a query or react to what it emits: this file carries no System, so
- * naming CabinetLink never drags its behaviour into your bundle.
+ * Holds the `CabinetLinkComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name CabinetLink in a query, or type an event it listens for, without
+ * pulling CabinetLink's behaviour into its own bundle. Import from here, not
+ * from CabinetLink.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+
 export interface CabinetLinkInput {
   /**
    * Key of the game this cabinet fronts, e.g. `'frogger'`. Matches a folder

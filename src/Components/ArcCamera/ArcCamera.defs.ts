@@ -1,14 +1,16 @@
 /**
  * ArcCamera — definitions.
  *
- * The ArcCamera component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * ArcCamera in a query or react to what it emits: this file carries no System, so
- * naming ArcCamera never drags its behaviour into your bundle.
+ * Holds the `ArcCameraComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name ArcCamera in a query, or type an event it listens for, without
+ * pulling ArcCamera's behaviour into its own bundle. Import from here, not
+ * from ArcCamera.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { ArcCameraSpec, CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+
 export interface ArcCameraInput {
   /** Entity the camera tracks when `follow` is true (kept centred). */
   target?: string;

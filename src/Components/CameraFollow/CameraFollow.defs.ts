@@ -1,14 +1,16 @@
 /**
  * CameraFollow — definitions.
  *
- * The CameraFollow component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * CameraFollow in a query or react to what it emits: this file carries no System, so
- * naming CameraFollow never drags its behaviour into your bundle.
+ * Holds the `CameraFollowComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name CameraFollow in a query, or type an event it listens for, without
+ * pulling CameraFollow's behaviour into its own bundle. Import from here,
+ * not from CameraFollow.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import { type CameraFollowInstance, type CameraFollowParams, DEFAULT_CAMERA_FOLLOW_PARAMS } from './CameraFollow.core';
+
 export interface CameraFollowInput extends Partial<CameraFollowParams> {
   /** Entity id of the thing to follow. Must own a MeshPrimitive. */
   target?: string;

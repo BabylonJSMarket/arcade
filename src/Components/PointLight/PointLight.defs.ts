@@ -1,14 +1,16 @@
 /**
  * PointLight — definitions.
  *
- * The PointLight component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * PointLight in a query or react to what it emits: this file carries no System, so
- * naming PointLight never drags its behaviour into your bundle.
+ * Holds the `PointLightComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name PointLight in a query, or type an event it listens for, without
+ * pulling PointLight's behaviour into its own bundle. Import from here, not
+ * from PointLight.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, PointLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+
 export interface PointLightInput {
   position?: Vec3;
   intensity?: number;

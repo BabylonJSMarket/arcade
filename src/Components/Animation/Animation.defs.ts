@@ -1,10 +1,11 @@
 /**
  * Animation — definitions.
  *
- * The Animation component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * Animation in a query or react to what it emits: this file carries no System, so
- * naming Animation never drags its behaviour into your bundle.
+ * Holds the `AnimationComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name Animation in a query, or type an event it listens for, without
+ * pulling Animation's behaviour into its own bundle. Import from here, not
+ * from Animation.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';

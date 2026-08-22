@@ -1,13 +1,14 @@
 /**
  * Pool — definitions.
  *
- * The Pool component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * Pool in a query or react to what it emits: this file carries no System, so
- * naming Pool never drags its behaviour into your bundle.
+ * Holds the `PoolComponent` class and the shapes its data and events travel
+ * in. No System lives here, which is the point: another component can name
+ * Pool in a query, or type an event it listens for, without pulling Pool's
+ * behaviour into its own bundle. Import from here, not from Pool.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
+
 export interface PoolInput {
   /**
    * Pool name spawners pass to `world.acquire(name)`. Defaults to the blueprint

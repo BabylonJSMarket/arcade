@@ -1,13 +1,15 @@
 /**
  * Obstacle — definitions.
  *
- * The Obstacle component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * Obstacle in a query or react to what it emits: this file carries no System, so
- * naming Obstacle never drags its behaviour into your bundle.
+ * Holds the `ObstacleComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name Obstacle in a query, or type an event it listens for, without pulling
+ * Obstacle's behaviour into its own bundle. Import from here, not from
+ * Obstacle.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
+
 export interface ObstacleInput {
   /** XZ half-extents of the box footprint. */
   halfWidth?: number

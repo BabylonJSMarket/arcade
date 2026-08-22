@@ -1,14 +1,16 @@
 /**
  * PlayerInput — definitions.
  *
- * The PlayerInput component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * PlayerInput in a query or react to what it emits: this file carries no System, so
- * naming PlayerInput never drags its behaviour into your bundle.
+ * Holds the `PlayerInputComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name PlayerInput in a query, or type an event it listens for, without
+ * pulling PlayerInput's behaviour into its own bundle. Import from here, not
+ * from PlayerInput.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import { DEFAULT_PLAYER_INPUT_PARAMS, type PlayerInputInstance, type PlayerInputParams, type KeyBindings, type GamepadBindings, type InputSource } from './PlayerInput.core';
+
 export interface PlayerInputActionEvent {
   entityId: string;
   action: string;

@@ -1,10 +1,10 @@
 /**
  * Jump — definitions.
  *
- * The Jump component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * Jump in a query or react to what it emits: this file carries no System, so
- * naming Jump never drags its behaviour into your bundle.
+ * Holds the `JumpComponent` class and the shapes its data and events travel
+ * in. No System lives here, which is the point: another component can name
+ * Jump in a query, or type an event it listens for, without pulling Jump's
+ * behaviour into its own bundle. Import from here, not from Jump.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';

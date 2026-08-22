@@ -1,14 +1,16 @@
 /**
  * HemisphericLight — definitions.
  *
- * The HemisphericLight component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * HemisphericLight in a query or react to what it emits: this file carries no System, so
- * naming HemisphericLight never drags its behaviour into your bundle.
+ * Holds the `HemisphericLightComponent` class and the shapes its data and
+ * events travel in. No System lives here, which is the point: another
+ * component can name HemisphericLight in a query, or type an event it
+ * listens for, without pulling HemisphericLight's behaviour into its own
+ * bundle. Import from here, not from HemisphericLight.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, HemisphericLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+
 export interface HemisphericLightInput {
   direction?: Vec3;
   intensity?: number;

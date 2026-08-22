@@ -1,14 +1,16 @@
 /**
  * MeshPrimitive — definitions.
  *
- * The MeshPrimitive component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * MeshPrimitive in a query or react to what it emits: this file carries no System, so
- * naming MeshPrimitive never drags its behaviour into your bundle.
+ * Holds the `MeshPrimitiveComponent` class and the shapes its data and
+ * events travel in. No System lives here, which is the point: another
+ * component can name MeshPrimitive in a query, or type an event it listens
+ * for, without pulling MeshPrimitive's behaviour into its own bundle. Import
+ * from here, not from MeshPrimitive.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { MaterialSpec, MeshHandle, PrimitiveSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+
 export type PrimitiveType = PrimitiveSpec['kind'];
 
 /**

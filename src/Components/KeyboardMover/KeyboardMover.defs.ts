@@ -1,13 +1,15 @@
 /**
  * KeyboardMover — definitions.
  *
- * The KeyboardMover component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * KeyboardMover in a query or react to what it emits: this file carries no System, so
- * naming KeyboardMover never drags its behaviour into your bundle.
+ * Holds the `KeyboardMoverComponent` class and the shapes its data and
+ * events travel in. No System lives here, which is the point: another
+ * component can name KeyboardMover in a query, or type an event it listens
+ * for, without pulling KeyboardMover's behaviour into its own bundle. Import
+ * from here, not from KeyboardMover.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
+
 export interface KeyboardMoverInput {
   /** World units per second at full input. */
   speed?: number;

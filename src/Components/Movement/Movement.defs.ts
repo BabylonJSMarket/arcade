@@ -1,10 +1,11 @@
 /**
  * Movement — definitions.
  *
- * The Movement component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * Movement in a query or react to what it emits: this file carries no System, so
- * naming Movement never drags its behaviour into your bundle.
+ * Holds the `MovementComponent` class and the shapes its data and events
+ * travel in. No System lives here, which is the point: another component can
+ * name Movement in a query, or type an event it listens for, without pulling
+ * Movement's behaviour into its own bundle. Import from here, not from
+ * Movement.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';

@@ -1,14 +1,16 @@
 /**
  * DirectionalLight — definitions.
  *
- * The DirectionalLight component class, its event dictionary and the payload shapes that
- * travel on those events. Import from HERE when another component needs to name
- * DirectionalLight in a query or react to what it emits: this file carries no System, so
- * naming DirectionalLight never drags its behaviour into your bundle.
+ * Holds the `DirectionalLightComponent` class and the shapes its data and
+ * events travel in. No System lives here, which is the point: another
+ * component can name DirectionalLight in a query, or type an event it
+ * listens for, without pulling DirectionalLight's behaviour into its own
+ * bundle. Import from here, not from DirectionalLight.ts.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, DirectionalLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+
 export interface DirectionalLightInput {
   direction?: Vec3;
   position?: Vec3;
