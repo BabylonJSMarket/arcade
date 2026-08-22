@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PoolComponent } from './Pool.core'
+import { PoolComponent } from './Pool.defs'
 
 describe('PoolComponent', () => {
   it('defaults name to "" (use entity id) and size to 16', () => {

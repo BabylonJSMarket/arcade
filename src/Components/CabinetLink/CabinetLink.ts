@@ -13,9 +13,9 @@ import { CabinetLinkEvents, FirstPersonCameraEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { Entity, EventBus } from '@babylonjsmarket/ecs';
 import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { MeshComponent } from '../Mesh/Mesh';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
-import { CabinetLinkComponent, type CabinetLinkInput } from './CabinetLink.core';
+import { MeshComponent } from '../Mesh/Mesh.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { CabinetLinkComponent, type CabinetLinkInput } from './CabinetLink.defs';
 
 export { CabinetLinkComponent, type CabinetLinkInput };
 

@@ -1,11 +1,14 @@
 /**
- * ArcCamera.core.ts — pure data Component for an orbiting arc camera.
- * Zero imports from @babylonjs, three, or the DOM.
+ * ArcCamera — definitions.
+ *
+ * The ArcCamera component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * ArcCamera in a query or react to what it emits: this file carries no System, so
+ * naming ArcCamera never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { ArcCameraSpec, CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-
 export interface ArcCameraInput {
   /** Entity the camera tracks when `follow` is true (kept centred). */
   target?: string;
@@ -47,7 +50,7 @@ export interface ArcCameraInput {
   controlsEnabled?: boolean;
 }
 
-function cloneVec3(v: Vec3): Vec3 {
+export function cloneVec3(v: Vec3): Vec3 {
   return [v[0], v[1], v[2]];
 }
 
@@ -70,7 +73,7 @@ export interface ArcCameraRuntime {
   freeBase?: Vec3;
 }
 
-const runtimeByComponent = new WeakMap<ArcCameraComponent, ArcCameraRuntime>();
+export const runtimeByComponent = new WeakMap<ArcCameraComponent, ArcCameraRuntime>();
 
 export function getArcCameraRuntime(comp: ArcCameraComponent): ArcCameraRuntime {
   let rt = runtimeByComponent.get(comp);

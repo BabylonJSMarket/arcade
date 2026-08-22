@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { KeyboardMoverComponent, KeyboardMoverSystem } from './KeyboardMover';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
-import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { ArcCameraComponent } from '../ArcCamera/ArcCamera.defs';
+import { getArcCameraRuntime } from '../ArcCamera/ArcCamera.defs';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

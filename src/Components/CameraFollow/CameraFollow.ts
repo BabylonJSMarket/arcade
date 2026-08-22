@@ -11,43 +11,14 @@
  */
 
 import { CameraFollowEvents, MeshPrimitiveEvents } from '../../events';
-import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { CameraHandle, MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import {
-  createCameraFollow,
-  type CameraFollowInstance,
-  type CameraFollowParams,
-  DEFAULT_CAMERA_FOLLOW_PARAMS,
-} from './CameraFollow.core';
-
-
-
-export interface CameraFollowInput extends Partial<CameraFollowParams> {
-  /** Entity id of the thing to follow. Must own a MeshPrimitive. */
-  target?: string;
-}
-
-export class CameraFollowComponent extends Component {
-  params: CameraFollowParams;
-  target: string;
-  instance: CameraFollowInstance | null = null;
-
-  constructor(data: CameraFollowInput = {}) {
-    super();
-    const { target, ...params } = data;
-    this.target = target ?? '';
-    this.params = { ...DEFAULT_CAMERA_FOLLOW_PARAMS, ...params };
-  }
-
-  serialize(): CameraFollowInput {
-    return { target: this.target, ...this.params };
-  }
-}
+import { ArcCameraComponent } from '../ArcCamera/ArcCamera.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { createCameraFollow } from './CameraFollow.core';
+import { CameraFollowComponent } from './CameraFollow.defs';
 
 export class CameraFollowSystem extends System {
   protected query = { required: [CameraFollowComponent] };
@@ -164,3 +135,7 @@ export class CameraFollowSystem extends System {
     return undefined;
   }
 }
+
+// The definitions live in CameraFollow.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './CameraFollow.defs' directly.
+export { CameraFollowComponent, type CameraFollowInput } from './CameraFollow.defs';

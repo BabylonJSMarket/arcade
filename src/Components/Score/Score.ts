@@ -13,71 +13,11 @@
  */
 
 import { ScoreEvents, ScoreInputEvents } from '../../events';
-import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
-import {
-  createScore,
-  DEFAULT_SCORE_PARAMS,
-  type ScoreInstance,
-  type ScoreParams,
-} from './Score.core';
-
-// ============================================
-// Events
-// ============================================
-
-
-
-
-
-export interface ScoreAddRequest {
-  ownerEntity: string;
-  /** Omit to use the core's defaultPoints. */
-  points?: number;
-}
-
-export interface ScoreResetRequest {}
-
-/** Payload shape of the `goal.scored` event emitted by the Goal System. */
-interface GoalScoredPayload {
-  ownerEntity?: string;
-  points?: number;
-}
-
-export interface ScoreInput extends Partial<ScoreParams> {
-  /** Seeded scores keyed by player/entity id. Empty by default. */
-  scores?: Record<string, number>;
-}
-
-// ============================================
-// Component — params + live core instance
-// ============================================
-
-export class ScoreComponent extends Component {
-  params: ScoreParams;
-  initialScores: Record<string, number>;
-  /** Populated lazily by the System. */
-  instance: ScoreInstance | null = null;
-
-  constructor(data: ScoreInput = {}) {
-    super();
-    const { scores, ...paramsPartial } = data;
-    this.params = { ...DEFAULT_SCORE_PARAMS, ...paramsPartial };
-    this.initialScores = scores ? { ...scores } : {};
-  }
-
-  serialize(): ScoreInput {
-    // If the live instance has been attached, prefer its current state over
-    // the stale seed — that way a save/load round-trip preserves gameplay.
-    const scores = this.instance ? this.instance.getAllScores() : { ...this.initialScores };
-    return {
-      ...this.params,
-      scores,
-    };
-  }
-}
+import { createScore } from './Score.core';
+import { type GoalScoredPayload, type ScoreAddRequest, ScoreComponent } from './Score.defs';
 
 // ============================================
 // System — listens for score updates, rebroadcasts transitions
@@ -151,3 +91,7 @@ export class ScoreSystem extends System {
     // Score has no per-frame work — everything is event-driven.
   }
 }
+
+// The definitions live in Score.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './Score.defs' directly.
+export { type ScoreAddRequest, ScoreComponent, type ScoreInput, type ScoreResetRequest } from './Score.defs';

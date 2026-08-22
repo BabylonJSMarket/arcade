@@ -16,7 +16,7 @@ import {
   type ToneMappingInput,
   type ToneMappingMode,
   type ToneMappingSettings,
-} from './ToneMapping.core';
+} from './ToneMapping.defs';
 
 export {
   ToneMappingComponent,

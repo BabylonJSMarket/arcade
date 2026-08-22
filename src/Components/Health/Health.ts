@@ -11,8 +11,8 @@
 import { HealthEvents, HealthInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { EventBus, Entity } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { HealthComponent, type HealthDamageRequest, type HealthHealRequest, type HealthInput } from './Health.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { HealthComponent, type HealthDamageRequest, type HealthHealRequest, type HealthInput } from './Health.defs';
 
 export class HealthSystem extends System {
   protected query = { required: [HealthComponent] }
@@ -98,4 +98,4 @@ export class HealthSystem extends System {
   }
 }
 
-export { HealthComponent, type HealthDamageRequest, type HealthHealRequest, type HealthInput } from './Health.core';
+export { HealthComponent, type HealthDamageRequest, type HealthHealRequest, type HealthInput } from './Health.defs';

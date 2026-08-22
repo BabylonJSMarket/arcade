@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FlashComponent } from './Flash.core';
+import { FlashComponent } from './Flash.defs';
 
 describe('FlashComponent', () => {
   it('applies defaults', () => {

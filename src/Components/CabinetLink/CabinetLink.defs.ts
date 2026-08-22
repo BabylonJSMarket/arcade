@@ -1,20 +1,14 @@
 /**
- * CabinetLink.core.ts — pure data Component marking an entity as a clickable
- * arcade cabinet that fronts a game.
+ * CabinetLink — definitions.
  *
- * Two gestures, deliberately different in weight:
- *   • single click — walk me over there (cheap, reversible, no commitment)
- *   • double click — start the game (the real navigation)
- *
- * That split is what lets one pointer serve both "let me look at that machine"
- * and "put the coin in", which is how a real arcade floor works.
- *
- * Zero imports from @babylonjs, three, or the DOM. The System does the picking.
+ * The CabinetLink component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * CabinetLink in a query or react to what it emits: this file carries no System, so
+ * naming CabinetLink never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-
 export interface CabinetLinkInput {
   /**
    * Key of the game this cabinet fronts, e.g. `'frogger'`. Matches a folder

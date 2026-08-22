@@ -1,6 +1,6 @@
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import { KeyboardMoverComponent, KeyboardMoverSystem } from './KeyboardMover';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 runMechanicContract({
   name: 'KeyboardMover',

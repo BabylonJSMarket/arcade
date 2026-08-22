@@ -15,7 +15,7 @@ import { LineOfSightEvents, LineOfSightInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { Entity } from '@babylonjsmarket/ecs'
 import type { LineHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { collectObstacleBoxes } from '../Obstacle/Obstacle'
 import { LineOfSightComponent, hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches } from './LineOfSight.core';
 import type { Occluder } from './LineOfSight.core'

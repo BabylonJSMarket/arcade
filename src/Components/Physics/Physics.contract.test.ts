@@ -2,7 +2,7 @@ import { PhysicsEvents, PhysicsInputEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import type { MechanicContractContext } from '@babylonjsmarket/ecs/testing';
 import { PhysicsComponent, PhysicsSystem } from './Physics';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 /**
  * Physics needs a sibling MeshPrimitive with an adapter handle before the

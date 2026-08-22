@@ -13,13 +13,13 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { MeshHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import {
   ArcCameraComponent,
   type ArcCameraInput,
   type ArcCameraRuntime,
   getArcCameraRuntime,
-} from './ArcCamera.core';
+} from './ArcCamera.defs';
 
 export { ArcCameraComponent, type ArcCameraInput };
 

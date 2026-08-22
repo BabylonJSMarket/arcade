@@ -15,74 +15,11 @@
  */
 
 import { ScoreboardEvents, ScoreboardInputEvents } from '../../events';
-import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
-import {
-  createScoreboard,
-  DEFAULT_SCOREBOARD_PARAMS,
-  type ScoreboardInstance,
-  type ScoreboardParams,
-  type ScoreboardPlayer,
-  type ScoreboardPosition,
-  type ScoreboardSnapshot,
-} from './Scoreboard.core';
-
-// ============================================
-// Events
-// ============================================
-
-
-
-
-
-export interface ScoreboardScoreUpdateEvent {
-  ownerEntity?: string;
-  score?: number;
-  allScores?: Record<string, number>;
-}
-
-export interface ScoreboardScoreResetEvent {
-  allScores?: Record<string, number>;
-}
-
-export interface ScoreboardInput extends Partial<ScoreboardParams> {
-  players?: ScoreboardPlayer[];
-}
-
-// ============================================
-// Component — params + roster + core instance
-// ============================================
-
-export class ScoreboardComponent extends Component {
-  params: ScoreboardParams;
-  players: ScoreboardPlayer[];
-  /** Populated lazily by the System on attach. */
-  instance: ScoreboardInstance | null = null;
-
-  constructor(data: ScoreboardInput = {}) {
-    super();
-    const { players, ...paramInput } = data;
-    this.params = { ...DEFAULT_SCOREBOARD_PARAMS, ...paramInput };
-    this.players = (players ?? []).map((p) => ({
-      entityId: p.entityId,
-      name: p.name,
-      color: [p.color[0], p.color[1], p.color[2]],
-    }));
-  }
-
-  serialize(): ScoreboardInput {
-    return {
-      ...this.params,
-      players: this.players.map((p) => ({
-        entityId: p.entityId,
-        name: p.name,
-        color: [p.color[0], p.color[1], p.color[2]],
-      })),
-    };
-  }
-}
+import { createScoreboard, type ScoreboardPlayer, type ScoreboardPosition, type ScoreboardSnapshot } from './Scoreboard.core';
+import { ScoreboardComponent, type ScoreboardScoreResetEvent, type ScoreboardScoreUpdateEvent } from './Scoreboard.defs';
 
 // ============================================
 // System — listens to Score events, rebuilds snapshot
@@ -156,3 +93,7 @@ export class ScoreboardSystem extends System {
 }
 
 export type { ScoreboardPlayer, ScoreboardPosition };
+
+// The definitions live in Scoreboard.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './Scoreboard.defs' directly.
+export { ScoreboardComponent, type ScoreboardInput, type ScoreboardScoreResetEvent, type ScoreboardScoreUpdateEvent } from './Scoreboard.defs';

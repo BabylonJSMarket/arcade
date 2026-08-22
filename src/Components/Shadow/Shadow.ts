@@ -22,8 +22,8 @@ import type {
   MeshHandle,
   ShadowCasterHandle,
 } from '@babylonjsmarket/ecs/renderer-types';
-import { ShadowComponent, type ShadowInput } from './Shadow.core';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { ShadowComponent, type ShadowInput } from './Shadow.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 export { ShadowComponent, type ShadowInput };
 

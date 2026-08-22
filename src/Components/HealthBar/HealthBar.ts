@@ -20,9 +20,9 @@
 import { System } from '@babylonjsmarket/ecs'
 import type { EventBus, Entity } from '@babylonjsmarket/ecs'
 import type { MeshHandle } from '@babylonjsmarket/ecs/renderer-types'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { HealthComponent } from '../Health/Health'
-import { HealthBarComponent } from './HealthBar.core'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { HealthComponent } from '../Health/Health.defs';
+import { HealthBarComponent } from './HealthBar.defs'
 
 interface HealthBarRuntime {
   bgHandle?: MeshHandle
@@ -168,5 +168,5 @@ export class HealthBarSystem extends System {
   }
 }
 
-export { HealthBarComponent } from './HealthBar.core'
-export type { HealthBarInput } from './HealthBar.core'
+export { HealthBarComponent } from './HealthBar.defs'
+export type { HealthBarInput } from './HealthBar.defs'

@@ -8,41 +8,22 @@
  * world.renderer; camera orientation comes from renderer.getCameraAngles.
  */
 
-import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { CameraHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import { ArcCameraComponent } from '../ArcCamera/ArcCamera';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { ArcCameraComponent } from '../ArcCamera/ArcCamera.defs';
 import { KeyboardInputEvents } from '../../inputEvents';
 import { AnimationInputEvents } from '../../events';
-
-export interface KeyboardMoverInput {
-  /** World units per second at full input. */
-  speed?: number;
-  /** When true, the mesh yaws to face its direction of motion. */
-  faceMotion?: boolean;
-}
+import { KeyboardMoverComponent } from './KeyboardMover.defs';
 
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
+
 const BACK_KEYS = new Set(['KeyS', 'ArrowDown']);
+
 const LEFT_KEYS = new Set(['KeyA', 'ArrowLeft']);
+
 const RIGHT_KEYS = new Set(['KeyD', 'ArrowRight']);
-
-export class KeyboardMoverComponent extends Component {
-  speed: number;
-  faceMotion: boolean;
-
-  constructor(data: KeyboardMoverInput = {}) {
-    super();
-    this.speed = data.speed ?? 4;
-    this.faceMotion = data.faceMotion ?? true;
-  }
-
-  serialize(): KeyboardMoverInput {
-    return { speed: this.speed, faceMotion: this.faceMotion };
-  }
-}
 
 export class KeyboardMoverSystem extends System {
   private forward = 0;
@@ -168,3 +149,7 @@ export class KeyboardMoverSystem extends System {
     return undefined;
   }
 }
+
+// The definitions live in KeyboardMover.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './KeyboardMover.defs' directly.
+export { KeyboardMoverComponent, type KeyboardMoverInput } from './KeyboardMover.defs';

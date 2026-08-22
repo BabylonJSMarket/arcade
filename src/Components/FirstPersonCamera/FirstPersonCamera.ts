@@ -14,13 +14,13 @@ import type { Entity, EventBus } from '@babylonjsmarket/ecs';
 import type { CameraHandle, Quaternion, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { KeyboardInputEvents } from '../../inputEvents';
 import { FirstPersonCameraEvents } from '../../events';
-import { FirstPersonCameraComponent } from './FirstPersonCamera.core';
+import { FirstPersonCameraComponent } from './FirstPersonCamera.defs';
 
-export { FirstPersonCameraComponent } from './FirstPersonCamera.core';
+export { FirstPersonCameraComponent } from './FirstPersonCamera.defs';
 export type {
   FirstPersonCameraInput,
   FirstPersonCameraBounds,
-} from './FirstPersonCamera.core';
+} from './FirstPersonCamera.defs';
 
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
 const BACK_KEYS = new Set(['KeyS', 'ArrowDown']);

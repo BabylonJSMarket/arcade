@@ -12,7 +12,7 @@ import { NeonSignEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { Entity, EventBus } from '@babylonjsmarket/ecs';
 import type { LabelHandle, LightHandle } from '@babylonjsmarket/ecs/renderer-types';
-import { NeonSignComponent, type NeonSignInput } from './NeonSign.core';
+import { NeonSignComponent, type NeonSignInput } from './NeonSign.defs';
 
 export { NeonSignComponent, type NeonSignInput };
 

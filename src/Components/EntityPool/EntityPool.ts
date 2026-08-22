@@ -12,10 +12,10 @@
 import { EntityPoolEvents, EntityPoolInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { EventBus, Entity, World } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { EntityPoolComponent, type EntityPoolSpawnEvent, type EntityPoolReleaseEvent } from './EntityPool.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { EntityPoolComponent, type EntityPoolSpawnEvent, type EntityPoolReleaseEvent } from './EntityPool.defs';
 
-export { EntityPoolComponent, type EntityPoolInput, type EntityPoolSpawnEvent, type EntityPoolReleaseEvent } from './EntityPool.core';
+export { EntityPoolComponent, type EntityPoolInput, type EntityPoolSpawnEvent, type EntityPoolReleaseEvent } from './EntityPool.defs';
 
 export class EntityPoolSystem extends System {
   protected query = { required: [EntityPoolComponent] }

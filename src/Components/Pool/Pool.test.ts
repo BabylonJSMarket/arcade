@@ -11,8 +11,10 @@
 import { PoolEvents, PoolInputEvents } from '../../events'
 import { describe, it, expect } from 'vitest'
 import { EventBus, World, SceneLoader, MockRendererAdapter } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent, MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive'
-import { HealthComponent, HealthSystem } from '../Health/Health'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive';
+import { HealthComponent } from '../Health/Health.defs';
+import { HealthSystem } from '../Health/Health';
 import { PoolComponent, PoolSystem } from './Pool'
 
 function setup(

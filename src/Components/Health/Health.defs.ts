@@ -1,22 +1,13 @@
 /**
- * Health — pure core (data + event constants + request payload shapes).
+ * Health — definitions.
  *
- * Generic HP component, decoupled from any one game.
- *
- * Wire it up by:
- *   1. Adding `Health: { hp, maxHp, invulnSeconds?, respawnPosition? }` to
- *      an entity in the scene.
- *   2. Anywhere that should hurt the entity, emit `health.damage`
- *      { entityId, damage } on the event bus.
- *
- * The system (in `Health.ts`) absorbs damage during invulnerability
- * windows, emits `health.damaged` { entityId, hp, maxHp } when HP actually
- * moves, and on 0 HP emits `health.died` { entityId } — then, if a
- * `respawnPosition` is set, snaps the entity's MeshPrimitive back to that
- * point with full HP restored.
+ * The Health component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * Health in a query or react to what it emits: this file carries no System, so
+ * naming Health never drags its behaviour into your bundle.
  */
-import { Component } from '@babylonjsmarket/ecs'
 
+import { Component } from '@babylonjsmarket/ecs';
 export interface HealthInput {
   hp?: number
   maxHp?: number
@@ -57,6 +48,7 @@ export interface HealthDamageRequest {
   entityId: string
   damage: number
 }
+
 export interface HealthHealRequest {
   entityId: string
   amount: number

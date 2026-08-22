@@ -1,20 +1,13 @@
 /**
- * ToneMapping.core.ts — pure data Component for scene-wide tone mapping.
+ * ToneMapping — definitions.
  *
- * The filmic grade from the marketplace asset-render pipeline: an ACES curve
- * plus an exposure/contrast lift. Pair it with an EnvironmentTexture (IBL) to
- * reproduce the figure-render look. Tone mapping is scene-global, so put one
- * ToneMapping component on a single world/lighting entity.
- *
- * Babylon has no adapter-interface method for image processing, so this ships
- * an adapter plugin (ToneMapping.babylon.ts) — the sanctioned place to touch
- * the engine. The System stays renderer-agnostic and reaches the plugin via
- * `renderer.extension(TONE_MAPPING_EXTENSION)`; with no plugin bootstrapped
- * (headless, or a renderer without one) it's a no-op.
+ * The ToneMapping component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * ToneMapping in a query or react to what it emits: this file carries no System, so
+ * naming ToneMapping never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-
 /** Tone-mapping curve. 'aces' is the filmic default; 'none' disables it. */
 export type ToneMappingMode = 'aces' | 'standard' | 'none';
 

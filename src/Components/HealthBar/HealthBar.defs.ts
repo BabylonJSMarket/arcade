@@ -1,13 +1,13 @@
 /**
- * HealthBar — pure core.
+ * HealthBar — definitions.
  *
- * Data-only definition for the 3D billboarded health bar. Runtime mesh
- * handles (`bgHandle`, `fillHandle`) and the `initialized` one-shot flag
- * live in a WeakMap on `HealthBarSystem` — they're renderer state, not
- * serializable data.
+ * The HealthBar component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * HealthBar in a query or react to what it emits: this file carries no System, so
+ * naming HealthBar never drags its behaviour into your bundle.
  */
-import { Component } from '@babylonjsmarket/ecs'
 
+import { Component } from '@babylonjsmarket/ecs';
 export interface HealthBarInput {
   /** World-space width of the bar at full HP. */
   width?: number

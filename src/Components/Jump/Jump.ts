@@ -16,10 +16,10 @@
 import { JumpEvents, JumpInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus, Entity } from '@babylonjsmarket/ecs';
-import { MeshComponent } from '../Mesh/Mesh';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshComponent } from '../Mesh/Mesh.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { KeyboardInputEvents } from '../../inputEvents';
-import { JumpComponent, type JumpStartedEvent } from './Jump.core';
+import { JumpComponent, type JumpStartedEvent } from './Jump.defs';
 
 export class JumpSystem extends System {
   protected query = { required: [JumpComponent] };
@@ -102,4 +102,4 @@ export class JumpSystem extends System {
   }
 }
 
-export * from './Jump.core';
+export * from './Jump.defs';

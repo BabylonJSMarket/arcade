@@ -12,7 +12,7 @@
  * the one impure bit — scanning the World for live obstacle footprints.
  */
 import type { World } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { ObstacleComponent } from './Obstacle.core'
 
 export {

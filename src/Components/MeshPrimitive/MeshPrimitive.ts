@@ -17,7 +17,7 @@ import {
   type MeshPrimitiveInput,
   type MeshPrimitiveRuntime,
   type PrimitiveType,
-} from './MeshPrimitive.core';
+} from './MeshPrimitive.defs';
 
 export { MeshPrimitiveComponent, type MeshPrimitiveInput, type MeshPrimitiveRuntime, type PrimitiveType };
 

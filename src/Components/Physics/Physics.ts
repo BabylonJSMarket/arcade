@@ -11,129 +11,11 @@
  */
 
 import { PhysicsEvents, PhysicsInputEvents } from '../../events';
-import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
-import type { PhysicsBodyOpts } from '@babylonjsmarket/ecs/renderer-types';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-
-// ============================================
-// Events
-// ============================================
-
-
-
-
-
-export interface PhysicsSetVelocityEvent {
-  entityId: string;
-  vx: number;
-  vy: number;
-  vz: number;
-}
-
-export interface PhysicsSetTimeStepEvent {
-  hz: number;
-}
-
-export interface PhysicsSetGravityEvent {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export interface PhysicsSetRestitutionEvent {
-  entityId: string;
-  restitution: number;
-}
-
-export interface PhysicsSetCollidersVisibleEvent {
-  visible: boolean;
-}
-
-// ============================================
-// Component
-// ============================================
-
-export type PhysicsShapeTypeName = 'sphere' | 'box' | 'capsule';
-export type PhysicsMotionTypeName = 'dynamic' | 'static' | 'kinematic';
-
-export interface PhysicsInput {
-  shapeType?: PhysicsShapeTypeName;
-  motionType?: PhysicsMotionTypeName;
-  mass?: number;
-  friction?: number;
-  restitution?: number;
-  lockRotation?: boolean;
-  /**
-   * When true (default), the System calls `physicsCreateBody` automatically
-   * once the sibling MeshPrimitive's handle is ready. Set false to hand-drive
-   * body creation (e.g., respawn flows that want to re-pose the mesh first).
-   */
-  autoCreate?: boolean;
-  /**
-   * Engine fixed simulation rate in Hertz. Applied once at system init via
-   * `physicsSetTimeStep` and updateable live via the SET_TIME_STEP event
-   * (e.g. the Physics debugger panel slider). The Hz lives on the component
-   * so a scene-author can pin a higher rate per-game (pinball wants ~240).
-   * Only one PhysicsComponent's `simulationHz` is consulted — the first one
-   * encountered. Default 60.
-   */
-  simulationHz?: number;
-}
-
-export class PhysicsComponent extends Component {
-  shapeType: PhysicsShapeTypeName;
-  motionType: PhysicsMotionTypeName;
-  mass: number;
-  friction: number;
-  restitution: number;
-  lockRotation: boolean;
-  autoCreate: boolean;
-  simulationHz: number;
-
-  /** Populated by the System once `physicsCreateBody` has run for this entity. */
-  isCreated = false;
-
-  constructor(data: PhysicsInput = {}) {
-    super();
-    this.shapeType = data.shapeType ?? 'sphere';
-    // Mirror legacy default: a zero-mass body should be static even if the
-    // caller omits `motionType`.
-    this.motionType = data.motionType ?? (data.mass === 0 ? 'static' : 'dynamic');
-    this.mass = data.mass ?? 1;
-    this.friction = data.friction ?? 0.5;
-    this.restitution = data.restitution ?? 0.5;
-    this.lockRotation = data.lockRotation ?? false;
-    this.autoCreate = data.autoCreate ?? true;
-    this.simulationHz = data.simulationHz ?? 60;
-  }
-
-  toBodyOpts(): PhysicsBodyOpts {
-    return {
-      shapeType: this.shapeType,
-      motionType: this.motionType,
-      mass: this.mass,
-      friction: this.friction,
-      restitution: this.restitution,
-      lockRotation: this.lockRotation,
-    };
-  }
-
-  serialize(): PhysicsInput {
-    return {
-      shapeType: this.shapeType,
-      motionType: this.motionType,
-      mass: this.mass,
-      friction: this.friction,
-      restitution: this.restitution,
-      lockRotation: this.lockRotation,
-      autoCreate: this.autoCreate,
-      simulationHz: this.simulationHz,
-    };
-  }
-}
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { PhysicsComponent, type PhysicsSetCollidersVisibleEvent, type PhysicsSetGravityEvent, type PhysicsSetRestitutionEvent, type PhysicsSetTimeStepEvent, type PhysicsSetVelocityEvent } from './Physics.defs';
 
 // ============================================
 // System
@@ -264,3 +146,7 @@ export class PhysicsSystem extends System {
     }
   }
 }
+
+// The definitions live in Physics.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './Physics.defs' directly.
+export { PhysicsComponent, type PhysicsInput, type PhysicsMotionTypeName, type PhysicsSetCollidersVisibleEvent, type PhysicsSetGravityEvent, type PhysicsSetRestitutionEvent, type PhysicsSetTimeStepEvent, type PhysicsSetVelocityEvent, type PhysicsShapeTypeName } from './Physics.defs';

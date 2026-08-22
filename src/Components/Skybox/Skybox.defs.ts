@@ -1,11 +1,14 @@
 /**
- * Skybox.core.ts — pure data Component for a procedural gradient sky.
- * Zero imports from @babylonjs, three, or the DOM.
+ * Skybox — definitions.
+ *
+ * The Skybox component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * Skybox in a query or react to what it emits: this file carries no System, so
+ * naming Skybox never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, SkyboxSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-
 export interface SkyboxInput {
   zenithColor?: Color;
   horizonColor?: Color;
@@ -31,7 +34,7 @@ export interface SkyboxInput {
   followLight?: string | 'auto';
 }
 
-function cloneVec3(v: Vec3): Vec3 {
+export function cloneVec3(v: Vec3): Vec3 {
   return [v[0], v[1], v[2]];
 }
 

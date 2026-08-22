@@ -1,7 +1,7 @@
 import { PhysicsEvents, PhysicsInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PhysicsComponent, PhysicsSystem } from './Physics';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

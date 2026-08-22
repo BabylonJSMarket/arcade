@@ -8,7 +8,7 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { LightHandle } from '@babylonjsmarket/ecs/renderer-types';
-import { DirectionalLightComponent, type DirectionalLightInput } from './DirectionalLight.core';
+import { DirectionalLightComponent, type DirectionalLightInput } from './DirectionalLight.defs';
 
 export { DirectionalLightComponent, type DirectionalLightInput };
 

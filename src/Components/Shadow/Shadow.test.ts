@@ -1,8 +1,10 @@
 import { ShadowEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ShadowComponent, ShadowSystem } from './Shadow';
-import { DirectionalLightComponent, DirectionalLightSystem } from '../DirectionalLight/DirectionalLight';
-import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { DirectionalLightComponent } from '../DirectionalLight/DirectionalLight.defs';
+import { DirectionalLightSystem } from '../DirectionalLight/DirectionalLight';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

@@ -1,20 +1,15 @@
 /**
- * EnvironmentTexture.core.ts — pure data Component for image-based lighting.
+ * EnvironmentTexture — definitions.
  *
- * Points the scene at a prefiltered cubemap URL (Babylon `.env`, Three
- * `.hdr` + PMREM, etc.). The system applies it on init and clears it on
- * detach. Most PBR materials in the scene then reflect the environment
- * (metallic balls, polished floors). Without this, PBR meshes look flat.
- *
- * A `preset` fills url + level from a named lighting setup, so a scene can say
- * `{ preset: 'studio' }` and get the marketplace asset-render HDRI without
- * knowing the URL. Pair with a ToneMapping component for the full filmic look.
+ * The EnvironmentTexture component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * EnvironmentTexture in a query or react to what it emits: this file carries no System, so
+ * naming EnvironmentTexture never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-
 /** Named lighting presets (url + level). Explicit url/level always win. */
-const PRESETS = {
+export const PRESETS = {
   /** The neutral studio HDRI used by the marketplace figure-render pipeline. */
   studio: {
     url: 'https://assets.babylonjs.com/environments/studio.env',

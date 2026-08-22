@@ -26,10 +26,10 @@
 import { PoolEvents, PoolInputEvents } from '../../events'
 import { System } from '@babylonjsmarket/ecs'
 import type { Entity, World, Component } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { PoolComponent } from './Pool.core'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { PoolComponent } from './Pool.defs'
 
-export { PoolComponent, type PoolInput } from './Pool.core'
+export { PoolComponent, type PoolInput } from './Pool.defs'
 
 /** One captured blueprint component: its class + the config to rebuild it with. */
 interface SlotPart {

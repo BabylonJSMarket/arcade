@@ -1,17 +1,14 @@
 /**
- * PointLight.core.ts — pure data Component for a positioned, falling-off light.
+ * PointLight — definitions.
  *
- * The lamp in the room: a bulb, a fire, the glow bleeding off a neon sign. It
- * has a PLACE and a REACH, which is what separates it from HemisphericLight
- * (ambient everywhere) and DirectionalLight (parallel rays, no position).
- *
- * Zero imports from @babylonjs, three, or the DOM. The System drives the
- * adapter with this data.
+ * The PointLight component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * PointLight in a query or react to what it emits: this file carries no System, so
+ * naming PointLight never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, PointLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-
 export interface PointLightInput {
   position?: Vec3;
   intensity?: number;
@@ -26,7 +23,7 @@ export interface PointLightInput {
   range?: number;
 }
 
-function cloneVec3(v: Vec3): Vec3 {
+export function cloneVec3(v: Vec3): Vec3 {
   return [v[0], v[1], v[2]];
 }
 

@@ -11,4 +11,4 @@
  * the data, which is exactly right here.
  */
 
-export { EnemyComponent } from './Enemy.core'
+export { EnemyComponent } from './Enemy.defs'

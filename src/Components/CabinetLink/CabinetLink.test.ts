@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventBus, MockRendererAdapter, World } from '@babylonjsmarket/ecs';
 import { CabinetLinkEvents, FirstPersonCameraEvents } from '../../events';
 import { CabinetLinkComponent, CabinetLinkSystem } from './CabinetLink';
-import { MeshComponent } from '../Mesh/Mesh';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { MeshComponent } from '../Mesh/Mesh.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 describe('CabinetLinkComponent', () => {
   it('derives its route from the game key', () => {

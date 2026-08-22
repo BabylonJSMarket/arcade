@@ -22,7 +22,7 @@ import {
   type ToneMappingExtension,
   type ToneMappingMode,
   type ToneMappingSettings,
-} from './ToneMapping.core';
+} from './ToneMapping.defs';
 
 /** The slice of Babylon's scene.imageProcessingConfiguration we touch. */
 interface BabylonImageProcessing {

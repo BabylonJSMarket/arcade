@@ -13,7 +13,7 @@ import {
   EnvironmentTextureComponent,
   type EnvironmentTextureInput,
   type EnvironmentPreset,
-} from './EnvironmentTexture.core';
+} from './EnvironmentTexture.defs';
 
 export {
   EnvironmentTextureComponent,

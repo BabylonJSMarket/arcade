@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { HealthBarComponent } from './HealthBar.core'
+import { HealthBarComponent } from './HealthBar.defs'
 
 describe('HealthBarComponent', () => {
   it('applies defaults', () => {

@@ -9,88 +9,11 @@
  */
 
 import { PlayerInputEvents, PlayerInputInputEvents } from '../../events';
-import { Component } from '@babylonjsmarket/ecs';
 import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
-import {
-  createPlayerInput,
-  DEFAULT_PLAYER_INPUT_PARAMS,
-  type PlayerInputInstance,
-  type PlayerInputParams,
-  type KeyBindings,
-  type GamepadBindings,
-  type InputSource,
-} from './PlayerInput.core';
-
-
-
-
-
-export interface PlayerInputActionEvent {
-  entityId: string;
-  action: string;
-  source: InputSource;
-}
-
-export interface PlayerInputMoveEvent {
-  entityId: string;
-  x: number;
-  z: number;
-}
-
-export interface PlayerInputSourceEvent {
-  entityId: string;
-  source: InputSource;
-}
-
-export interface PlayerInputSetEnabledEvent {
-  enabled: boolean;
-}
-
-export interface PlayerInputInput extends Partial<PlayerInputParams> {
-  enabled?: boolean;
-  /** Which gamepad slot (0-3) to poll each frame. */
-  gamepadIndex?: number;
-}
-
-export class PlayerInputComponent extends Component {
-  params: PlayerInputParams;
-  gamepadIndex: number;
-  instance: PlayerInputInstance | null = null;
-
-  constructor(data: PlayerInputInput = {}) {
-    super();
-    const { enabled, gamepadIndex, keyBindings, gamepadBindings, deadzone } = data;
-    this.params = {
-      deadzone: deadzone ?? DEFAULT_PLAYER_INPUT_PARAMS.deadzone,
-      keyBindings: { ...DEFAULT_PLAYER_INPUT_PARAMS.keyBindings, ...(keyBindings ?? {}) } as KeyBindings,
-      gamepadBindings: {
-        ...DEFAULT_PLAYER_INPUT_PARAMS.gamepadBindings,
-        ...(gamepadBindings ?? {}),
-      } as GamepadBindings,
-    };
-    this.enabled = enabled ?? true;
-    this.gamepadIndex = gamepadIndex ?? 0;
-  }
-
-  serialize(): PlayerInputInput {
-    return {
-      enabled: this.enabled,
-      gamepadIndex: this.gamepadIndex,
-      deadzone: this.params.deadzone,
-      keyBindings: this.params.keyBindings,
-      gamepadBindings: this.params.gamepadBindings,
-    };
-  }
-}
-
-// Gamepads that have been seen and whose button/axis state we last cached.
-interface GamepadSnapshot {
-  buttons: boolean[];
-  axisX: number;
-  axisZ: number;
-}
+import { createPlayerInput, type InputSource } from './PlayerInput.core';
+import { type GamepadSnapshot, PlayerInputComponent, type PlayerInputSetEnabledEvent } from './PlayerInput.defs';
 
 export class PlayerInputSystem extends System {
   protected query = { required: [PlayerInputComponent] };
@@ -253,3 +176,7 @@ export class PlayerInputSystem extends System {
     }
   }
 }
+
+// The definitions live in PlayerInput.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './PlayerInput.defs' directly.
+export { type PlayerInputActionEvent, PlayerInputComponent, type PlayerInputInput, type PlayerInputMoveEvent, type PlayerInputSetEnabledEvent, type PlayerInputSourceEvent } from './PlayerInput.defs';

@@ -7,8 +7,8 @@
  */
 import { System } from '@babylonjsmarket/ecs'
 import type { EventBus } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
-import { FlashComponent, type FlashInput } from './Flash.core'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { FlashComponent, type FlashInput } from './Flash.defs'
 
 export class FlashSystem extends System {
   // Require a mesh: a flash is a visual effect, so a real flash always has a
@@ -37,4 +37,4 @@ export class FlashSystem extends System {
   }
 }
 
-export { FlashComponent, type FlashInput } from './Flash.core'
+export { FlashComponent, type FlashInput } from './Flash.defs'

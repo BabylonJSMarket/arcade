@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { EnemyComponent } from './Enemy.core'
+import { EnemyComponent } from './Enemy.defs'
 
 describe('EnemyComponent', () => {
   it('is a marker: constructs with no arguments and holds no data', () => {

@@ -1,30 +1,16 @@
 /**
- * Jump — pure core.
+ * Jump — definitions.
  *
- * A self-contained vertical arc: press the jump key (or emit `jump.request`)
- * and the character rises then falls along a tunable parabola-with-hang over a
- * fixed air time, back to where it left the ground. The System owns the actual
- * vertical drive + the airborne state machine; this file is serializable config
- * plus the arc math and the event contracts.
- *
- * The arc is scripted, not physics-integrated — `height`, `duration`, and
- * `hang` fully describe it, so it composes with any mover (KeyboardMover, AI)
- * and needs no physics engine. `jump.started` carries the duration so an
- * animator can play a jump clip that lands exactly on touchdown (first half
- * ascending, second half descending).
- *
- * Zero imports from @babylonjs, three, solid-js or the DOM.
+ * The Jump component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * Jump in a query or react to what it emits: this file carries no System, so
+ * naming Jump never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-
 // ============================================
 // Events
 // ============================================
-
-
-
-
 
 export interface JumpStartedEvent {
   entityId: string;
@@ -88,6 +74,6 @@ export class JumpComponent extends Component {
   }
 }
 
-function clamp(v: number, lo: number, hi: number): number {
+export function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }

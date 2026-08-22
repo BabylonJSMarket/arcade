@@ -2,8 +2,8 @@ import { BulletEvents, EnemyEvents, EntityPoolInputEvents, HealthEvents, HealthI
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventBus, World, MockRendererAdapter } from '@babylonjsmarket/ecs';
 import { TwinStickEnemyComponent, TwinStickEnemySystem } from './TwinStickEnemy';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
-import { ObstacleComponent } from '../Obstacle/Obstacle.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { ObstacleComponent } from '../Obstacle/Obstacle.defs';
 
 describe('TwinStickEnemySystem knockback', () => {
   let eventBus: EventBus;

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { HealthBarComponent, HealthBarSystem } from './HealthBar';
-import { HealthComponent } from '../Health/Health';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { HealthComponent } from '../Health/Health.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 

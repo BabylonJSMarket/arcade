@@ -2,7 +2,7 @@ import { AnimationEvents, AnimationInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AnimationComponent, AnimationSystem } from './Animation';
 import { DEFAULT_ANIMATION_PARAMS } from './Animation.core';
-import { MeshComponent } from '../Mesh/Mesh';
+import { MeshComponent } from '../Mesh/Mesh.defs';
 import { createMesh } from '../Mesh/Mesh.core';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';

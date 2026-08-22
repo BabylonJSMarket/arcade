@@ -8,7 +8,7 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { LightHandle } from '@babylonjsmarket/ecs/renderer-types';
-import { HemisphericLightComponent, type HemisphericLightInput } from './HemisphericLight.core';
+import { HemisphericLightComponent, type HemisphericLightInput } from './HemisphericLight.defs';
 
 export { HemisphericLightComponent, type HemisphericLightInput };
 

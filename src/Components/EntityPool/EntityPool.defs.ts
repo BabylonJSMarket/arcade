@@ -1,30 +1,13 @@
 /**
- * EntityPool — pure core (data only).
+ * EntityPool — definitions.
  *
- * A generic, declarative entity pool. Instead of a hard-coded `build()`, the
- * component set each pooled entity carries is declared as data (`components`),
- * exactly like a scene entity's `components` map. The System resolves each name
- * via the SceneLoader registry, so every component named here must be
- * registered (declare a marker for it on a scene entity, as usual).
- *
- * Convention — the MeshPrimitive is the collision/position proxy. Include a
- * `MeshPrimitive` in `components`; the pool writes each spawn's position into
- * it. When the set ALSO declares a separate visual `Mesh` (a loaded GLB), the
- * pool makes that MeshPrimitive invisible and stops it casting shadows — it
- * becomes a pure collision shape while the Mesh provides the visual (and casts
- * the shadow). Without a `Mesh`, the MeshPrimitive is the visual as usual.
- *
- * Reuse semantics — on acquire the pool re-applies each declared component's
- * config (so HP/speed/etc. snap back to configured values), clears any
- * transient tags (a reused slot keeps exactly its declared `tags`), writes the
- * spawn position, then emits ACQUIRED so game systems can apply per-spawn
- * dynamics. Runtime fields not named in the config (mesh handles, load state)
- * are preserved.
- *
- * No imports from @babylonjs, three, solid-js, or the DOM.
+ * The EntityPool component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * EntityPool in a query or react to what it emits: this file carries no System, so
+ * naming EntityPool never drags its behaviour into your bundle.
  */
-import { Component } from '@babylonjsmarket/ecs'
 
+import { Component } from '@babylonjsmarket/ecs';
 export interface EntityPoolInput {
   /** Pool name; also the pooled-entity name prefix (`enemy-0`, …). */
   pool?: string

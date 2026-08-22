@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { EntityPoolComponent } from './EntityPool.core'
+import { EntityPoolComponent } from './EntityPool.defs'
 
 describe('EntityPoolComponent', () => {
   it('applies defaults', () => {

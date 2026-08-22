@@ -1,7 +1,7 @@
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import { HealthBarComponent, HealthBarSystem } from './HealthBar';
-import { HealthComponent } from '../Health/Health';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { HealthComponent } from '../Health/Health.defs';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 runMechanicContract({
   name: 'HealthBar',

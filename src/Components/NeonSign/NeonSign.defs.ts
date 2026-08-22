@@ -1,22 +1,14 @@
 /**
- * NeonSign.core.ts — pure data Component for a glowing sign that reads as words.
+ * NeonSign — definitions.
  *
- * A neon sign is two things that have to agree, and the component owns both so
- * they can't drift apart:
- *
- *   1. the TUBE — emissive lettering, bright but lighting nothing;
- *   2. the GLOW — a coloured point light just in front of it, which is what
- *      actually washes the wall, the carpet and the sides of the cabinets.
- *
- * Emissive alone reads as a sticker; a light with no visible source reads as a
- * bug. One component, one colour, both halves.
- *
- * Zero imports from @babylonjs, three, or the DOM.
+ * The NeonSign component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * NeonSign in a query or react to what it emits: this file carries no System, so
+ * naming NeonSign never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-
 export interface NeonSignInput {
   /** The words. */
   text?: string;
@@ -41,7 +33,7 @@ export interface NeonSignInput {
   fontSize?: number;
 }
 
-function cloneVec3(v: Vec3): Vec3 {
+export function cloneVec3(v: Vec3): Vec3 {
   return [v[0], v[1], v[2]];
 }
 

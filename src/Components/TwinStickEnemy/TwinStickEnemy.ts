@@ -30,7 +30,7 @@
 import { BulletEvents, EnemyEvents, EntityPoolInputEvents, HealthEvents, HealthInputEvents, LineOfSightEvents, ScoreInputEvents, SkeletonAnimatorEvents, SkeletonAnimatorInputEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs'
 import type { Entity } from '@babylonjsmarket/ecs'
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive'
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { collectObstacleBoxes, resolveCircleVsBox } from '../Obstacle/Obstacle'
 import { TwinStickEnemyComponent, decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip } from './TwinStickEnemy.core';
 

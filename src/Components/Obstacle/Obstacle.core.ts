@@ -13,49 +13,8 @@
  * TwinStickShooterSystem (player movement). The collision math below is pure so
  * it's unit-testable without a renderer.
  */
-import { Component } from '@babylonjsmarket/ecs'
 
-export interface ObstacleInput {
-  /** XZ half-extents of the box footprint. */
-  halfWidth?: number
-  halfDepth?: number
-  /** Full-height wall breaks line of sight (low cover doesn't). */
-  blocksSight?: boolean
-  /** Full-height wall stops bullets (low cover lets them through). */
-  blocksBullets?: boolean
-}
-
-export class ObstacleComponent extends Component {
-  halfWidth: number
-  halfDepth: number
-  blocksSight: boolean
-  blocksBullets: boolean
-
-  constructor(data: ObstacleInput = {}) {
-    super()
-    this.halfWidth = data.halfWidth ?? 1
-    this.halfDepth = data.halfDepth ?? 1
-    this.blocksSight = data.blocksSight ?? true
-    this.blocksBullets = data.blocksBullets ?? true
-  }
-
-  serialize(): ObstacleInput {
-    return {
-      halfWidth: this.halfWidth,
-      halfDepth: this.halfDepth,
-      blocksSight: this.blocksSight,
-      blocksBullets: this.blocksBullets,
-    }
-  }
-}
-
-/** An axis-aligned box footprint in the XZ plane. */
-export interface BoxBounds {
-  minX: number
-  maxX: number
-  minZ: number
-  maxZ: number
-}
+import { type BoxBounds } from './Obstacle.defs';
 
 /**
  * Push a circle (centre cx,cz, radius r) out of an AABB so it no longer
@@ -132,3 +91,7 @@ export function segmentIntersectsBox(
   if (!clip(dz, box.maxZ - az)) return false
   return t0 <= t1
 }
+
+// The definitions live in Obstacle.defs.ts; re-exported so existing importers
+// keep working. New code should import them from './Obstacle.defs' directly.
+export { type BoxBounds, ObstacleComponent, type ObstacleInput } from './Obstacle.defs';

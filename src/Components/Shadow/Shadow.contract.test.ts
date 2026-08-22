@@ -1,6 +1,6 @@
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import { ShadowComponent, ShadowSystem } from './Shadow';
-import { DirectionalLightComponent } from '../DirectionalLight/DirectionalLight';
+import { DirectionalLightComponent } from '../DirectionalLight/DirectionalLight.defs';
 
 runMechanicContract({
   name: 'Shadow',

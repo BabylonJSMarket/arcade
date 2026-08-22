@@ -1,25 +1,13 @@
 /**
- * FirstPersonCamera.core.ts — pure data Component for a walk-around, eye-height
- * first-person camera. Zero imports from @babylonjs, three, or the DOM.
+ * FirstPersonCamera — definitions.
  *
- * The FirstPersonCameraSystem creates a FREE perspective camera through the
- * RendererAdapter (`createPerspectiveCamera`) and drives its pose every frame
- * from the keyboard:
- *   • W / S  — walk forward / back along the facing direction
- *   • A / D  — turn left / right in place (tank controls)
- *   • Q / E  — strafe left / right (optional)
- * The camera stays pinned at `eyeHeight` above the floor — you never look up or
- * down, you just walk the room like a person. Optional `bounds` clamp the
- * player to a rectangle (inset the walls) so you can't walk out of the room.
- *
- * This is the "stand inside the space and move around with the keyboard"
- * camera — the counterpart to ArcCamera (orbit) and CameraFollow (chase). It is
- * free-core: the arcade room starter scene uses it, and it composes with the
- * built-in lights / MeshPrimitive / Mesh with no extra wiring.
+ * The FirstPersonCamera component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * FirstPersonCamera in a query or react to what it emits: this file carries no System, so
+ * naming FirstPersonCamera never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-
 /** Rectangle (metres) the camera is clamped to, so it can't leave the room. */
 export interface FirstPersonCameraBounds {
   minX: number;

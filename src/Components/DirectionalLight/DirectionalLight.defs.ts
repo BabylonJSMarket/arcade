@@ -1,11 +1,14 @@
 /**
- * DirectionalLight.core.ts — pure data Component for directional lighting.
- * Zero imports from @babylonjs, three, or the DOM.
+ * DirectionalLight — definitions.
+ *
+ * The DirectionalLight component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * DirectionalLight in a query or react to what it emits: this file carries no System, so
+ * naming DirectionalLight never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, DirectionalLightSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-
 export interface DirectionalLightInput {
   direction?: Vec3;
   position?: Vec3;
@@ -19,11 +22,11 @@ export interface DirectionalLightInput {
   autoCreate?: boolean;
 }
 
-function cloneVec3(v: Vec3): Vec3 {
+export function cloneVec3(v: Vec3): Vec3 {
   return [v[0], v[1], v[2]];
 }
 
-function normalize(v: Vec3): Vec3 {
+export function normalize(v: Vec3): Vec3 {
   const len = Math.hypot(v[0], v[1], v[2]);
   if (len === 0) return [0, -1, 0];
   return [v[0] / len, v[1] / len, v[2] / len];

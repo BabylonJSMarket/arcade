@@ -1,19 +1,14 @@
 /**
- * MeshPrimitive.core.ts — pure data Component for primitive meshes.
+ * MeshPrimitive — definitions.
  *
- * Zero imports from @babylonjs, three, or the DOM. Fields are plain tuples.
- * The MeshPrimitiveSystem reads this and calls into the active RendererAdapter
- * to create the actual 3D object.
+ * The MeshPrimitive component class, its event dictionary and the payload shapes that
+ * travel on those events. Import from HERE when another component needs to name
+ * MeshPrimitive in a query or react to what it emits: this file carries no System, so
+ * naming MeshPrimitive never drags its behaviour into your bundle.
  */
 
 import { Component } from '@babylonjsmarket/ecs';
-import type {
-  MaterialSpec,
-  MeshHandle,
-  PrimitiveSpec,
-  Vec3,
-} from '@babylonjsmarket/ecs/renderer-types';
-
+import type { MaterialSpec, MeshHandle, PrimitiveSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 export type PrimitiveType = PrimitiveSpec['kind'];
 
 /**
@@ -28,7 +23,7 @@ export interface MeshPrimitiveRuntime {
   handle?: MeshHandle;
 }
 
-const runtimeByComponent = new WeakMap<MeshPrimitiveComponent, MeshPrimitiveRuntime>();
+export const runtimeByComponent = new WeakMap<MeshPrimitiveComponent, MeshPrimitiveRuntime>();
 
 /** Lazily create + return the runtime slot for a component. */
 export function getMeshPrimitiveRuntime(comp: MeshPrimitiveComponent): MeshPrimitiveRuntime {
@@ -101,7 +96,7 @@ export interface MeshPrimitiveInput {
   visible?: boolean;
 }
 
-function toVec3(input: unknown, fallback: Vec3): Vec3 {
+export function toVec3(input: unknown, fallback: Vec3): Vec3 {
   if (!input) return [...fallback] as Vec3;
   if (Array.isArray(input) && input.length === 3) {
     return [Number(input[0]) || 0, Number(input[1]) || 0, Number(input[2]) || 0];

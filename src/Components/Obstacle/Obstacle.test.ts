@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EventBus, World, MockRendererAdapter } from '@babylonjsmarket/ecs';
 import { collectObstacleBoxes, ObstacleComponent } from './Obstacle';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 describe('collectObstacleBoxes', () => {
   let eventBus: EventBus;

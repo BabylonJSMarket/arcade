@@ -1,7 +1,7 @@
 import { EnemyEvents } from '../../events';
 import { runMechanicContract } from '@babylonjsmarket/ecs/testing';
 import { TwinStickEnemyComponent, TwinStickEnemySystem } from './TwinStickEnemy';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.core';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 runMechanicContract({
   name: 'Enemy',

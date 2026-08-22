@@ -8,7 +8,7 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { LightHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { PointLightComponent, type PointLightInput } from './PointLight.core';
+import { PointLightComponent, type PointLightInput } from './PointLight.defs';
 
 export { PointLightComponent, type PointLightInput };
 

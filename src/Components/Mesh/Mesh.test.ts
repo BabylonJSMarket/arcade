@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MeshComponent, MeshSystem } from './Mesh';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
-import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive';
+import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 describe('MeshComponent', () => {
   it('applies defaults', () => {

@@ -14,8 +14,8 @@ import { System } from '@babylonjsmarket/ecs';
 import type { EventBus } from '@babylonjsmarket/ecs';
 import type { Entity } from '@babylonjsmarket/ecs';
 import type { SkyboxHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
-import { SkyboxComponent, type SkyboxInput } from './Skybox.core';
-import { DirectionalLightComponent } from '../DirectionalLight/DirectionalLight';
+import { SkyboxComponent, type SkyboxInput } from './Skybox.defs';
+import { DirectionalLightComponent } from '../DirectionalLight/DirectionalLight.defs';
 
 export { SkyboxComponent, type SkyboxInput };
 
