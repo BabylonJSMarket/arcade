@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import {
-  LineOfSightComponent,
-  hasLineOfSight,
-  inSightCone,
-  rayReaches,
-  rayFanEndpoints,
-} from './LineOfSight.core'
+import { LineOfSightComponent } from './LineOfSight.defs';
+import { hasLineOfSight, inSightCone, rayReaches, rayFanEndpoints } from './LineOfSight.core';
 
 describe('LineOfSightComponent', () => {
   it('applies defaults', () => {

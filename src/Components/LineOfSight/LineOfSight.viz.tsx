@@ -16,7 +16,7 @@ import {
   type PanelHostInput,
   type PanelSpec,
 } from '@babylonjsmarket/viz'
-import { LineOfSightComponent } from './LineOfSight.core';
+import { LineOfSightComponent } from './LineOfSight.defs';
 
 const PANEL_ID = 'line-of-sight'
 

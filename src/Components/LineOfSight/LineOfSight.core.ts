@@ -137,7 +137,3 @@ function segmentBlocked(
   }
   return false
 }
-
-// The definitions live in LineOfSight.defs.ts; re-exported so existing importers
-// keep working. New code should import them from './LineOfSight.defs' directly.
-export { LineOfSightComponent, type LineOfSightInput, type Occluder } from './LineOfSight.defs';

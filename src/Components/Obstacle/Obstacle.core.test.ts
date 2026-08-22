@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import {
-  ObstacleComponent,
-  resolveCircleVsBox,
-  segmentIntersectsBox,
-  type BoxBounds,
-} from './Obstacle.core'
+import { ObstacleComponent, type BoxBounds } from './Obstacle.defs';
+import { resolveCircleVsBox, segmentIntersectsBox } from './Obstacle.core';
 
 const box: BoxBounds = { minX: -1, maxX: 1, minZ: -1, maxZ: 1 }
 

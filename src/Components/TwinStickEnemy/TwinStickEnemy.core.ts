@@ -79,7 +79,3 @@ export function wanderHeading(
   const angle = mag < 1e-4 ? randomAngle : Math.atan2(awayZ, awayX) + jitter
   return [Math.cos(angle), Math.sin(angle)]
 }
-
-// The definitions live in TwinStickEnemy.defs.ts; re-exported so existing importers
-// keep working. New code should import them from './TwinStickEnemy.defs' directly.
-export { TwinStickEnemyComponent, type TwinStickEnemyInput } from './TwinStickEnemy.defs';

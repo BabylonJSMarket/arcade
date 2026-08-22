@@ -2,7 +2,7 @@ import { LineOfSightEvents, LineOfSightInputEvents } from '../../events';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { EventBus, World, MockRendererAdapter } from '@babylonjsmarket/ecs'
 import { LineOfSightSystem } from './LineOfSight'
-import { LineOfSightComponent } from './LineOfSight.core'
+import { LineOfSightComponent } from './LineOfSight.defs';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 
 describe('LineOfSightSystem', () => {

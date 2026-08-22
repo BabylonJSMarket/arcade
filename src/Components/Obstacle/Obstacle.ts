@@ -13,15 +13,10 @@
  */
 import type { World } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
-import { ObstacleComponent } from './Obstacle.core'
+import { ObstacleComponent } from './Obstacle.defs';
 
-export {
-  ObstacleComponent,
-  resolveCircleVsBox,
-  segmentIntersectsBox,
-  type ObstacleInput,
-  type BoxBounds,
-} from './Obstacle.core'
+export { ObstacleComponent, type ObstacleInput, type BoxBounds } from './Obstacle.defs';
+export { resolveCircleVsBox, segmentIntersectsBox } from './Obstacle.core';
 
 /** A collected obstacle footprint plus its collision flags. */
 export interface ObstacleBox {

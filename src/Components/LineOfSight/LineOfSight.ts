@@ -17,10 +17,12 @@ import type { Entity } from '@babylonjsmarket/ecs'
 import type { LineHandle, Vec3 } from '@babylonjsmarket/ecs/renderer-types'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { collectObstacleBoxes } from '../Obstacle/Obstacle'
-import { LineOfSightComponent, hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches } from './LineOfSight.core';
-import type { Occluder } from './LineOfSight.core'
+import { LineOfSightComponent } from './LineOfSight.defs';
+import { hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches } from './LineOfSight.core';
+import type { Occluder } from './LineOfSight.defs';
 
-export { LineOfSightComponent, hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches, type LineOfSightInput, type Occluder } from './LineOfSight.core';
+export { LineOfSightComponent, type LineOfSightInput, type Occluder } from './LineOfSight.defs';
+export { hasLineOfSight, inSightCone, rayFanEndpoints, rayReaches } from './LineOfSight.core';
 
 const CLEAR_COLOR: Vec3 = [0.3, 1, 0.4]
 const BLOCKED_COLOR: Vec3 = [1, 0.3, 0.3]

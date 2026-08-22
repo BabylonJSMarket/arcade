@@ -32,9 +32,11 @@ import { System } from '@babylonjsmarket/ecs'
 import type { Entity } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { collectObstacleBoxes, resolveCircleVsBox } from '../Obstacle/Obstacle'
-import { TwinStickEnemyComponent, decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip } from './TwinStickEnemy.core';
+import { TwinStickEnemyComponent } from './TwinStickEnemy.defs';
+import { decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip } from './TwinStickEnemy.core';
 
-export { TwinStickEnemyComponent, decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip, type TwinStickEnemyInput } from './TwinStickEnemy.core';
+export { TwinStickEnemyComponent, type TwinStickEnemyInput } from './TwinStickEnemy.defs';
+export { decideLocomotion, wanderHeading, allDeathClips, chooseDeathClip } from './TwinStickEnemy.core';
 
 // Max radians a wander heading is rotated off "straight away from the crowd",
 // so wanderers scatter instead of fleeing in a dead-straight radial line.

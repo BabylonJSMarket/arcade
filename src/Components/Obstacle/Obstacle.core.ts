@@ -91,7 +91,3 @@ export function segmentIntersectsBox(
   if (!clip(dz, box.maxZ - az)) return false
   return t0 <= t1
 }
-
-// The definitions live in Obstacle.defs.ts; re-exported so existing importers
-// keep working. New code should import them from './Obstacle.defs' directly.
-export { type BoxBounds, ObstacleComponent, type ObstacleInput } from './Obstacle.defs';

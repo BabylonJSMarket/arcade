@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { TwinStickEnemyComponent, wanderHeading, allDeathClips, chooseDeathClip, decideLocomotion } from './TwinStickEnemy.core';
+import { TwinStickEnemyComponent } from './TwinStickEnemy.defs';
+import { wanderHeading, allDeathClips, chooseDeathClip, decideLocomotion } from './TwinStickEnemy.core';
 
 describe('TwinStickEnemyComponent', () => {
   it('applies defaults', () => {
