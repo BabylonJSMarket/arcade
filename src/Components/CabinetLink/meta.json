@@ -1,6 +1,6 @@
 {
   "name": "CabinetLink",
-  "description": "Makes an arcade cabinet clickable: single click walks the player over, double click launches its game",
+  "description": "Makes an arcade cabinet clickable: single click walks the player over, double click launches its game — optionally only once the player is within `launchDistance` of the machine, otherwise the click reports out-of-range and the walk carries on.",
   "category": "interaction",
   "components": [
     "CabinetLinkComponent"
@@ -16,7 +16,10 @@
   "emits": [
     "cabinetlink.focused",
     "cabinetlink.launch",
+    "cabinetlink.launch.outofrange",
     "firstpersoncamera.goto"
   ],
-  "listens": []
+  "listens": [
+    "firstpersoncamera.created"
+  ]
 }

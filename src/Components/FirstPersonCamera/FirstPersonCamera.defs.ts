@@ -41,6 +41,23 @@ export interface FirstPersonCameraInput {
    * roughly the player's shoulder width. Omit for unbounded movement.
    */
   bounds?: FirstPersonCameraBounds;
+  /**
+   * Walk collision against the scene's Obstacle footprints: the player slides
+   * along cabinets and props instead of walking through them. Default TRUE.
+   * `bounds` still applies on top, as the outer belt.
+   */
+  collide?: boolean;
+  /**
+   * The player's body radius for that collision, in metres — a shoulder's
+   * half-width. Default 0.45.
+   */
+  radius?: number;
+  /**
+   * localStorage key under which the live pose (x, z, yaw) is remembered and
+   * restored next visit, so a reload puts you back where you were standing.
+   * Omit for a fresh start at `position` every time.
+   */
+  persistKey?: string;
 }
 
 export class FirstPersonCameraComponent extends Component {
@@ -55,6 +72,9 @@ export class FirstPersonCameraComponent extends Component {
   near: number;
   far: number;
   bounds?: FirstPersonCameraBounds;
+  collide: boolean;
+  radius: number;
+  persistKey?: string;
 
   constructor(data: FirstPersonCameraInput = {}) {
     super();
@@ -68,6 +88,9 @@ export class FirstPersonCameraComponent extends Component {
     this.near = data.near ?? 0.1;
     this.far = data.far ?? 200;
     this.bounds = data.bounds;
+    this.collide = data.collide ?? true;
+    this.radius = data.radius ?? 0.45;
+    this.persistKey = data.persistKey;
   }
 
   serialize(): FirstPersonCameraInput {
@@ -81,6 +104,9 @@ export class FirstPersonCameraComponent extends Component {
       near: this.near,
       far: this.far,
       ...(this.bounds ? { bounds: { ...this.bounds } } : {}),
+      collide: this.collide,
+      radius: this.radius,
+      ...(this.persistKey ? { persistKey: this.persistKey } : {}),
     };
   }
 }

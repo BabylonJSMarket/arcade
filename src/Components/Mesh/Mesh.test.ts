@@ -32,6 +32,19 @@ describe('MeshComponent', () => {
     expect(copy.params).toEqual(original.params);
   });
 
+  it('has no fit by default, and round-trips one as a detached copy', () => {
+    expect(new MeshComponent().params.fit).toBeNull();
+    expect(new MeshComponent().serialize().fit).toBeNull();
+    const fit = { fitHeight: 1.9, seatOnGround: true, yaw: Math.PI };
+    const c = new MeshComponent({ src: '/cab.glb', fit });
+    fit.fitHeight = 99; // the caller's object is not aliased
+    expect(c.params.fit).toEqual({ fitHeight: 1.9, seatOnGround: true, yaw: Math.PI });
+    const out = c.serialize();
+    expect(out.fit).toEqual({ fitHeight: 1.9, seatOnGround: true, yaw: Math.PI });
+    expect(out.fit).not.toBe(c.params.fit);
+    expect(new MeshComponent(out).params).toEqual(c.params);
+  });
+
   it('accepts position/rotation as arrays or {x,y,z} objects', () => {
     const a = new MeshComponent({
       src: '/x.glb',
@@ -168,6 +181,75 @@ describe('MeshSystem', () => {
     });
     // And NOT applied a second time as a post-load repaint.
     expect(renderer.calls.some((c) => c.method === 'setMeshSkin')).toBe(false);
+  });
+
+  it('passes the fit INTO instantiateModel for an instanced mesh', async () => {
+    const entity = world.createEntity();
+    entity.add(
+      new MeshComponent({
+        src: '/arcade/cab.glb',
+        instanced: true,
+        fit: { fitHeight: 1.9, seatOnGround: true },
+      }),
+    );
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60);
+    const calls = renderer.calls.filter((c) => c.method === 'instantiateModel');
+    expect(calls).toHaveLength(1);
+    expect((calls[0].args[2] as { fit?: unknown }).fit).toEqual({ fitHeight: 1.9, seatOnGround: true });
+  });
+
+  it('a NON-instanced mesh with a fit takes the template path — loadMesh cannot fit', async () => {
+    // The room's props: 24 different GLBs, each sized by height. loadMesh has
+    // no fit in its spec, so a fitted one-off is a single-clone template.
+    const entity = world.createEntity('Prop_atm');
+    entity.add(
+      new MeshComponent({
+        src: '/arcade/atm.glb',
+        position: [-5.6, 0, 4],
+        rotation: [0, Math.PI / 2, 0],
+        fit: { fitHeight: 1.7, seatOnGround: true, yaw: Math.PI },
+      }),
+    );
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60);
+    expect(renderer.calls.some((c) => c.method === 'loadMesh')).toBe(false);
+    expect(renderer.calls.filter((c) => c.method === 'loadModelTemplate')).toHaveLength(1);
+    const inst = renderer.calls.filter((c) => c.method === 'instantiateModel');
+    expect(inst).toHaveLength(1);
+    expect(inst[0].args[0]).toBe(entity.id);
+    expect(inst[0].args[2]).toMatchObject({
+      position: [-5.6, 0, 4],
+      rotation: [0, Math.PI / 2, 0],
+      fit: { fitHeight: 1.7, seatOnGround: true, yaw: Math.PI },
+    });
+    expect(entity.get(MeshComponent)!.instance?.getState().state).toBe('loaded');
+
+    // And because the handle is a clone root, it is disposed as one.
+    renderer.calls.length = 0;
+    world.removeEntity(entity.id);
+    expect(renderer.calls.filter((c) => c.method === 'disposeModel')).toHaveLength(1);
+    expect(renderer.calls.some((c) => c.method === 'disposeMesh')).toBe(false);
+  });
+
+  it('a fitted one-off that is parked keeps its clone like an instanced one', async () => {
+    const entity = world.createEntity('Prop_keg');
+    entity.add(new MeshComponent({ src: '/arcade/keg.glb', fit: { fitHeight: 0.9 } }));
+    world.update(1 / 60);
+    await Promise.resolve();
+    await Promise.resolve();
+    world.update(1 / 60);
+    renderer.calls.length = 0;
+    entity.active = false;
+    expect(renderer.calls.some((c) => c.method === 'disposeModel')).toBe(false);
+    entity.active = true;
+    world.update(1 / 60);
+    expect(renderer.calls.filter((c) => c.method === 'setModelVisible').map((c) => c.args[1])).toEqual([true]);
+    expect(renderer.calls.filter((c) => c.method === 'instantiateModel')).toHaveLength(0);
   });
 
   it('two entities can wear different skins off the one shared template', async () => {

@@ -1,10 +1,22 @@
 {
   "name": "NeonSign",
-  "description": "Glowing neon lettering on a wall, plus the coloured light it throws into the room",
+  "description": "Glowing neon lettering on a wall, plus the coloured light it throws into the room — a point light or a spot aimed along the sign's facing. The words are a world-fixed quad, or, with `extruded: true` and the `neonText` Babylon adapter plugin registered (`registerBabylonNeonTextExtension`), real extruded geometry; without the plugin the sign quietly draws the quad. Colour, size, position, rotation, glow and light kind are all live-editable.",
   "category": "lighting",
-  "components": ["NeonSignComponent"],
-  "systems": ["NeonSignSystem"],
+  "components": [
+    "NeonSignComponent"
+  ],
+  "systems": [
+    "NeonSignSystem"
+  ],
   "dependencies": [],
-  "tags": ["core", "rendering"],
-  "emits": ["neonsign.created", "neonsign.text.changed"]
+  "tags": [
+    "core",
+    "rendering"
+  ],
+  "emits": [
+    "neonsign.created",
+    "neonsign.text.changed",
+    "neonsign.color.changed",
+    "neonsign.extruded"
+  ]
 }

@@ -1,0 +1,20 @@
+{
+  "name": "Fog",
+  "description": "Scene-wide distance fog — the far end of a room dims toward a colour instead of rendering pin-sharp, so a 24 m hall feels bigger and the edge of the floor never shows. One per scene; density is live so a slider can drive it",
+  "category": "rendering",
+  "components": [
+    "FogComponent"
+  ],
+  "systems": [
+    "FogSystem"
+  ],
+  "dependencies": [],
+  "tags": [
+    "core",
+    "rendering"
+  ],
+  "emits": [
+    "fog.applied",
+    "fog.cleared"
+  ]
+}

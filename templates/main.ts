@@ -8,6 +8,7 @@
 // previews a downloaded asset — it drops public/<key>/scene.json and opens
 // /?scene=/<key>/scene.json. With no param, the default scene loads.
 import { ArcadeGame, registerBabylonToneMappingExtension } from '@babylonjsmarket/arcade'
+import { registerBabylonAmbientOcclusionExtension, registerBabylonNeonTextExtension } from '@babylonjsmarket/arcade/babylon'
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'
 import { mountArcadeViz, mountControlsHud, hintsFromSceneTitle } from '@babylonjsmarket/arcade/viz'
 import { mountViz } from '@babylonjsmarket/viz/solid'
@@ -33,11 +34,15 @@ const sceneUrl = new URLSearchParams(window.location.search).get('scene')
 
 const adapter = new BabylonAdapter()
 
-// Built-in arcade adapter plugin: the ACES tone-mapping grade that
+// Built-in arcade adapter plugins: the ACES tone-mapping grade that
 // EnvironmentTexture{preset:'studio'} + ToneMapping rely on for the marketplace
-// figure look. Free arcade components aren't downloaded, so the auto-wire below
-// won't catch this one — register it explicitly.
+// figure look, the SSAO2 contact-shadow pass behind AmbientOcclusion, and the
+// slab-geometry text extrusion behind NeonSign (without it a sign quietly draws
+// a flat label quad instead). Free arcade components aren't downloaded, so the
+// auto-wire below won't catch these — register them explicitly.
 registerBabylonToneMappingExtension(adapter)
+registerBabylonAmbientOcclusionExtension(adapter)
+registerBabylonNeonTextExtension(adapter)
 
 // Auto-wire adapter plugins shipped by downloaded components. A component that
 // needs an engine feature the adapter doesn't expose — AnimateMeshy's runtime

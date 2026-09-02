@@ -25,6 +25,14 @@ export * from './Components/Shadow/Shadow';
 export * from './Components/Skybox/Skybox';
 export * from './Components/EnvironmentTexture/EnvironmentTexture';
 export * from './Components/ToneMapping/ToneMapping';
+export * from './Components/SpotLight/SpotLight';
+export * from './Components/Fog/Fog';
+export * from './Components/GlowLayer/GlowLayer';
+export * from './Components/Sound/Sound';
+// AmbientOcclusion's Babylon plugin (registerBabylonAmbientOcclusionExtension)
+// imports @babylonjs/core, so it lives behind '@babylonjsmarket/arcade/babylon'
+// — this barrel stays engine-free for Three / Lite projects.
+export * from './Components/AmbientOcclusion/AmbientOcclusion';
 export * from './Components/Animation/Animation';
 export * from './Components/Mesh/Mesh';
 export * from './Components/EntityPool/EntityPool';

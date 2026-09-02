@@ -2,17 +2,19 @@
  * CabinetLink.ts — renderer-agnostic System turning pointer clicks on a cabinet
  * into "walk me over" and "start the game".
  *
- * Pure data lives in CabinetLink.core.ts. This System owns the pointer
+ * Pure data lives in CabinetLink.defs.ts. This System owns the pointer
  * listeners and the ray pick, and talks to everything else over the EventBus:
  * it emits FirstPersonCameraEvents.GOTO to move the player and
  * CabinetLinkEvents.LAUNCH for the host app to route on. It never imports a
- * camera or a router.
+ * camera or a router — the one thing it needs from the camera, where the
+ * player is standing when they confirm, it reads back through the renderer
+ * from the handle the walking camera announced on its CREATED event.
  */
 
 import { CabinetLinkEvents, FirstPersonCameraEvents } from '../../events';
 import { System } from '@babylonjsmarket/ecs';
 import type { Entity, EventBus } from '@babylonjsmarket/ecs';
-import type { Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+import type { CameraHandle, Quaternion, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 import { MeshComponent } from '../Mesh/Mesh.defs';
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { CabinetLinkComponent, type CabinetLinkInput } from './CabinetLink.defs';
@@ -27,21 +29,36 @@ export { CabinetLinkComponent, type CabinetLinkInput };
  */
 const DOUBLE_CLICK_MS = 400;
 
+/** A world-space point, as the pick reports it. */
+interface HitPoint {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export class CabinetLinkSystem extends System {
   protected query = { required: [CabinetLinkComponent] };
 
   private pointerHandler: ((e: PointerEvent) => void) | null = null;
   private canvas: HTMLCanvasElement | null = null;
-  private lastClick: { entityId: string; at: number } | null = null;
-  /** Injected clock so tests can drive the double-click window deterministically. */
-  private now: () => number;
+  /** The armed first click: which cabinet, when, and where on it the pick landed. */
+  private lastClick: { entityId: string; at: number; hit: HitPoint } | null = null;
+  /** The walking camera, once it has announced itself; where the player IS. */
+  private cameraHandle: CameraHandle | null = null;
+  private readonly _camPos: Vec3 = [0, 0, 0];
+  private readonly _camQuat: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
+  /** The clock the double-click window is measured on; a test swaps it for a fake. */
+  now: () => number = () => Date.now();
 
-  constructor(eventBus: EventBus, opts: { now?: () => number } = {}) {
+  constructor(eventBus: EventBus) {
     super(eventBus);
-    this.now = opts.now ?? (() => Date.now());
   }
 
   protected onInitialize(): void {
+    this.listen(FirstPersonCameraEvents.CREATED, (e: { entityId: string; handle?: CameraHandle }) => {
+      if (e?.handle) this.cameraHandle = e.handle;
+    });
+
     if (typeof window === 'undefined') return; // headless tests drive handleClick directly
     const canvas = this.world?.renderer?.getRenderingCanvas?.() ?? null;
     if (!canvas) return;
@@ -65,6 +82,7 @@ export class CabinetLinkSystem extends System {
     this.canvas = null;
     this.pointerHandler = null;
     this.lastClick = null;
+    this.cameraHandle = null;
   }
 
   /**
@@ -97,14 +115,29 @@ export class CabinetLinkSystem extends System {
       const target = this.entityById(pending.entityId);
       const comp = target?.get(CabinetLinkComponent);
       this.lastClick = null; // a third click starts a fresh pair
-      if (target && comp?.interactive) {
-        this.eventBus.emit(CabinetLinkEvents.LAUNCH, {
+      if (!target || !comp?.interactive) return;
+
+      // The proximity gate: measured from where the PLAYER stands, not from
+      // where the click landed — a click on a far marquee is still a click
+      // from across the room. The walk keeps going either way; too far just
+      // means "not yet".
+      const distance = this.distanceFromCamera(this.cabinetPosition(target, pending.hit));
+      if (distance !== null && distance > comp.launchDistance) {
+        this.eventBus.emit(CabinetLinkEvents.OUT_OF_RANGE, {
           entityId: target.id,
           game: comp.game,
-          route: comp.route,
           title: comp.title,
+          distance,
+          launchDistance: comp.launchDistance,
         });
+        return;
       }
+      this.eventBus.emit(CabinetLinkEvents.LAUNCH, {
+        entityId: target.id,
+        game: comp.game,
+        route: comp.route,
+        title: comp.title,
+      });
       return;
     }
 
@@ -115,10 +148,10 @@ export class CabinetLinkSystem extends System {
   }
 
   /** Walk the player to `entity` and arm it as the double-click candidate. */
-  private approach(entity: Entity, hit: { x: number; y: number; z: number }, now: number): void {
+  private approach(entity: Entity, hit: HitPoint, now: number): void {
     const comp = entity.get(CabinetLinkComponent);
     if (!comp?.interactive) return;
-    this.lastClick = { entityId: entity.id, at: now };
+    this.lastClick = { entityId: entity.id, at: now, hit: { x: hit.x, y: hit.y, z: hit.z } };
     const spot = comp.approachFrom(this.cabinetPosition(entity, hit));
     this.eventBus.emit(FirstPersonCameraEvents.GOTO, spot);
     this.eventBus.emit(CabinetLinkEvents.FOCUSED, {
@@ -158,11 +191,23 @@ export class CabinetLinkSystem extends System {
    * top of the marquee, the side art — and standing "in front of" THAT would
    * put the player at a different spot depending on where they clicked.
    */
-  private cabinetPosition(entity: Entity, hit: { x: number; y: number; z: number }): Vec3 {
+  private cabinetPosition(entity: Entity, hit: HitPoint): Vec3 {
     const mesh = entity.get(MeshComponent);
     if (mesh) return [...mesh.params.position] as Vec3;
     const prim = entity.get(MeshPrimitiveComponent);
     if (prim) return [...prim.position] as Vec3;
     return [hit.x, hit.y, hit.z];
+  }
+
+  /**
+   * XZ distance from the player's eyes to `point`, or `null` when there is no
+   * walking camera to measure from (a scene with no FirstPersonCamera, or one
+   * that hasn't announced itself yet) — in which case the gate stays open.
+   */
+  private distanceFromCamera(point: Vec3): number | null {
+    const r = this.world?.renderer;
+    if (!r || !this.cameraHandle) return null;
+    r.getCameraPose(this.cameraHandle, this._camPos, this._camQuat);
+    return Math.hypot(point[0] - this._camPos[0], point[2] - this._camPos[2]);
   }
 }

@@ -1,17 +1,19 @@
 /**
  * Obstacle — pure core.
  *
- * A solid, axis-aligned box barrier on the play field. Its XZ footprint
- * (`halfWidth`/`halfDepth`) comes from the sibling MeshPrimitive's box; this
- * component carries the *collision semantics*:
+ * A solid, axis-aligned box barrier on the play field. Its XZ footprint is
+ * `halfWidth`/`halfDepth` around an explicit `center` — or, when none is
+ * given, around the sibling MeshPrimitive's box, then the sibling Mesh — and
+ * this component carries the *collision semantics*:
  *
  * - Movement is ALWAYS blocked — neither robots nor the player pass through.
  * - `blocksBullets` — full-height walls stop bullets; low cover lets them through.
  * - `blocksSight` — full-height walls break line of sight; low cover doesn't.
  *
- * Consumed by TwinStickEnemySystem (movement + LOS), BulletSystem (bullet stops), and
- * TwinStickShooterSystem (player movement). The collision math below is pure so
- * it's unit-testable without a renderer.
+ * Consumed by TwinStickEnemySystem (movement + LOS), BulletSystem (bullet stops),
+ * TwinStickShooterSystem (player movement) and FirstPersonCameraSystem (the
+ * walk-around player's body). The collision math below is pure so it's
+ * unit-testable without a renderer.
  */
 
 import { type BoxBounds } from './Obstacle.defs';

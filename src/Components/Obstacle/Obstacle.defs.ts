@@ -11,6 +11,15 @@
 import { Component } from '@babylonjsmarket/ecs';
 
 export interface ObstacleInput {
+  /**
+   * Explicit XZ centre of the footprint, `[x, z]`. Set it for anything that
+   * isn't a MeshPrimitive box — a GLB cabinet, a prop, an invisible barrier —
+   * or whenever the collider should sit somewhere other than the mesh's
+   * origin. When it is absent the footprint is centred on the sibling
+   * MeshPrimitive, then on the sibling Mesh; an entity with neither is not
+   * an obstacle at all.
+   */
+  center?: [number, number]
   /** XZ half-extents of the box footprint. */
   halfWidth?: number
   halfDepth?: number
@@ -21,6 +30,7 @@ export interface ObstacleInput {
 }
 
 export class ObstacleComponent extends Component {
+  center?: [number, number]
   halfWidth: number
   halfDepth: number
   blocksSight: boolean
@@ -28,6 +38,7 @@ export class ObstacleComponent extends Component {
 
   constructor(data: ObstacleInput = {}) {
     super()
+    this.center = data.center ? [data.center[0], data.center[1]] : undefined
     this.halfWidth = data.halfWidth ?? 1
     this.halfDepth = data.halfDepth ?? 1
     this.blocksSight = data.blocksSight ?? true
@@ -36,6 +47,7 @@ export class ObstacleComponent extends Component {
 
   serialize(): ObstacleInput {
     return {
+      ...(this.center ? { center: [this.center[0], this.center[1]] as [number, number] } : {}),
       halfWidth: this.halfWidth,
       halfDepth: this.halfDepth,
       blocksSight: this.blocksSight,

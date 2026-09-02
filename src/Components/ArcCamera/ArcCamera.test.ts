@@ -128,6 +128,8 @@ describe('ArcCameraSystem — adapter integration', () => {
         alpha: expect.any(Number),
         beta: expect.any(Number),
         radius: expect.any(Number),
+        // The camera handle rides along so Sound can attach the audio listener.
+        handle: expect.anything(),
       }),
     );
   });

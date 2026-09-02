@@ -31,8 +31,14 @@ const EXPECTED_NAMES = [
   'Skybox',
   'EnvironmentTexture',
   'ToneMapping',
+  'SpotLight',
+  'Fog',
+  'GlowLayer',
+  'AmbientOcclusion',
+  'Sound',
   'Animation',
   'Mesh',
+  'Obstacle',
   // Free generic AI + pooling primitives (the pinball + shooter kits are now
   // premium and vendored per game, so they're no longer in this registry).
   'EntityPool',
@@ -48,9 +54,10 @@ const EXPECTED_NAMES = [
  * fact about an entity and leaves acting on it to whoever cares, so there is no
  * system to own it: `Enemy` is read by targeting, impact and scoring code in
  * three different subgenres. (The swarm brain that used to hold that name, and
- * its System, is `TwinStickEnemy`.)
+ * its System, is `TwinStickEnemy`.) `Obstacle` is a footprint the movement
+ * systems query via `collectObstacleBoxes`; nothing ticks it.
  */
-const DATA_ONLY_NAMES = new Set<string>(['Enemy']);
+const DATA_ONLY_NAMES = new Set<string>(['Enemy', 'Obstacle']);
 
 type ComponentClass = new (...args: never[]) => Component;
 type SystemClass = new (...args: never[]) => System;

@@ -273,6 +273,23 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
+  // The Babylon-only adapter plugins the starter main.ts registers. The other
+  // renderers must lose every trace of them — a surviving import of
+  // @babylonjsmarket/arcade/babylon drags @babylonjs/core into a Three project.
+  const BABYLON_PLUGINS = [
+    "registerBabylonToneMappingExtension",
+    "registerBabylonAmbientOcclusionExtension",
+    "registerBabylonNeonTextExtension",
+  ];
+  function expectNoBabylonPlugins(main: string): void {
+    expect(main).not.toMatch(/registerBabylon\w+/);
+    expect(main).not.toContain("@babylonjsmarket/arcade/babylon");
+    expect(main).not.toContain("Built-in arcade adapter plugins");
+    // The strip closes up cleanly: adapter construction, one blank line, then
+    // the auto-wire comment (no orphaned blank lines or half a comment).
+    expect(main).toMatch(/Adapter\(\)\n\n\/\/ Auto-wire adapter plugins/);
+  }
+
   describe("--renderer (engine choice)", () => {
     it("documents --renderer in --help", async () => {
       const { stdout } = await runCli(["--help"], tmpDir);
@@ -286,6 +303,13 @@ describe("arcade CLI", () => {
       const main = fs.readFileSync(path.join(tmpDir, "d", "src", "main.ts"), "utf-8");
       expect(main).toContain("new BabylonAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/babylon'");
+      // The Babylon-only plugins the free components need are registered
+      // explicitly (the auto-wire only sees downloaded components). Without
+      // the neon-text one a scaffolded room's NeonSigns fall back to flat quads.
+      for (const plugin of BABYLON_PLUGINS) {
+        expect(main).toContain(`${plugin}(adapter)`);
+      }
+      expect(main).toContain("from '@babylonjsmarket/arcade/babylon'");
       const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, "d", "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@babylonjs/core");
       expect(pkg.dependencies).toHaveProperty("@babylonjs/havok");
@@ -298,6 +322,7 @@ describe("arcade CLI", () => {
       expect(main).toContain("new ThreeAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/three'");
       expect(main).not.toContain("BabylonAdapter");
+      expectNoBabylonPlugins(main);
       const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@dimforge/rapier3d-compat");
       expect(pkg.dependencies).not.toHaveProperty("@babylonjs/core"); // three is CDN
@@ -314,6 +339,7 @@ describe("arcade CLI", () => {
       const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
       expect(main).toContain("new BabylonLiteAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/babylon-lite'");
+      expectNoBabylonPlugins(main);
       const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@babylonjs/lite");
       expect(pkg.dependencies).toHaveProperty("@babylonjs/havok");

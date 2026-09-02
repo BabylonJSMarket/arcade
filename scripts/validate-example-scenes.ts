@@ -69,13 +69,11 @@ const SYSTEMLESS = new Set<string>(['Obstacle']);
 
 /**
  * Off-registry resolvers, merged on top of ARCADE_COMPONENT_REGISTRY:
- *   - Obstacle: in the arcade package but intentionally absent from the lazy
- *     registry (no system, static collision data).
  *   - MoneyField / PlayerWalkAnimator: game-local (games/src/games/arcade/shooter).
+ * (Obstacle used to be listed here too; it is in the lazy registry now, since
+ * a walk-around room declares one per wall, cabinet and prop in scene data.)
  */
 const EXTRA_RESOLVERS: Record<string, LazyComponentResolver> = {
-  Obstacle: () =>
-    import('../src/Components/Obstacle/Obstacle') as Promise<Record<string, unknown>>,
   MoneyField: () =>
     import(
       resolvePath(REPO_ROOT, 'games/src/games/arcade/shooter/MoneyField.ts')

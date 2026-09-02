@@ -35,11 +35,21 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   Skybox: () => import("./Components/Skybox/Skybox"),
   EnvironmentTexture: () => import("./Components/EnvironmentTexture/EnvironmentTexture"),
   ToneMapping: () => import("./Components/ToneMapping/ToneMapping"),
+  // Room atmosphere: the scene-wide effects and the aimed light + audio that
+  // turn a box with cabinets in it into an arcade hall. All free core.
+  SpotLight: () => import("./Components/SpotLight/SpotLight"),
+  Fog: () => import("./Components/Fog/Fog"),
+  GlowLayer: () => import("./Components/GlowLayer/GlowLayer"),
+  AmbientOcclusion: () => import("./Components/AmbientOcclusion/AmbientOcclusion"),
+  Sound: () => import("./Components/Sound/Sound"),
   Animation: () => import("./Components/Animation/Animation"),
   Mesh: () => import("./Components/Mesh/Mesh"),
-  // Free generic AI + pooling primitives. (Obstacle is a free collision box too,
-  // but it's created programmatically / imported directly, never loaded by scene
-  // name, so it needs no resolver here.)
+  // A free collision footprint, declared per entity in scene data (every wall,
+  // cabinet and prop in a walk-around room carries one) and read by the
+  // movement systems through collectObstacleBoxes. Pure data — it has no
+  // System of its own, like Enemy.
+  Obstacle: () => import("./Components/Obstacle/Obstacle"),
+  // Free generic AI + pooling primitives.
   EntityPool: () => import("./Components/EntityPool/EntityPool"),
   Pool: () => import("./Components/Pool/Pool"),
   Enemy: () => import("./Components/Enemy/Enemy"),
@@ -53,7 +63,8 @@ export const ARCADE_COMPONENT_REGISTRY: Record<string, LazyComponentResolver> = 
   // (Bullet/BulletPool/TwinStickShooter/ShooterCamera/EnemySpawner/SkeletonAnimator/
   // ObstacleField) — previously bundled free, now premium. This free registry is
   // the "build-a-room" core only: mesh/material loading, cameras, movement, lights,
-  // shadows, plus the generic AI/pooling primitives above.
+  // shadows, the room's atmosphere (fog, glow, SSAO, spot lights, sound), plus
+  // the generic AI/pooling primitives above.
 };
 
 export const ARCADE_COMPONENT_NAMES = Object.keys(ARCADE_COMPONENT_REGISTRY);

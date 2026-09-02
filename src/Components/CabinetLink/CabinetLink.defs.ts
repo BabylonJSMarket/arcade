@@ -36,6 +36,14 @@ export interface CabinetLinkInput {
   facing?: number;
   /** Set false to make a cabinet purely scenery. */
   interactive?: boolean;
+  /**
+   * How close the PLAYER must already be (XZ metres from the cabinet) for the
+   * confirming double-click to launch. Further away, the click reports
+   * `cabinetlink.launch.outofrange` and the walk the first click started just
+   * carries on — the player arrives, and double-clicks again. Omit for no
+   * gate: a double-click launches from anywhere, as it always did.
+   */
+  launchDistance?: number;
 }
 
 export class CabinetLinkComponent extends Component {
@@ -46,6 +54,7 @@ export class CabinetLinkComponent extends Component {
   standoff: number;
   facing: number;
   interactive: boolean;
+  launchDistance: number;
 
   constructor(data: CabinetLinkInput = {}) {
     super();
@@ -57,6 +66,7 @@ export class CabinetLinkComponent extends Component {
     this.standoff = data.standoff ?? 1.2;
     this.facing = data.facing ?? 0;
     this.interactive = data.interactive ?? true;
+    this.launchDistance = data.launchDistance ?? Infinity;
   }
 
   /**
@@ -87,6 +97,9 @@ export class CabinetLinkComponent extends Component {
       standoff: this.standoff,
       facing: this.facing,
       interactive: this.interactive,
+      // Infinity is the "no gate" default and does not survive JSON, so the
+      // key is simply left out — the constructor puts it back.
+      ...(Number.isFinite(this.launchDistance) ? { launchDistance: this.launchDistance } : {}),
     };
   }
 }

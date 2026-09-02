@@ -21,6 +21,23 @@ describe('ObstacleComponent', () => {
     expect(b.blocksSight).toBe(false)
     expect(b.blocksBullets).toBe(false)
   })
+
+  it('has no center by default, and serialize leaves the key out', () => {
+    const c = new ObstacleComponent()
+    expect(c.center).toBeUndefined()
+    expect('center' in c.serialize()).toBe(false)
+  })
+
+  it('round-trips an explicit center as a detached copy', () => {
+    const center: [number, number] = [5.415, -3.91]
+    const a = new ObstacleComponent({ center, halfWidth: 0.485, halfDepth: 0.416 })
+    center[0] = 99 // the caller's array is not aliased
+    expect(a.center).toEqual([5.415, -3.91])
+    const out = a.serialize()
+    expect(out.center).toEqual([5.415, -3.91])
+    expect(out.center).not.toBe(a.center)
+    expect(new ObstacleComponent(out).serialize()).toEqual(out)
+  })
 })
 
 describe('resolveCircleVsBox', () => {

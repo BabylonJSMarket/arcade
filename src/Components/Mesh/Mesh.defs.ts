@@ -67,6 +67,7 @@ export class MeshComponent extends Component {
       yawOffset: data.yawOffset ?? DEFAULT_MESH_PARAMS.yawOffset,
       lockRootMotion: data.lockRootMotion ?? DEFAULT_MESH_PARAMS.lockRootMotion,
       skin: data.skin ?? DEFAULT_MESH_PARAMS.skin,
+      fit: data.fit ? { ...data.fit } : DEFAULT_MESH_PARAMS.fit,
     };
   }
 
@@ -84,6 +85,7 @@ export class MeshComponent extends Component {
       yawOffset: this.params.yawOffset,
       lockRootMotion: this.params.lockRootMotion,
       skin: this.params.skin ? { ...this.params.skin } : null,
+      fit: this.params.fit ? { ...this.params.fit } : null,
     };
   }
 }

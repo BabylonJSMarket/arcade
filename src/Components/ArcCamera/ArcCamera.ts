@@ -221,6 +221,9 @@ export class ArcCameraSystem extends System {
       beta: angles.beta,
       radius: angles.radius,
       target: [...seedTarget] as Vec3,
+      // The renderer handle, so a listener (Sound's audio listener) can attach
+      // to the camera without reaching into this System.
+      handle: rt.handle,
     });
   }
 }

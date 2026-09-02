@@ -1,0 +1,30 @@
+{
+  "name": "Sound",
+  "description": "An audio clip on an entity — a flat bed heard everywhere, or a positional loop pinned to the entity's mesh that gets louder as you walk up. Waits out the browser's user-gesture rule and retries on the first click",
+  "category": "audio",
+  "components": [
+    "SoundComponent"
+  ],
+  "systems": [
+    "SoundSystem"
+  ],
+  "dependencies": [],
+  "tags": [
+    "core",
+    "audio"
+  ],
+  "emits": [
+    "sound.ready",
+    "sound.blocked",
+    "sound.error"
+  ],
+  "listens": [
+    "sound.play",
+    "sound.stop",
+    "sound.volume.set",
+    "firstpersoncamera.created",
+    "arccamera.created",
+    "meshprimitive.created",
+    "mesh.loaded"
+  ]
+}

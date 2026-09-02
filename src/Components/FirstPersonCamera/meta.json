@@ -1,6 +1,6 @@
 {
   "name": "FirstPersonCamera",
-  "description": "Walk-around, eye-height first-person camera driven by the keyboard (W/S walk, A/D turn, Q/E strafe), with optional room bounds",
+  "description": "Walk-around, eye-height first-person camera driven by the keyboard (W/S walk, A/D turn, Q/E strafe). Walks into nothing: every step is swept against the scene's Obstacle footprints and slides along cabinet faces, with optional room `bounds` as the outer belt. Walks itself to a spot on a `firstpersoncamera.goto` (a clicked cabinet), and with a `persistKey` remembers where you stood between visits.",
   "category": "core",
   "components": [
     "FirstPersonCameraComponent"
@@ -8,15 +8,21 @@
   "systems": [
     "FirstPersonCameraSystem"
   ],
-  "dependencies": [],
+  "dependencies": [
+    "Obstacle"
+  ],
   "tags": [
     "core",
     "camera",
     "input"
   ],
-  "emits": [],
+  "emits": [
+    "firstpersoncamera.created",
+    "firstpersoncamera.arrived"
+  ],
   "listens": [
     "keyboard.keydown",
-    "keyboard.keyup"
+    "keyboard.keyup",
+    "firstpersoncamera.goto"
   ]
 }

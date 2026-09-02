@@ -3,9 +3,10 @@
  *
  * The state machine lives in Mesh.core.ts. This System is a thin driver: it
  * observes entities with a MeshComponent, calls `world.renderer.loadMesh(id,
- * { url, position, rotation, scale })`, and on the returned Promise records
- * the assigned meshId + animation names back on the core. Events fire at each
- * transition so HUDs / downstream systems (e.g., Animation) can react.
+ * { url, position, rotation, scale })` — or, for an `instanced` or `fit`ted
+ * mesh, `loadModelTemplate` + `instantiateModel` — and on the returned Promise
+ * records the assigned meshId + animation names back on the core. Events fire
+ * at each transition so HUDs / downstream systems (e.g., Animation) can react.
  *
  * Zero imports from @babylonjs or three — the adapter handles the
  * `SceneLoader.ImportMeshAsync` / `GLTFLoader.loadAsync` specifics.
@@ -60,6 +61,26 @@ export class MeshSystem extends System {
     return rt;
   }
 
+  /**
+   * Does this mesh live as a clone of a shared template (instantiateModel)
+   * rather than a one-off import (loadMesh)?
+   *
+   * `instanced` asks for it outright. A `fit` forces it: `loadMesh` has no
+   * fit in its spec — it imports the file as authored — while
+   * `instantiateModel` measures the template and normalizes the clone's
+   * height/footprint, seats it on the ground and corrects its facing. So the
+   * room's 24 props, each a different GLB sized by height, go through the
+   * template path one clone apiece. The cost of a single-instance template is
+   * one extra map entry and an off-scene container, not a second parse.
+   *
+   * The two paths hand back different kinds of handle (a clone root vs. an
+   * imported root), so this decides how the handle is disposed and parked
+   * too — every branch that used to ask `params.instanced` asks this.
+   */
+  private usesTemplate(comp: MeshComponent): boolean {
+    return comp.params.instanced || comp.params.fit !== null;
+  }
+
   protected query = { required: [MeshComponent] };
 
   constructor(eventBus: EventBus) {
@@ -101,7 +122,7 @@ export class MeshSystem extends System {
     // stale pre-park position. At pool build time there's no clone yet → no-op.
     const id = (entity as unknown as { id: string }).id;
     const comp = entity.get(MeshComponent);
-    if (!comp?.params.instanced) return;
+    if (!comp || !this.usesTemplate(comp)) return;
     const rt = this.runtime.get(comp);
     if (!rt?.handle) return;
     // Queued, not written: a pooled entity parked and reacquired in one frame
@@ -125,7 +146,7 @@ export class MeshSystem extends System {
       const rt = this.getRuntime(comp);
       if (rt.handle) {
         const r = this.world?.renderer;
-        if (comp.params.instanced) {
+        if (this.usesTemplate(comp)) {
           // Park-aware: a parked (pooled) entity keeps its clone + follow state
           // for reuse, just hidden. A true destroy disposes the clone.
           if (!entity.active) {
@@ -243,7 +264,8 @@ export class MeshSystem extends System {
     if (!inst) return;
     if (!inst.getParams().src) return; // No src yet; wait for a LOAD event.
 
-    if (comp.params.instanced) {
+    // Instanced, or fitted (loadMesh cannot fit; see usesTemplate).
+    if (this.usesTemplate(comp)) {
       this.dispatchInstancedLoad(entityId, comp);
       return;
     }
@@ -293,12 +315,13 @@ export class MeshSystem extends System {
   }
 
   /**
-   * Instanced load path: one shared `loadModelTemplate` per url (deduped across
+   * Template load path: one shared `loadModelTemplate` per url (deduped across
    * the whole pool), then a cheap `instantiateModel` clone per entity. Because
    * instantiate must wait for the async template, this does NOT mark `dispatched`
    * until the clone actually exists — `onUpdate` keeps retrying each frame, and
    * the core stays in `loading` until then. For a pool where N entities request
-   * the same url in one tick: ONE loadModelTemplate, N instantiateModel.
+   * the same url in one tick: ONE loadModelTemplate, N instantiateModel. A
+   * fitted one-off (a prop with `fit` but not `instanced`) is the N = 1 case.
    */
   private dispatchInstancedLoad(entityId: string, comp: MeshComponent): void {
     const inst = comp.instance;
@@ -340,11 +363,14 @@ export class MeshSystem extends System {
     // after: the adapter has to give this clone its OWN materials before it can
     // repaint them, and it only knows to do that if it's told up front.
     const skin = inst.getResolvedSkin();
+    // The fit rides along too: the adapter measures the template's bounds and
+    // sizes/seats/turns THIS clone from them.
     const handle = r.instantiateModel(entityId, url, {
       position: params.position,
       rotation: params.rotation,
       scale: params.scale,
       ...(skin ? { skin } : {}),
+      ...(params.fit ? { fit: { ...params.fit } } : {}),
     });
     this.getRuntime(comp).handle = handle;
     // Clone starts hidden — reveal it.

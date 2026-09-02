@@ -754,16 +754,32 @@ ${threeImportmap}    <style>
           `import { ${rc.adapter} } from '${rc.import}'`,
         )
         .replace("new BabylonAdapter()", `new ${rc.adapter}()`)
-        // The ToneMapping grade is a Babylon-only plugin; drop its import + call
-        // for the other renderers (they have no scene image-processing seam).
+        // The ToneMapping grade, the AmbientOcclusion SSAO pass and the
+        // NeonSign text extrusion are Babylon-only plugins; drop their imports
+        // + calls for the other renderers (no image-processing seam, no SSAO2
+        // pipeline, no MeshBuilder.CreateText — and the /babylon entry imports
+        // @babylonjs/core, which a Three project doesn't have).
         .replace(
           "import { ArcadeGame, registerBabylonToneMappingExtension } from '@babylonjsmarket/arcade'",
           "import { ArcadeGame } from '@babylonjsmarket/arcade'",
         )
-        .replace(
-          /\n\/\/ Built-in arcade adapter plugin:[\s\S]*?registerBabylonToneMappingExtension\(adapter\)\n/,
-          "\n",
+        // Whatever the /babylon entry's import line names — one plugin or five,
+        // on one line or wrapped — goes as a unit.
+        .replace(/^import \{[^}]*\} from '@babylonjsmarket\/arcade\/babylon'\n/m, "")
+        // The whole "Built-in arcade adapter plugins" block: header comment
+        // through the last register…Extension(adapter) call, up to the blank
+        // line that ends it — so adding a plugin to the template can't leave a
+        // dangling call behind.
+        .replace(/\n\/\/ Built-in arcade adapter plugins:[\s\S]*?\n\n/, "\n");
+      // A template edit that outgrows the patterns above must fail the
+      // scaffold here, loudly — not ship a main.ts that can't resolve.
+      const leftover = mainTs.match(/registerBabylon\w+|@babylonjsmarket\/arcade\/babylon/);
+      if (leftover) {
+        throw new Error(
+          `create-arcade: Babylon-only plugin reference "${leftover[0]}" survived the ${renderer} ` +
+            "strip of templates/main.ts — extend the strip in src/cli/index.ts.",
         );
+      }
     }
     write("src/main.ts", mainTs);
     // The scene set differs by kind: a single game ships one starter scene; an

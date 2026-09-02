@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FirstPersonCameraComponent, FirstPersonCameraSystem } from './FirstPersonCamera';
 import { EventBus, World } from '@babylonjsmarket/ecs';
 import { FirstPersonCameraEvents } from '../../events';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
+import { ObstacleComponent } from '../Obstacle/Obstacle.defs';
 
 /** Last recorded call to a given adapter method, or undefined. */
 function lastCall(renderer: MockRendererAdapter, method: string) {
@@ -28,6 +29,19 @@ describe('FirstPersonCamera', () => {
     world.initialize();
   });
 
+  it('emits CREATED with the camera handle once the camera exists', () => {
+    const seen: { entityId: string; handle?: unknown }[] = [];
+    eventBus.on(FirstPersonCameraEvents.CREATED, (e: { entityId: string; handle?: unknown }) => seen.push(e));
+    const entity = world.createEntity();
+    entity.add(new FirstPersonCameraComponent());
+    expect(seen).toHaveLength(1);
+    expect(seen[0].entityId).toBe(entity.id);
+    expect(seen[0].handle).toBeDefined();
+    // The handle is the one the adapter handed back for the perspective camera.
+    world.update(1 / 60);
+    expect(seen).toHaveLength(1);
+  });
+
   it('applies defaults', () => {
     const c = new FirstPersonCameraComponent();
     expect(c.eyeHeight).toBe(1.7);
@@ -36,6 +50,18 @@ describe('FirstPersonCamera', () => {
     expect(c.moveSpeed).toBe(3);
     expect(c.turnSpeed).toBe(1.8);
     expect(c.bounds).toBeUndefined();
+    // Collision is on by default, at a shoulder's half-width.
+    expect(c.collide).toBe(true);
+    expect(c.radius).toBe(0.45);
+    expect(c.persistKey).toBeUndefined();
+  });
+
+  it('round-trips collide / radius / persistKey, omitting an unset persistKey', () => {
+    const c = new FirstPersonCameraComponent({ collide: false, radius: 0.3, persistKey: 'room.pose' });
+    const out = c.serialize();
+    expect(out).toMatchObject({ collide: false, radius: 0.3, persistKey: 'room.pose' });
+    expect(new FirstPersonCameraComponent(out).serialize()).toEqual(out);
+    expect('persistKey' in new FirstPersonCameraComponent().serialize()).toBe(false);
   });
 
   it('round-trips through serialize (with and without bounds)', () => {
@@ -228,6 +254,227 @@ describe('FirstPersonCamera', () => {
       const pos = settle(120);
       expect(pos[0]).toBeLessThanOrEqual(1.0001);
       expect(pos[2]).toBeLessThanOrEqual(1.0001);
+    });
+  });
+
+  describe('collision — Obstacles are solid', () => {
+    /** A solid box footprint at `center` with the given half-extents. */
+    const obstacle = (center: [number, number], halfWidth: number, halfDepth: number) => {
+      const e = world.createEntity();
+      e.add(new ObstacleComponent({ center, halfWidth, halfDepth }));
+      return e;
+    };
+    const pose = () => lastCall(renderer, 'setCameraPose')!.args[1] as number[];
+
+    it('stops one radius short of a cabinet it walks straight into', () => {
+      // Cabinet centred 3 m ahead, 1 m deep: its near face is at z = 2.5.
+      obstacle([0, 3], 0.5, 0.5);
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ moveSpeed: 10, radius: 0.45 }));
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      world.update(1); // would reach z = 10 unopposed
+      expect(pose()[2]).toBeCloseTo(2.5 - 0.45, 5);
+      // Holding the key keeps pressing, never tunnels.
+      world.update(1);
+      expect(pose()[2]).toBeCloseTo(2.05, 5);
+    });
+
+    it('slides along a face when it approaches at an angle', () => {
+      // A long wall ahead; strafing right while walking forward carries on
+      // along the wall once the forward part is stopped.
+      obstacle([0, 3], 10, 0.5);
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ moveSpeed: 4 }));
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      eventBus.emit('keyboard.keydown', { code: 'KeyE' });
+      world.update(1);
+      const p = pose();
+      expect(p[2]).toBeCloseTo(2.5 - 0.45, 5); // stopped at the wall
+      expect(p[0]).toBeCloseTo(4, 5); // the strafe went through in full
+    });
+
+    it('collide: false walks straight through', () => {
+      obstacle([0, 3], 0.5, 0.5);
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ moveSpeed: 10, collide: false }));
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      world.update(1);
+      expect(pose()[2]).toBeCloseTo(10, 5);
+    });
+
+    it('bounds still clamp on top of the sweep', () => {
+      obstacle([0, 30], 0.5, 0.5); // far beyond the room; the wall belt should win
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ moveSpeed: 100, bounds: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 } }));
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      world.update(1);
+      expect(pose()[2]).toBeCloseTo(5, 5);
+    });
+
+    it('a GOTO blocked by a cabinet gives up with ARRIVED { cancelled: true }', () => {
+      const arrived: { cancelled: boolean }[] = [];
+      eventBus.on(FirstPersonCameraEvents.ARRIVED, (p: { cancelled: boolean }) => arrived.push(p));
+      obstacle([0, 2], 2, 0.5); // a bar across the way to the target
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 6, turnSpeed: 8 }));
+      world.update(1 / 60);
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 0, z: 5 });
+      for (let i = 0; i < 120; i++) world.update(1 / 60);
+      expect(arrived).toHaveLength(1);
+      expect(arrived[0].cancelled).toBe(true);
+      // Pressed against the near face, not through it.
+      expect(pose()[2]).toBeCloseTo(1.5 - 0.45, 3);
+      // And no longer driving itself: more frames, no more events, no movement.
+      const z = pose()[2];
+      for (let i = 0; i < 30; i++) world.update(1 / 60);
+      expect(arrived).toHaveLength(1);
+      expect(pose()[2]).toBeCloseTo(z, 5);
+    });
+
+    it('a GOTO that can slide round a box still arrives', () => {
+      // The target is off to the right of a box that sits on the diagonal:
+      // the forward part of each step is stopped at the box's front, the
+      // sideways part carries the player along it and past — the slide —
+      // and the walk goes on to the target rather than giving up.
+      obstacle([0.9, 2.2], 0.3, 0.3);
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 6, turnSpeed: 8 }));
+      world.update(1 / 60);
+      const arrived: { cancelled: boolean }[] = [];
+      eventBus.on(FirstPersonCameraEvents.ARRIVED, (p: { cancelled: boolean }) => arrived.push(p));
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 2, z: 5 });
+      for (let i = 0; i < 300; i++) world.update(1 / 60);
+      expect(arrived).toHaveLength(1);
+      expect(arrived[0].cancelled).toBe(false);
+      expect(pose()[0]).toBeCloseTo(2, 1);
+      expect(pose()[2]).toBeCloseTo(5, 1);
+    });
+  });
+
+  describe('pose persistence (persistKey)', () => {
+    const KEY = 'test.room.pose';
+    // Node 25 puts its own `localStorage` on the global — a stub with no
+    // getItem/setItem unless `--localstorage-file` is set — and it shadows
+    // jsdom's. Install a real in-memory Storage for these tests and put the
+    // original back after, so what the System sees is what a browser gives it.
+    let store: Storage;
+    let original: PropertyDescriptor | undefined;
+    beforeEach(() => {
+      const data = new Map<string, string>();
+      store = {
+        get length() {
+          return data.size;
+        },
+        clear: () => data.clear(),
+        getItem: (k: string) => data.get(k) ?? null,
+        key: (i: number) => [...data.keys()][i] ?? null,
+        removeItem: (k: string) => void data.delete(k),
+        setItem: (k: string, v: string) => void data.set(k, String(v)),
+      };
+      original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+      Object.defineProperty(window, 'localStorage', { value: store, configurable: true, writable: true });
+    });
+    afterEach(() => {
+      if (original) Object.defineProperty(window, 'localStorage', original);
+    });
+
+    it('restores the remembered pose on attach instead of the start pose', () => {
+      window.localStorage.setItem(KEY, JSON.stringify({ x: 3, z: -2, yaw: 1.25 }));
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], yaw: 0, eyeHeight: 1.6, persistKey: KEY }));
+      const spec = lastCall(renderer, 'createPerspectiveCamera')!.args[1] as { position: number[]; orientation: { y: number } };
+      expect(spec.position).toEqual([3, 1.6, -2]);
+      expect(spec.orientation.y).toBeCloseTo(Math.sin(1.25 / 2), 5);
+    });
+
+    it('ignores a malformed entry and starts at the start pose', () => {
+      window.localStorage.setItem(KEY, '{"x": "nope"}');
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [1, 2], persistKey: KEY }));
+      const spec = lastCall(renderer, 'createPerspectiveCamera')!.args[1] as { position: number[] };
+      expect(spec.position).toEqual([1, 1.7, 2]);
+    });
+
+    it('writes the live pose about once a second while it changes, not every frame', () => {
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 1, persistKey: KEY }));
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      const setItem = vi.spyOn(store, 'setItem');
+      world.update(0.5);
+      expect(setItem).not.toHaveBeenCalled(); // half a second in: not yet
+      world.update(0.6);
+      expect(setItem).toHaveBeenCalledTimes(1); // past the interval: written
+      const saved = JSON.parse(window.localStorage.getItem(KEY)!);
+      expect(saved.z).toBeCloseTo(1.1, 5);
+      // Idle now: the next interval has nothing new to say.
+      eventBus.emit('keyboard.keyup', { code: 'KeyW' });
+      world.update(1.5);
+      expect(setItem).toHaveBeenCalledTimes(1);
+      setItem.mockRestore();
+    });
+
+    it('writes on shutdown so the last steps are not lost', () => {
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 2, persistKey: KEY }));
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      world.update(0.25); // 0.5 m, well inside the throttle window
+      expect(window.localStorage.getItem(KEY)).toBeNull();
+      world.removeSystem(system);
+      expect(JSON.parse(window.localStorage.getItem(KEY)!).z).toBeCloseTo(0.5, 5);
+    });
+
+    it('writes when the camera entity is removed (a scene swap)', () => {
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [4, 4], persistKey: KEY }));
+      world.update(1 / 60);
+      world.removeEntity(e.id);
+      expect(JSON.parse(window.localStorage.getItem(KEY)!)).toMatchObject({ x: 4, z: 4 });
+    });
+
+    it('without a persistKey nothing is ever stored', () => {
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 1 }));
+      const setItem = vi.spyOn(store, 'setItem');
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      world.update(2);
+      world.removeSystem(system);
+      expect(setItem).not.toHaveBeenCalled();
+      setItem.mockRestore();
+    });
+
+    it('a storage that throws is shrugged off', () => {
+      const getItem = vi.spyOn(store, 'getItem').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+      const setItem = vi.spyOn(store, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+      const e = world.createEntity('Camera');
+      expect(() => e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 1, persistKey: KEY }))).not.toThrow();
+      eventBus.emit('keyboard.keydown', { code: 'KeyW' });
+      expect(() => world.update(2)).not.toThrow();
+      expect(() => world.removeSystem(system)).not.toThrow();
+      getItem.mockRestore();
+      setItem.mockRestore();
+    });
+
+    it('a window whose localStorage getter throws is treated as no storage', () => {
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        get() {
+          throw new Error('SecurityError');
+        },
+      });
+      const e = world.createEntity('Camera');
+      expect(() => e.add(new FirstPersonCameraComponent({ persistKey: KEY }))).not.toThrow();
+      expect(() => world.removeSystem(system)).not.toThrow();
+    });
+
+    it('a window with no localStorage at all is treated as no storage', () => {
+      Object.defineProperty(window, 'localStorage', { value: undefined, configurable: true, writable: true });
+      const e = world.createEntity('Camera');
+      expect(() => e.add(new FirstPersonCameraComponent({ persistKey: KEY }))).not.toThrow();
+      expect(() => world.removeSystem(system)).not.toThrow();
     });
   });
 

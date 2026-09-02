@@ -51,6 +51,21 @@ describe('CabinetLinkComponent', () => {
     const c = new CabinetLinkComponent({ game: 'pacman', facing: 1, standoff: 2, title: 'Pac-Man' });
     expect(new CabinetLinkComponent(c.serialize()).serialize()).toEqual(c.serialize());
   });
+
+  it('launchDistance defaults to no gate (Infinity) and stays out of the serialized form', () => {
+    const c = new CabinetLinkComponent({ game: 'g' });
+    expect(c.launchDistance).toBe(Infinity);
+    expect('launchDistance' in c.serialize()).toBe(false);
+    // …so the JSON round-trip cannot turn it into null.
+    const json = JSON.parse(JSON.stringify(c.serialize()));
+    expect(new CabinetLinkComponent(json).launchDistance).toBe(Infinity);
+  });
+
+  it('a finite launchDistance round-trips', () => {
+    const c = new CabinetLinkComponent({ game: 'g', launchDistance: 1.5 });
+    expect(c.serialize().launchDistance).toBe(1.5);
+    expect(new CabinetLinkComponent(c.serialize()).launchDistance).toBe(1.5);
+  });
 });
 
 describe('CabinetLinkSystem', () => {
@@ -65,7 +80,8 @@ describe('CabinetLinkSystem', () => {
     eventBus = new EventBus();
     renderer = new MockRendererAdapter();
     world = new World({ eventBus, renderer, detectRaces: false });
-    system = new CabinetLinkSystem(eventBus, { now: () => clock });
+    system = new CabinetLinkSystem(eventBus);
+    system.now = () => clock;
     world.addSystem(system);
     world.initialize();
   });
@@ -237,6 +253,148 @@ describe('CabinetLinkSystem', () => {
     pickReturns('Floor');
     system.handleClick(1, 1);
     expect(goto).not.toHaveBeenCalled();
+  });
+
+  describe('launchDistance — the proximity gate', () => {
+    /** Announce a walking camera standing at (x, z), the way FirstPersonCamera does. */
+    const cameraAt = (x: number, z: number) => {
+      const handle = renderer.createPerspectiveCamera('firstPerson', {
+        fov: 1.1,
+        near: 0.1,
+        far: 100,
+        position: [x, 1.6, z],
+      });
+      eventBus.emit(FirstPersonCameraEvents.CREATED, { entityId: 'Player', handle });
+      return handle;
+    };
+    const doubleClick = (id: string) => {
+      pickReturns(id);
+      system.handleClick(1, 1);
+      clock += 150;
+      system.handleClick(1, 1);
+    };
+
+    it('launches when the player is within reach', () => {
+      const e = cabinet('frogger', 0); // at z = -4
+      cameraAt(0, -3); // 1 m away
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      e.get(CabinetLinkComponent)!.launchDistance = 1.5;
+      doubleClick(e.id);
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+
+    it('too far: reports OUT_OF_RANGE with the distances, does not launch, leaves the walk running', () => {
+      const e = cabinet('frogger', 0); // at z = -4
+      cameraAt(0, 4); // 8 m away
+      const launch = vi.fn();
+      const outOfRange = vi.fn();
+      const goto = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      eventBus.on(CabinetLinkEvents.OUT_OF_RANGE, outOfRange);
+      eventBus.on(FirstPersonCameraEvents.GOTO, goto);
+      e.get(CabinetLinkComponent)!.launchDistance = 1.5;
+      doubleClick(e.id);
+      expect(launch).not.toHaveBeenCalled();
+      expect(outOfRange).toHaveBeenCalledTimes(1);
+      expect(outOfRange.mock.calls[0][0]).toMatchObject({
+        entityId: e.id,
+        game: 'frogger',
+        title: 'frogger',
+        launchDistance: 1.5,
+      });
+      expect(outOfRange.mock.calls[0][0].distance).toBeCloseTo(8, 5);
+      // Exactly one GOTO — the first click's — and nothing cancelled it.
+      expect(goto).toHaveBeenCalledTimes(1);
+    });
+
+    it('measures from the PLAYER, not from the click point', () => {
+      const e = cabinet('frogger', 0); // at z = -4
+      cameraAt(0, 4); // player is 8 m away…
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      e.get(CabinetLinkComponent)!.launchDistance = 1.5;
+      // …even though the pick itself lands right on the machine.
+      vi.spyOn(renderer, 'pickAtScreenPoint').mockReturnValue({ x: 0, y: 1, z: -3.9, meshId: e.id });
+      system.handleClick(1, 1);
+      clock += 100;
+      system.handleClick(1, 1);
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it('after the walk brings the player close, the next double-click launches', () => {
+      const e = cabinet('frogger', 0);
+      const handle = cameraAt(0, 4);
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      e.get(CabinetLinkComponent)!.launchDistance = 1.5;
+      doubleClick(e.id);
+      expect(launch).not.toHaveBeenCalled();
+      // The camera walked over (FirstPersonCamera poses it each frame).
+      renderer.setCameraPose(handle, [0, 1.6, -2.8], { x: 0, y: 1, z: 0, w: 0 });
+      clock += 5000; // a fresh pair
+      doubleClick(e.id);
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+
+    it('with no launchDistance the gate is open from anywhere (today’s behaviour)', () => {
+      const e = cabinet('frogger', 0);
+      cameraAt(50, 50);
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      doubleClick(e.id);
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+
+    it('with no walking camera announced there is nothing to measure from, so it launches', () => {
+      const e = cabinet('frogger', 0);
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      e.get(CabinetLinkComponent)!.launchDistance = 0.1;
+      doubleClick(e.id);
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+
+    it('a CREATED without a handle is ignored', () => {
+      const e = cabinet('frogger', 0);
+      eventBus.emit(FirstPersonCameraEvents.CREATED, { entityId: 'Player' });
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      e.get(CabinetLinkComponent)!.launchDistance = 0.1;
+      doubleClick(e.id);
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+
+    it('a cabinet with no mesh at all is measured from the first click’s pick point', () => {
+      const e = world.createEntity();
+      e.add(new CabinetLinkComponent({ game: 'g', launchDistance: 1 }));
+      world.update(1 / 60);
+      cameraAt(0, 0);
+      const outOfRange = vi.fn();
+      eventBus.on(CabinetLinkEvents.OUT_OF_RANGE, outOfRange);
+      vi.spyOn(renderer, 'pickAtScreenPoint').mockReturnValue({ x: 3, y: 1, z: 4, meshId: e.id });
+      system.handleClick(1, 1);
+      clock += 100;
+      system.handleClick(1, 1);
+      expect(outOfRange.mock.calls[0][0].distance).toBeCloseTo(5, 5);
+    });
+
+    it('forgets the camera on shutdown', () => {
+      const e = cabinet('frogger', 0);
+      cameraAt(0, 40);
+      e.get(CabinetLinkComponent)!.launchDistance = 1;
+      world.removeSystem(system);
+      const fresh = new CabinetLinkSystem(eventBus);
+      fresh.now = () => clock;
+      world.addSystem(fresh);
+      const launch = vi.fn();
+      eventBus.on(CabinetLinkEvents.LAUNCH, launch);
+      pickReturns(e.id);
+      fresh.handleClick(1, 1);
+      clock += 100;
+      fresh.handleClick(1, 1);
+      expect(launch).toHaveBeenCalledTimes(1); // no camera known → gate open
+    });
   });
 
   it('a non-interactive cabinet is scenery', () => {

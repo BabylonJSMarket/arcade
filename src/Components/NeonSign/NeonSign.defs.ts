@@ -10,6 +10,10 @@
 
 import { Component } from '@babylonjsmarket/ecs';
 import type { Color, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+import { spotDirection } from './NeonSign.core';
+
+/** What throws the sign's wash into the room. */
+export type NeonSignLightKind = 'point' | 'spot';
 
 export interface NeonSignInput {
   /** The words. */
@@ -33,6 +37,28 @@ export interface NeonSignInput {
   glowOffset?: number;
   /** Text resolution in CSS pixels. Bigger = crisper up close. */
   fontSize?: number;
+  /**
+   * The light's shape. `'point'` (default) radiates every way from in front
+   * of the sign; `'spot'` is a cone aimed along the sign's facing and tilted
+   * down, so the wash lands on the cabinets and floor rather than the ceiling
+   * and the wall the sign hangs on.
+   */
+  lightKind?: NeonSignLightKind;
+  /** Spot only: full cone aperture, radians. Default 0.95π — almost a hemisphere. */
+  spotAngle?: number;
+  /** Spot only: edge falloff sharpness. Default 2, a soft rim. */
+  spotExponent?: number;
+  /**
+   * Real extruded lettering instead of a rasterised quad. Needs the
+   * `neonText` adapter plugin registered on the renderer
+   * (`registerBabylonNeonTextExtension`); without one the sign quietly draws
+   * the quad instead. Default false.
+   */
+  extruded?: boolean;
+  /** Extruded only: slab depth in metres. Default 0.08. */
+  depth?: number;
+  /** Extruded only: URL of a facetype.js font JSON. Default `/fonts/neon.json`. */
+  fontUrl?: string;
 }
 
 export function cloneVec3(v: Vec3): Vec3 {
@@ -49,6 +75,12 @@ export class NeonSignComponent extends Component {
   range: number;
   glowOffset: number;
   fontSize: number;
+  lightKind: NeonSignLightKind;
+  spotAngle: number;
+  spotExponent: number;
+  extruded: boolean;
+  depth: number;
+  fontUrl: string;
 
   constructor(data: NeonSignInput = {}) {
     super();
@@ -61,6 +93,12 @@ export class NeonSignComponent extends Component {
     this.range = data.range ?? 7;
     this.glowOffset = data.glowOffset ?? 0.35;
     this.fontSize = data.fontSize ?? 96;
+    this.lightKind = data.lightKind ?? 'point';
+    this.spotAngle = data.spotAngle ?? Math.PI * 0.95;
+    this.spotExponent = data.spotExponent ?? 2;
+    this.extruded = data.extruded ?? false;
+    this.depth = data.depth ?? 0.08;
+    this.fontUrl = data.fontUrl ?? '/fonts/neon.json';
   }
 
   /**
@@ -76,6 +114,11 @@ export class NeonSignComponent extends Component {
     ];
   }
 
+  /** Where a spot aims: along the facing, tilted 0.4 down, unit length. */
+  spotDirection(): Vec3 {
+    return spotDirection(this.rotation[1]);
+  }
+
   serialize(): NeonSignInput {
     return {
       text: this.text,
@@ -87,6 +130,12 @@ export class NeonSignComponent extends Component {
       range: this.range,
       glowOffset: this.glowOffset,
       fontSize: this.fontSize,
+      lightKind: this.lightKind,
+      spotAngle: this.spotAngle,
+      spotExponent: this.spotExponent,
+      extruded: this.extruded,
+      depth: this.depth,
+      fontUrl: this.fontUrl,
     };
   }
 }

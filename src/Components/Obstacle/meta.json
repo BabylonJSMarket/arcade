@@ -1,13 +1,14 @@
 {
   "name": "Obstacle",
-  "description": "A solid, axis-aligned box barrier on the play field. Its XZ footprint comes from the sibling MeshPrimitive; the component carries the collision semantics: movement is always blocked, while `blocksBullets` and `blocksSight` distinguish full-height walls from low cover. It has no per-frame system of its own — it's static collision data plus pure circle-vs-box and segment-vs-box math, consumed by gameplay systems (movement, bullets, LineOfSight) via a `collectObstacleBoxes` world query.",
+  "description": "A solid, axis-aligned box barrier on the play field. Its XZ footprint is `halfWidth`/`halfDepth` around an explicit `center` — or, when none is set, around the sibling MeshPrimitive, then the sibling Mesh (so a GLB cabinet or prop gets a collider too). The component carries the collision semantics: movement is always blocked, while `blocksBullets` and `blocksSight` distinguish full-height walls from low cover. It has no per-frame system of its own — it's static collision data plus pure circle-vs-box and segment-vs-box math, consumed by gameplay systems (movement, bullets, LineOfSight, the first-person walk) via a `collectObstacleBoxes` world query.",
   "category": "shooter",
   "components": [
     "ObstacleComponent"
   ],
   "systems": [],
   "dependencies": [
-    "MeshPrimitive"
+    "MeshPrimitive",
+    "Mesh"
   ],
   "tags": [
     "core",

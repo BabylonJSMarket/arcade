@@ -14,6 +14,20 @@
  * component can react to a paid component's events without importing it.
  */
 
+// AmbientOcclusionEvents — from AmbientOcclusion
+export const AmbientOcclusionEvents = {
+  /** The SSAO pass is live with the component's settings. `{ entityId }`. */
+  APPLIED: 'ambientocclusion.applied',
+  /**
+   * Nothing can run the pass: no adapter plugin was registered, or the engine
+   * can't do SSAO2 (WebGL1). Fired once; the scene renders without contact
+   * shadows. `{ entityId, reason }`.
+   */
+  UNSUPPORTED: 'ambientocclusion.unsupported',
+  /** The pass was torn down (component removed or disabled). `{ entityId }`. */
+  CLEARED: 'ambientocclusion.cleared',
+} as const;
+
 // AnimationEvents — from Animation
 export const AnimationEvents = {
   /** Fired the frame the dominant clip flips (e.g., idle → walk). */
@@ -138,6 +152,18 @@ export const NeonSignEvents = {
   CREATED: 'neonsign.created',
   /** The sign's text changed; payload `{ entityId, text }`. */
   TEXT_CHANGED: 'neonsign.text.changed',
+  /**
+   * The tube colour changed — lettering and light recoloured together.
+   * Payload `{ entityId, color }`.
+   */
+  COLOR_CHANGED: 'neonsign.color.changed',
+  /**
+   * The lettering is real extruded geometry: the `neonText` adapter plugin
+   * built it. With no plugin registered (a Three host, a bootstrap that
+   * forgot) the sign quietly falls back to a label quad and this never fires.
+   * Payload `{ entityId, text }`.
+   */
+  EXTRUDED: 'neonsign.extruded',
 } as const;
 
 // CabinetLinkEvents — from CabinetLink
@@ -151,18 +177,57 @@ export const CabinetLinkEvents = {
    * touches the router.
    */
   LAUNCH: 'cabinetlink.launch',
+  /**
+   * The confirming click landed but the player is still further from the
+   * machine than its `launchDistance`. Nothing launches; the walk the first
+   * click started keeps going, so the player simply arrives closer and tries
+   * again. Payload `{ entityId, game, title, distance, launchDistance }`.
+   */
+  OUT_OF_RANGE: 'cabinetlink.launch.outofrange',
 } as const;
 
 // FirstPersonCameraEvents — from FirstPersonCamera
 export const FirstPersonCameraEvents = {
+  /**
+   * The walking camera exists. Payload `{ entityId, handle }` — `handle` is the
+   * renderer's camera handle, so anything that must follow the player's ears or
+   * eyes (Sound's audio listener) can attach to it without asking the System.
+   */
+  CREATED: 'firstpersoncamera.created',
   /**
    * Ask the walking camera to WALK ITSELF to a spot: `{ x, z, yaw? }`. It
    * paths there at its own moveSpeed/turnSpeed rather than teleporting, and any
    * movement key cancels it — the player is never trapped in an animation.
    */
   GOTO: 'firstpersoncamera.goto',
-  /** Emitted once the camera reaches (or is released from) a GOTO target. */
+  /**
+   * Emitted once the camera reaches a GOTO target, or gives one up: payload
+   * `{ entityId, x, z, yaw, cancelled }`, where `cancelled` is true when a
+   * movement key took over or an Obstacle blocked the path for good.
+   */
   ARRIVED: 'firstpersoncamera.arrived',
+} as const;
+
+// FogEvents — from Fog
+export const FogEvents = {
+  /** Fog is on with the component's current settings. `{ entityId, mode, density }`. */
+  APPLIED: 'fog.applied',
+  /** Fog was switched off (component removed or `enabled` false). `{ entityId }`. */
+  CLEARED: 'fog.cleared',
+} as const;
+
+// GlowLayerEvents — from GlowLayer
+export const GlowLayerEvents = {
+  /** The glow pass is up with the component's intensity. `{ entityId, intensity }`. */
+  APPLIED: 'glowlayer.applied',
+  /**
+   * A mesh was whitelisted into the glow pass. The adapter's layer starts EMPTY,
+   * so this fires once per mesh the system enrols — it is the only way a
+   * screen or a neon tube gets to bloom. `{ entityId, meshEntityId }`.
+   */
+  MESH_ENROLLED: 'glowlayer.mesh.enrolled',
+  /** The glow pass was torn down. `{ entityId }`. */
+  CLEARED: 'glowlayer.cleared',
 } as const;
 
 // PointLightEvents — from PointLight
@@ -360,6 +425,37 @@ export const ShadowEvents = {
 export const SkyboxEvents = {
   CREATED: 'skybox.created',
   SUN_CHANGED: 'skybox.sun.changed',
+} as const;
+
+// SoundEvents — from Sound
+export const SoundEvents = {
+  /** The clip loaded and has a live handle. `{ entityId, src }`. */
+  READY: 'sound.ready',
+  /**
+   * The audio engine refused to start — no WebAudio, or the browser is holding
+   * it behind a user gesture. Fired once per world; the system retries on the
+   * first click/key and goes quiet in between. `{ }`.
+   */
+  BLOCKED: 'sound.blocked',
+  /** The clip could not be fetched or decoded; it will not be retried. `{ entityId, src }`. */
+  ERROR: 'sound.error',
+} as const;
+
+// SoundInputEvents — from Sound
+export const SoundInputEvents = {
+  /** Start (or restart from the top) an entity's sound. `{ entityId }`. */
+  PLAY: 'sound.play',
+  /** Stop an entity's sound. `{ entityId }`. */
+  STOP: 'sound.stop',
+  /** Set an entity's gain at runtime. `{ entityId, volume }`. */
+  SET_VOLUME: 'sound.volume.set',
+} as const;
+
+// SpotLightEvents — from SpotLight
+export const SpotLightEvents = {
+  CREATED: 'spotlight.created',
+  INTENSITY_CHANGED: 'spotlight.intensity.changed',
+  MOVED: 'spotlight.moved',
 } as const;
 
 // ── Protocol events for PREMIUM emitters (implementations ship vendored per

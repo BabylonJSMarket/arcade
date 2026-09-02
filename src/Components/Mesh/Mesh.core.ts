@@ -9,7 +9,7 @@
  * are plain tuples. The System reads this and talks to `world.renderer`.
  */
 
-import type { MeshSkinSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
+import type { MeshSkinSpec, ModelFitSpec, Vec3 } from '@babylonjsmarket/ecs/renderer-types';
 
 export type MeshLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -67,6 +67,18 @@ export interface MeshParams {
    * skin off one shared template.
    */
   skin: MeshSkinSpec | null;
+  /**
+   * Auto-fit the loaded model (see `ModelFitSpec`): normalize its height
+   * (`fitHeight`) or footprint (`fitLength`), seat it on the floor
+   * (`seatOnGround`), correct its authored facing (`yaw` / `pitch`), nudge it
+   * (`yOffset`), keep one body of a multi-body file (`meshNameFilter`). The
+   * knob for "how tall is this cabinet / prop" when the GLB's own scale is
+   * anyone's guess. `null` (default) shows the model as authored, at `scale`.
+   *
+   * Only the template + clone path can fit, so a Mesh with a `fit` loads that
+   * way whether or not it is `instanced` (see MeshSystem.dispatchLoad).
+   */
+  fit: ModelFitSpec | null;
 }
 
 export interface MeshOutputs {
@@ -115,6 +127,7 @@ export const DEFAULT_MESH_PARAMS: MeshParams = {
   yawOffset: 0,
   lockRootMotion: false,
   skin: null,
+  fit: null,
 };
 
 export function createMesh(params: Partial<MeshParams> = {}): MeshInstance {
