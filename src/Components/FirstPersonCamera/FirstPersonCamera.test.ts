@@ -107,7 +107,12 @@ describe('FirstPersonCamera', () => {
     expect(pos[1]).toBeCloseTo(1.7, 5); // pinned at eye height
   });
 
-  it('strafes right (+X at yaw 0) with E', () => {
+  // The canonical frame: yaw 0 looks +Z, +Y is up, and the renderer is
+  // right-handed. Your right hand is forward x up, so at yaw 0 it points at -X
+  // — which is also why the adapter contract puts +X on the screen's LEFT for
+  // an identity camera. Turn to face -Z (yaw π, the arcade room's spawn) and
+  // your right becomes +X, on the screen's right, as it should be.
+  it('strafes toward the hand you would actually raise: -X at yaw 0, +X at yaw π', () => {
     const e = world.createEntity('Camera');
     e.add(new FirstPersonCameraComponent({ moveSpeed: 10 }));
 
@@ -115,7 +120,7 @@ describe('FirstPersonCamera', () => {
     world.update(0.1);
 
     const pos = lastCall(renderer, 'setCameraPose')!.args[1] as number[];
-    expect(pos[0]).toBeCloseTo(1.0, 5); // right = +X at yaw 0
+    expect(pos[0]).toBeCloseTo(-1.0, 5); // right = -X while facing +Z
     expect(pos[2]).toBeCloseTo(0, 5);
 
     // Release E, hold Q → strafe back toward the origin.
@@ -124,17 +129,31 @@ describe('FirstPersonCamera', () => {
     world.update(0.1);
     const pos2 = lastCall(renderer, 'setCameraPose')!.args[1] as number[];
     expect(pos2[0]).toBeCloseTo(0, 5);
+
+    // Same key, turned around: facing -Z, strafing right now carries you +X.
+    eventBus.emit('keyboard.keyup', { code: 'KeyQ' });
+    const spun = world.createEntity('CameraSpun');
+    spun.add(new FirstPersonCameraComponent({ moveSpeed: 10, yaw: Math.PI }));
+    eventBus.emit('keyboard.keydown', { code: 'KeyE' });
+    world.update(0.1);
+    const pos3 = lastCall(renderer, 'setCameraPose')!.args[1] as number[];
+    expect(pos3[0]).toBeCloseTo(1.0, 5);
+    eventBus.emit('keyboard.keyup', { code: 'KeyE' });
   });
 
-  it('turns with A / D (changes the pose orientation)', () => {
+  // D must turn the VIEW to the right, which means yaw goes DOWN: forward is
+  // (sin yaw, 0, cos yaw), so raising yaw swings the view toward -X and the
+  // right-handed renderer draws that on the left. Getting this backwards is
+  // exactly what shipped on 2026-09-02 and felt like inverted steering.
+  it('turns the view right on D, which decreases yaw', () => {
     const e = world.createEntity('Camera');
     e.add(new FirstPersonCameraComponent({ turnSpeed: 1 }));
 
     eventBus.emit('keyboard.keydown', { code: 'KeyD' });
-    world.update(0.5); // yaw += 0.5 rad
+    world.update(0.5); // yaw -= 0.5 rad
     const q = lastCall(renderer, 'setCameraPose')!.args[2] as { y: number; w: number };
-    expect(q.y).toBeCloseTo(Math.sin(0.25), 5);
-    expect(q.w).toBeCloseTo(Math.cos(0.25), 5);
+    expect(q.y).toBeCloseTo(Math.sin(-0.25), 5);
+    expect(q.w).toBeCloseTo(Math.cos(-0.25), 5);
 
     // A turns the other way (arrow keys too).
     eventBus.emit('keyboard.keyup', { code: 'KeyD' });
@@ -290,7 +309,7 @@ describe('FirstPersonCamera', () => {
       world.update(1);
       const p = pose();
       expect(p[2]).toBeCloseTo(2.5 - 0.45, 5); // stopped at the wall
-      expect(p[0]).toBeCloseTo(4, 5); // the strafe went through in full
+      expect(p[0]).toBeCloseTo(-4, 5); // the strafe went through in full (-X: facing +Z)
     });
 
     it('collide: false walks straight through', () => {
@@ -311,24 +330,56 @@ describe('FirstPersonCamera', () => {
       expect(pose()[2]).toBeCloseTo(5, 5);
     });
 
-    it('a GOTO blocked by a cabinet gives up with ARRIVED { cancelled: true }', () => {
-      const arrived: { cancelled: boolean }[] = [];
-      eventBus.on(FirstPersonCameraEvents.ARRIVED, (p: { cancelled: boolean }) => arrived.push(p));
-      obstacle([0, 2], 2, 0.5); // a bar across the way to the target
+    it('an approach glides over obstacles and lands on the spot', () => {
+      // Deliberate: the approach is on rails. A glide that snagged on a cabinet
+      // corner would stop in open floor with no way to explain itself, and the
+      // destination is always a clear spot in front of a machine. Walking under
+      // your own keys still collides — that is the test above.
+      const arrived: { cancelled: boolean; x: number; z: number }[] = [];
+      eventBus.on(FirstPersonCameraEvents.ARRIVED, (p: { cancelled: boolean; x: number; z: number }) =>
+        arrived.push(p),
+      );
+      obstacle([0, 2], 2, 0.5); // a bar straight across the way
       const e = world.createEntity('Camera');
-      e.add(new FirstPersonCameraComponent({ position: [0, 0], moveSpeed: 6, turnSpeed: 8 }));
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], approachDuration: 0.5 }));
       world.update(1 / 60);
-      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 0, z: 5 });
-      for (let i = 0; i < 120; i++) world.update(1 / 60);
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 0, z: 5, yaw: Math.PI });
+      for (let i = 0; i < 60; i++) world.update(1 / 60);
       expect(arrived).toHaveLength(1);
-      expect(arrived[0].cancelled).toBe(true);
-      // Pressed against the near face, not through it.
-      expect(pose()[2]).toBeCloseTo(1.5 - 0.45, 3);
-      // And no longer driving itself: more frames, no more events, no movement.
-      const z = pose()[2];
+      expect(arrived[0].cancelled).toBe(false);
+      expect(pose()[2]).toBeCloseTo(5, 5);
+      // Settled: more frames, no more events, no drift.
       for (let i = 0; i < 30; i++) world.update(1 / 60);
       expect(arrived).toHaveLength(1);
-      expect(pose()[2]).toBeCloseTo(z, 5);
+      expect(pose()[2]).toBeCloseTo(5, 5);
+    });
+
+    it('moves and turns at the same time, easing out', () => {
+      // The whole point of the change. Turning to face the target, then
+      // walking, then turning again to face the machine reads as three robotic
+      // moves and takes as long as the room is wide; the hand-written room
+      // eased position and facing together over a fixed 0.7 s, and that is what
+      // made clicking a cabinet feel like walking up to one.
+      const e = world.createEntity('Camera');
+      e.add(new FirstPersonCameraComponent({ position: [0, 0], yaw: 0, approachDuration: 1 }));
+      world.update(1 / 60);
+      // Target dead behind and to the side, so a turn-then-walk would show up
+      // as a long spell of turning with no movement at all.
+      eventBus.emit(FirstPersonCameraEvents.GOTO, { x: 4, z: -4, yaw: Math.PI });
+
+      for (let i = 0; i < 30; i++) world.update(1 / 60); // half way through
+      const half = pose();
+      const q = lastCall(renderer, 'setCameraPose')!.args[2] as { y: number };
+      // Ease-out 1-(1-u)^2 at u = 0.5 is 0.75 of the way there, on both axes...
+      expect(half[0]).toBeCloseTo(3, 1);
+      expect(half[2]).toBeCloseTo(-3, 1);
+      // ...and the facing has come along with it, not waited its turn.
+      expect(Math.abs(q.y)).toBeGreaterThan(0.5);
+
+      for (let i = 0; i < 35; i++) world.update(1 / 60);
+      const end = pose();
+      expect(end[0]).toBeCloseTo(4, 5);
+      expect(end[2]).toBeCloseTo(-4, 5);
     });
 
     it('a GOTO that can slide round a box still arrives', () => {

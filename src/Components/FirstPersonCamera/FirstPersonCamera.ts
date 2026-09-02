@@ -43,10 +43,19 @@ interface FirstPersonCameraRuntime {
   x: number;
   z: number;
   yaw: number;
-  /** Active GOTO target, if the camera is currently walking itself somewhere. */
-  goto?: { x: number; z: number; yaw?: number };
-  /** Seconds a GOTO has spent pressed against something without gaining ground. */
-  stalled: number;
+  /**
+   * An in-flight approach: where it started, where it ends, and how far through
+   * it is. Held as a whole path rather than a target, because the move is a
+   * timed glide, not a walk that is re-steered every frame.
+   */
+  goto?: {
+    fromX: number; fromZ: number; fromYaw: number;
+    x: number; z: number; yaw?: number;
+    /** Signed shortest turn from fromYaw to the final facing. */
+    dYaw: number;
+    t: number;
+    duration: number;
+  };
   /** Seconds since the pose was last written to storage. */
   persistAccum: number;
   /** The pose last written, so an idle player costs no storage writes. */
@@ -56,18 +65,12 @@ interface FirstPersonCameraRuntime {
 /** Close enough to a GOTO target to call it arrived (metres / radians). */
 const ARRIVE_DISTANCE = 0.05;
 const ARRIVE_ANGLE = 0.02;
-/**
- * A GOTO that has made no headway for this long is given up (ARRIVED with
- * `cancelled: true`). Without it a walk blocked by a cabinet in the way would
- * press the player against it forever, waiting for a key.
- */
-const STALL_SECONDS = 0.5;
-/** Less than this much progress per frame toward the target counts as none. */
-const STALL_EPSILON = 1e-4;
+/** An approach shorter than this is already there; don't bother gliding. */
+const APPROACH_MIN_DISTANCE = 1e-3;
 /** How often the pose is remembered while the player moves, in seconds. */
 const PERSIST_INTERVAL = 1;
 
-type GotoStep = 'walking' | 'arrived' | 'blocked';
+type GotoStep = 'walking' | 'arrived';
 
 /** Shortest signed angle from `a` to `b`, so a turn never takes the long way. */
 function angleDelta(a: number, b: number): number {
@@ -122,8 +125,7 @@ export class FirstPersonCameraSystem extends System {
         const comp = entity.get(FirstPersonCameraComponent);
         if (comp) {
           const rt = this.getRuntime(comp);
-          rt.goto = { x: e.x, z: e.z, yaw: e.yaw };
-          rt.stalled = 0;
+          rt.goto = this.planApproach(comp, rt, e);
         }
       }
     });
@@ -180,7 +182,7 @@ export class FirstPersonCameraSystem extends System {
   private getRuntime(comp: FirstPersonCameraComponent): FirstPersonCameraRuntime {
     let rt = this.runtime.get(comp);
     if (!rt) {
-      rt = { x: comp.startX, z: comp.startZ, yaw: comp.yaw, stalled: 0, persistAccum: 0 };
+      rt = { x: comp.startX, z: comp.startZ, yaw: comp.yaw, persistAccum: 0 };
       const saved = comp.persistKey ? readPose(poseStore(), comp.persistKey) : null;
       if (saved) {
         rt.x = saved.x;
@@ -229,70 +231,88 @@ export class FirstPersonCameraSystem extends System {
     if (comp.collide) {
       [nx, nz] = resolveWalk([rt.x, rt.z], [nx, nz], comp.radius, this.boxes());
     }
-    if (comp.bounds) {
-      nx = clamp(nx, comp.bounds.minX, comp.bounds.maxX);
-      nz = clamp(nz, comp.bounds.minZ, comp.bounds.maxZ);
-    }
     rt.x = nx;
     rt.z = nz;
+    this.clampToBounds(comp, rt);
+  }
+
+  /** Keep the camera inside the room rectangle. The outer belt, always on. */
+  private clampToBounds(comp: FirstPersonCameraComponent, rt: FirstPersonCameraRuntime): void {
+    if (!comp.bounds) return;
+    rt.x = clamp(rt.x, comp.bounds.minX, comp.bounds.maxX);
+    rt.z = clamp(rt.z, comp.bounds.minZ, comp.bounds.maxZ);
   }
 
   /**
-   * Advance one frame toward the active GOTO target: turn to face the walk
-   * direction, then walk. Clears `rt.goto` on arrival, or when the way is
-   * blocked and stays blocked.
+   * Lay out an approach: a fixed-length glide from where the camera is now to
+   * the spot in front of the machine, ending on the facing that looks at it.
    *
-   * Turn-then-walk (rather than sliding sideways) is deliberate — it's the same
-   * tank motion the keys produce, so an auto-walk looks like the player did it.
+   * Held as a path rather than re-solved each frame so the motion is one smooth
+   * move. Duration is fixed, not distance-based, which is what makes a click
+   * across the hall and a click at your elbow both feel like one gesture.
+   */
+  private planApproach(
+    comp: FirstPersonCameraComponent,
+    rt: FirstPersonCameraRuntime,
+    e: { x: number; z: number; yaw?: number },
+  ): FirstPersonCameraRuntime['goto'] {
+    const finalYaw = e.yaw ?? rt.yaw;
+    return {
+      fromX: rt.x,
+      fromZ: rt.z,
+      fromYaw: rt.yaw,
+      x: e.x,
+      z: e.z,
+      yaw: e.yaw,
+      // Take the short way round, so a machine behind you never spins the
+      // camera the long way through 300 degrees.
+      dYaw: angleDelta(rt.yaw, finalYaw),
+      t: 0,
+      duration: Math.max(1e-3, comp.approachDuration),
+    };
+  }
+
+  /**
+   * Advance an approach by `dt`.
+   *
+   * This is a GLIDE, and deliberately not the tank motion the keys produce.
+   * Turning to face the target, walking, then turning again to face the machine
+   * reads as three separate robotic moves and takes as long as the room is
+   * wide. Easing position and facing together over a fixed time is what the
+   * hand-written room did, and it is the thing that made clicking a cabinet
+   * feel like walking up to one.
+   *
+   * It is also on rails: obstacles are ignored for the duration. A glide that
+   * caught on a cabinet corner would stall in the open with no way to explain
+   * itself, and the destination is always a clear spot in front of a machine.
+   * The player still wins instantly — any movement key cancels.
    */
   private stepToward(
     comp: FirstPersonCameraComponent,
     rt: FirstPersonCameraRuntime,
     dt: number,
   ): GotoStep {
-    const target = rt.goto;
-    if (!target) return 'arrived';
-    const dx = target.x - rt.x;
-    const dz = target.z - rt.z;
-    const distance = Math.hypot(dx, dz);
+    const g = rt.goto;
+    if (!g) return 'arrived';
 
-    if (distance > ARRIVE_DISTANCE) {
-      // Face the walk direction first; only move once roughly aligned, so the
-      // camera doesn't crab sideways across the room.
-      const want = Math.atan2(dx, dz); // yaw 0 faces +Z
-      const turnStep = comp.turnSpeed * dt;
-      const dYaw = angleDelta(rt.yaw, want);
-      rt.yaw += Math.abs(dYaw) <= turnStep ? dYaw : Math.sign(dYaw) * turnStep;
+    g.t += dt;
+    const u = Math.min(1, g.t / g.duration);
+    // Ease out: quick off the mark, settling into the spot rather than
+    // stopping dead. Same curve the old room used.
+    const k = 1 - (1 - u) * (1 - u);
 
-      if (Math.abs(dYaw) < 0.35) {
-        const step = Math.min(comp.moveSpeed * dt, distance);
-        this.moveTo(comp, rt, rt.x + (dx / distance) * step, rt.z + (dz / distance) * step);
-        // A cabinet in the way: the sweep leaves us short of the step we
-        // asked for. Give the walk a moment (it may be sliding round), then
-        // give it up rather than lean on the furniture until a key is pressed.
-        const gained = distance - Math.hypot(target.x - rt.x, target.z - rt.z);
-        rt.stalled = gained > STALL_EPSILON ? 0 : rt.stalled + dt;
-        if (rt.stalled >= STALL_SECONDS) {
-          rt.goto = undefined;
-          rt.stalled = 0;
-          return 'blocked';
-        }
-      }
-      return 'walking';
-    }
+    rt.x = g.fromX + (g.x - g.fromX) * k;
+    rt.z = g.fromZ + (g.z - g.fromZ) * k;
+    rt.yaw = g.fromYaw + g.dYaw * k;
+    this.clampToBounds(comp, rt);
 
-    // Arrived on the floor plane. Settle the final facing, if one was asked for.
-    if (target.yaw !== undefined) {
-      const dYaw = angleDelta(rt.yaw, target.yaw);
-      if (Math.abs(dYaw) > ARRIVE_ANGLE) {
-        const turnStep = comp.turnSpeed * dt;
-        rt.yaw += Math.abs(dYaw) <= turnStep ? dYaw : Math.sign(dYaw) * turnStep;
-        return 'walking';
-      }
-      rt.yaw = target.yaw;
-    }
+    if (u < 1) return 'walking';
+
+    rt.x = g.x;
+    rt.z = g.z;
+    if (g.yaw !== undefined) rt.yaw = g.yaw;
+    this.clampToBounds(comp, rt);
     rt.goto = undefined;
-    rt.stalled = 0;
     return 'arrived';
   }
 
@@ -327,7 +347,13 @@ export class FirstPersonCameraSystem extends System {
     if (!r) return;
     this.frameBoxes = null;
 
-    const turn = this.turnRight - this.turnLeft;
+    // Both signs are set by the CANONICAL frame, not by taste. Yaw 0 looks +Z
+    // and forward(yaw) = (sin yaw, 0, cos yaw), so d/dyaw of forward at the
+    // spawn pose (yaw = π, looking -Z) is -X — increasing yaw swings the view
+    // toward -X, which the right-handed renderer draws on the LEFT. So turning
+    // RIGHT has to DECREASE yaw. Both of these read the other way round until
+    // 2026-09-02, carried over from a left-handed room where they were right.
+    const turn = this.turnLeft - this.turnRight;
     const fwd = this.forward - this.back;
     const strafe = this.strafeRight - this.strafeLeft;
 
@@ -347,7 +373,6 @@ export class FirstPersonCameraSystem extends System {
       if (rt.goto) {
         if (turn !== 0 || fwd !== 0 || strafe !== 0) {
           rt.goto = undefined;
-          rt.stalled = 0;
           this.eventBus.emit(FirstPersonCameraEvents.ARRIVED, {
             entityId: entity.id,
             x: rt.x,
@@ -363,7 +388,9 @@ export class FirstPersonCameraSystem extends System {
               x: rt.x,
               z: rt.z,
               yaw: rt.yaw,
-              cancelled: step === 'blocked',
+              // A glide always finishes. `cancelled` is now only ever true on
+              // the branch above, where a movement key took over.
+              cancelled: false,
             });
           }
           this._pos[0] = rt.x;
@@ -380,13 +407,17 @@ export class FirstPersonCameraSystem extends System {
       if (fwd !== 0 || strafe !== 0) {
         const sin = Math.sin(rt.yaw);
         const cos = Math.cos(rt.yaw);
-        // Facing +Z at yaw 0: forward = (sin, 0, cos), right = (cos, 0, -sin).
+        // forward = (sin, 0, cos). The player's right hand is forward × up,
+        // which in a right-handed frame is (-cos, 0, sin) — NOT (cos, 0, -sin),
+        // the left-handed answer this used to carry. At the spawn pose that is
+        // the difference between strafing toward +X (what you see on your
+        // right) and toward -X.
         const step = comp.moveSpeed * dt;
         this.moveTo(
           comp,
           rt,
-          rt.x + (sin * fwd + cos * strafe) * step,
-          rt.z + (cos * fwd - sin * strafe) * step,
+          rt.x + (sin * fwd - cos * strafe) * step,
+          rt.z + (cos * fwd + sin * strafe) * step,
         );
       }
 

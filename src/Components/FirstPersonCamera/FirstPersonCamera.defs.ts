@@ -29,6 +29,12 @@ export interface FirstPersonCameraInput {
   moveSpeed?: number;
   /** Turn speed, radians / second (A / D). */
   turnSpeed?: number;
+  /**
+   * Seconds an auto-approach takes — clicking a machine to walk over to it.
+   * Fixed, not distance-based: a click across the hall and a click at your
+   * elbow should both read as one gesture. 0.7 is the hand-written room's.
+   */
+  approachDuration?: number;
   /** Vertical field of view, in radians. */
   fov?: number;
   /** Near clip-plane distance, metres. */
@@ -68,6 +74,7 @@ export class FirstPersonCameraComponent extends Component {
   yaw: number;
   moveSpeed: number;
   turnSpeed: number;
+  approachDuration: number;
   fov: number;
   near: number;
   far: number;
@@ -84,6 +91,7 @@ export class FirstPersonCameraComponent extends Component {
     this.yaw = data.yaw ?? 0;
     this.moveSpeed = data.moveSpeed ?? 3;
     this.turnSpeed = data.turnSpeed ?? 1.8;
+    this.approachDuration = data.approachDuration ?? 0.7;
     this.fov = data.fov ?? 1.1;
     this.near = data.near ?? 0.1;
     this.far = data.far ?? 200;
@@ -100,6 +108,7 @@ export class FirstPersonCameraComponent extends Component {
       yaw: this.yaw,
       moveSpeed: this.moveSpeed,
       turnSpeed: this.turnSpeed,
+      approachDuration: this.approachDuration,
       fov: this.fov,
       near: this.near,
       far: this.far,

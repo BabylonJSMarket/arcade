@@ -141,16 +141,24 @@ export class CabinetLinkSystem extends System {
       return;
     }
 
-    // A first click only counts when it actually hits an interactive cabinet —
-    // clicking the floor does nothing and arms nothing.
+    // A first click on ANY machine walks you to it. Clicking the floor does
+    // nothing and arms nothing.
     if (!entity) return;
     this.approach(entity, hit!, now);
   }
 
-  /** Walk the player to `entity` and arm it as the double-click candidate. */
+  /**
+   * Walk the player to `entity` and arm it as the double-click candidate.
+   *
+   * Deliberately NOT gated on `interactive`. Walking up to a machine to look at
+   * its art is the thing you do in an arcade, and most of the machines in a
+   * room are scenery — gating the walk made nineteen of twenty-one cabinets
+   * ignore the click entirely, which reads as a broken page rather than as a
+   * cabinet with no game behind it. `interactive` gates the LAUNCH.
+   */
   private approach(entity: Entity, hit: HitPoint, now: number): void {
     const comp = entity.get(CabinetLinkComponent);
-    if (!comp?.interactive) return;
+    if (!comp) return;
     this.lastClick = { entityId: entity.id, at: now, hit: { x: hit.x, y: hit.y, z: hit.z } };
     const spot = comp.approachFrom(this.cabinetPosition(entity, hit));
     this.eventBus.emit(FirstPersonCameraEvents.GOTO, spot);

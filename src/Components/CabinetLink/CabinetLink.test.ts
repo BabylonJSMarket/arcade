@@ -397,16 +397,25 @@ describe('CabinetLinkSystem', () => {
     });
   });
 
-  it('a non-interactive cabinet is scenery', () => {
+  it('a non-interactive cabinet is scenery you can still walk up to', () => {
+    // `interactive: false` means "no game behind it", not "ignores you". Most
+    // machines in a room are scenery, and a click that does nothing at all
+    // reads as a broken page rather than as an empty cabinet.
     const e = world.createEntity();
     e.add(new MeshComponent({ src: '/cab.glb', position: [0, 0, -4], autoLoad: false }));
     e.add(new CabinetLinkComponent({ game: 'frogger', interactive: false }));
     world.update(1 / 60);
     const goto = vi.fn();
+    const launch = vi.fn();
     eventBus.on(FirstPersonCameraEvents.GOTO, goto);
+    eventBus.on(CabinetLinkEvents.LAUNCH, launch);
     pickReturns(e.id);
+
     system.handleClick(1, 1);
-    expect(goto).not.toHaveBeenCalled();
+    expect(goto).toHaveBeenCalledTimes(1); // walks you over
+
+    system.handleClick(1, 1); // and the confirming click does nothing
+    expect(launch).not.toHaveBeenCalled();
   });
 });
 

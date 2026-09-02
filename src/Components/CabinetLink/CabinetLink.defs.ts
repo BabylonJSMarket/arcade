@@ -34,7 +34,11 @@ export interface CabinetLinkInput {
    * match the Mesh's rotation Y. 0 = facing +Z.
    */
   facing?: number;
-  /** Set false to make a cabinet purely scenery. */
+  /**
+   * Whether a double-click LAUNCHES this machine. False makes it scenery you
+   * can still walk up to and look at — clicking always walks you over, on every
+   * machine, which is most of what you do in an arcade.
+   */
   interactive?: boolean;
   /**
    * How close the PLAYER must already be (XZ metres from the cabinet) for the
