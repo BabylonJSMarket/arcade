@@ -141,6 +141,26 @@ describe('PoolSystem', () => {
     expect([mp.position[0], mp.position[1], mp.position[2]]).toEqual([0, 0, 0])
   })
 
+  it('leaves no stray blueprint primitive behind at the origin', () => {
+    // The blueprint is an ordinary entity, so MeshPrimitiveSystem will happily
+    // build it a mesh. Consuming the blueprint has to blind that mesh, or the
+    // scene keeps a spare sphere parked at 0,0,0 forever.
+    const { world, renderer } = setup({ size: 2 }, { tags: ['bullet'] })
+    world.update(1 / 60)
+    world.update(1 / 60)
+
+    // Whichever order the two systems ran in, the blueprint's own mesh must end
+    // up hidden: painted false at creation if Pool got there first, hidden on
+    // the removal flush if MeshPrimitive did.
+    const isBlueprintMesh = (h: unknown) =>
+      (h as { __mockHandle?: string })?.__mockHandle === 'mesh:Bullets'
+    const painted = renderer.calls
+      .filter((c) => c.method === 'setMeshVisible' && isBlueprintMesh(c.args[0]))
+      .pop()
+    expect(painted?.args[1]).toBe(false)
+    expect(world.getEntity('Bullets')).toBeUndefined()
+  })
+
   // A blueprint that draws a GLB has two bodies: the model you see and the
   // MeshPrimitive underneath it doing collision. Drawing both put a red sphere
   // inside every robot in TwinStickArena — this is the demotion EntityPool did

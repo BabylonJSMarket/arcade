@@ -156,6 +156,17 @@ export class PoolSystem extends System {
     // The blueprint has done its job (its component keys registered their
     // Systems at scene-load; its config seeded the slots). Consume it so it
     // isn't a stray live instance.
+    //
+    // Blind it first. PoolSystem runs early in the frame, so the blueprint is
+    // usually removed BEFORE MeshPrimitiveSystem has built its mesh — and that
+    // system's removal hook returns early when there's no handle yet, so the
+    // mesh gets created afterwards with nobody left to own or hide it. The
+    // result is a stray primitive parked at the world origin for the life of
+    // the scene: the twin-stick arena had a bullet-sized sphere sitting under
+    // the player's feet. Marking the component invisible works in both
+    // orderings, since the create path paints `comp.visible` on the new mesh.
+    const bpMesh = blueprint.get(MeshPrimitiveComponent)
+    if (bpMesh) bpMesh.visible = false
     w.removeEntity(blueprint)
   }
 
