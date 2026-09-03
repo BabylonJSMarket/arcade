@@ -15,6 +15,9 @@ import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
 import { MeshPrimitiveSystem } from '../MeshPrimitive/MeshPrimitive';
 import { HealthComponent } from '../Health/Health.defs';
 import { HealthSystem } from '../Health/Health';
+import { ShadowComponent } from '../Shadow/Shadow.defs';
+import { ShadowSystem } from '../Shadow/Shadow';
+import { MeshComponent } from '../Mesh/Mesh.defs';
 import { PoolComponent, PoolSystem } from './Pool'
 
 function setup(
@@ -136,6 +139,54 @@ describe('PoolSystem', () => {
     const ent = world.acquire('Bullets', {}) // no x/y/z
     const mp = ent!.get(MeshPrimitiveComponent)!
     expect([mp.position[0], mp.position[1], mp.position[2]]).toEqual([0, 0, 0])
+  })
+
+  // A blueprint that draws a GLB has two bodies: the model you see and the
+  // MeshPrimitive underneath it doing collision. Drawing both put a red sphere
+  // inside every robot in TwinStickArena — this is the demotion EntityPool did
+  // for its `components` map, carried over to the blueprint form.
+  describe('a blueprint carrying a visual Mesh', () => {
+    function withMesh(mesh?: Record<string, unknown>) {
+      const eventBus = new EventBus()
+      const sceneLoader = new SceneLoader(eventBus)
+      sceneLoader.registerComponent('MeshPrimitive', MeshPrimitiveComponent, MeshPrimitiveSystem)
+      sceneLoader.registerComponent('Shadow', ShadowComponent, ShadowSystem)
+      sceneLoader.registerComponent('Mesh', MeshComponent)
+      sceneLoader.registerComponent('Pool', PoolComponent, PoolSystem)
+      const world = new World({ eventBus, renderer: new MockRendererAdapter(), sceneLoader, detectRaces: false })
+
+      const bp = world.createEntity('Enemies')
+      bp.add(new PoolComponent({ size: 2, name: 'enemy' }))
+      bp.add(new MeshPrimitiveComponent({ primitive: 'sphere', diameter: 1.2 }))
+      bp.add(new ShadowComponent({ castShadow: true, receiveShadow: false }))
+      if (mesh) bp.add(new MeshComponent(mesh))
+      for (const s of [new MeshPrimitiveSystem(eventBus), new ShadowSystem(eventBus), new PoolSystem(eventBus)]) {
+        world.addSystem(s)
+      }
+      world.update(1 / 60)
+      return world
+    }
+
+    it('hides the MeshPrimitive proxy and moves the shadow onto the model', () => {
+      const slot = withMesh({ src: '/bot.glb', instanced: true, follow: true })!.acquire('enemy')!
+      expect(slot.get(MeshPrimitiveComponent)!.visible).toBe(false)
+      expect(slot.get(ShadowComponent)!.castShadow).toBe(false)
+    })
+
+    it('leaves a Mesh-less blueprint drawing its primitive as before', () => {
+      const slot = withMesh()!.acquire('enemy')!
+      expect(slot.get(MeshPrimitiveComponent)!.visible).toBe(true)
+      expect(slot.get(ShadowComponent)!.castShadow).toBe(true)
+    })
+
+    it('keeps the demotion across a park + reacquire, not just the first build', () => {
+      const world = withMesh({ src: '/bot.glb', instanced: true, follow: true })
+      const first = world.acquire('enemy')!
+      first.get(MeshPrimitiveComponent)!.visible = true // a live system flips it back on
+      world.removeEntity(first.id)
+      const again = world.acquire('enemy')!
+      expect(again.get(MeshPrimitiveComponent)!.visible).toBe(false)
+    })
   })
 
   it('drives spawn/release through the pool.spawn / pool.release events too', () => {

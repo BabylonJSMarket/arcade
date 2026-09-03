@@ -27,6 +27,8 @@ import { PoolEvents, PoolInputEvents } from '../../events'
 import { System } from '@babylonjsmarket/ecs'
 import type { Entity, World, Component } from '@babylonjsmarket/ecs'
 import { MeshPrimitiveComponent } from '../MeshPrimitive/MeshPrimitive.defs';
+import { MeshComponent } from '../Mesh/Mesh.defs';
+import { ShadowComponent } from '../Shadow/Shadow.defs';
 import { PoolComponent } from './Pool.defs'
 
 export { PoolComponent, type PoolInput } from './Pool.defs'
@@ -49,6 +51,10 @@ export interface PoolSpawnEvent {
 
 export interface PoolReleaseEvent {
   entityId: string
+}
+
+function ctorOf(c: Component): new (data?: unknown) => Component {
+  return c.constructor as new (data?: unknown) => Component
 }
 
 function serializeOf(c: Component): Record<string, unknown> {
@@ -100,13 +106,20 @@ export class PoolSystem extends System {
     const tags = blueprint.getTags()
     // Capture the template: every component EXCEPT the Pool marker, as
     // { class, config }. `constructor` gives the class, `serialize()` the config.
-    const spec: SlotPart[] = blueprint
-      .getComponents()
-      .filter((c) => !(c instanceof PoolComponent))
-      .map((c) => ({
-        Ctor: c.constructor as new (data?: unknown) => Component,
-        data: serializeOf(c),
-      }))
+    const parts = blueprint.getComponents().filter((c) => !(c instanceof PoolComponent))
+    // When the blueprint declares a visual `Mesh`, the `MeshPrimitive` is the
+    // collision proxy underneath it, not a second body to draw: hide it, and
+    // hand the shadow to the model (an invisible caster otherwise drops a
+    // capsule-shaped shadow beside the one the model already casts). Demoted
+    // ONCE here so `build` and `reset` agree — the same rule EntityPool applied
+    // to its declarative `components` map, which this blueprint form replaced.
+    const hasVisual = parts.some((c) => c instanceof MeshComponent)
+    const spec: SlotPart[] = parts.map((c) => {
+      const data = serializeOf(c)
+      if (hasVisual && c instanceof MeshPrimitiveComponent) return { Ctor: ctorOf(c), data: { ...data, visible: false } }
+      if (hasVisual && c instanceof ShadowComponent) return { Ctor: ctorOf(c), data: { ...data, castShadow: false } }
+      return { Ctor: ctorOf(c), data }
+    })
 
     w.registerPool(name, {
       size,
