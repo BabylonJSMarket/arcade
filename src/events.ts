@@ -797,6 +797,22 @@ export const RoundResetInputEvents = {
   PLAYER_DIED: 'game.player.died',
 } as const;
 
+// CameraShakeEvents — trauma-based camera shake. The IMPULSE input is what any
+// component with something worth feeling (an explosion, a hit, a hard landing)
+// emits; CameraShake adds it to its trauma and decays it. The name lives here so
+// an emitter never imports CameraShake's file to shake the camera
+// (no-cross-component-event-import) — the whole point of the component is that
+// anything can drive it.
+export const CameraShakeInputEvents = {
+  /** Add trauma, clamped into [0, 1] after the add. payload: { impulse }. */
+  IMPULSE: 'cameraShake.impulse',
+} as const;
+
+export const CameraShakeEvents = {
+  /** Trauma moved. payload: { entityId, trauma }. */
+  TRAUMA_CHANGED: 'cameraShake.traumaChanged',
+} as const;
+
 // SpaceShooterHealthEvents — the ship-death protocol for the space-shooter
 // subgenre (6-DOF dogfighters like the Spaceshooter set). Emitted by the shared
 // `destroyShip` kill path in the premium SpaceShooterHealth component; listened
