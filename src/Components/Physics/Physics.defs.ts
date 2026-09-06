@@ -44,7 +44,12 @@ export interface PhysicsSetCollidersVisibleEvent {
 // Component
 // ============================================
 
-export type PhysicsShapeTypeName = 'sphere' | 'box' | 'capsule';
+/**
+ * `'mesh'` collides with the mesh's own triangles — static or kinematic bodies
+ * only; a dynamic body asking for it gets its bounding box. The shape for a
+ * procedural rock, a level piece, anything whose silhouette a box lies about.
+ */
+export type PhysicsShapeTypeName = 'sphere' | 'box' | 'capsule' | 'mesh';
 
 export type PhysicsMotionTypeName = 'dynamic' | 'static' | 'kinematic';
 

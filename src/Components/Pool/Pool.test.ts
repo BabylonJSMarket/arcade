@@ -149,15 +149,21 @@ describe('PoolSystem', () => {
     world.update(1 / 60)
     world.update(1 / 60)
 
-    // Whichever order the two systems ran in, the blueprint's own mesh must end
-    // up hidden: painted false at creation if Pool got there first, hidden on
-    // the removal flush if MeshPrimitive did.
+    // Whichever order the two systems ran in, nothing of the blueprint's own
+    // mesh may survive: never minted at all (the World no longer hands a
+    // mid-destroy entity back to MeshPrimitiveSystem, which is how the stray
+    // used to get built), or painted false at creation if Pool got there
+    // first, or disposed on the removal flush if MeshPrimitive did.
     const isBlueprintMesh = (h: unknown) =>
       (h as { __mockHandle?: string })?.__mockHandle === 'mesh:Bullets'
-    const painted = renderer.calls
-      .filter((c) => c.method === 'setMeshVisible' && isBlueprintMesh(c.args[0]))
-      .pop()
-    expect(painted?.args[1]).toBe(false)
+    const created = renderer.calls.filter((c) => c.method === 'createMesh' && c.args[0] === 'Bullets')
+    if (created.length > 0) {
+      const painted = renderer.calls
+        .filter((c) => c.method === 'setMeshVisible' && isBlueprintMesh(c.args[0]))
+        .pop()
+      const disposed = renderer.calls.some((c) => c.method === 'disposeMesh' && isBlueprintMesh(c.args[0]))
+      expect(disposed || painted?.args[1] === false).toBe(true)
+    }
     expect(world.getEntity('Bullets')).toBeUndefined()
   })
 

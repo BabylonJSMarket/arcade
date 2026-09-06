@@ -2,7 +2,8 @@
  * Physics.ts — renderer-agnostic System.
  *
  * Physics state orchestration lives in Physics.core.ts. This System is a thin
- * driver: it watches for entities with MeshPrimitive + PhysicsComponent, asks
+ * driver: it watches for entities carrying PhysicsComponent (whatever minted
+ * their mesh — MeshPrimitive, Renderable, a GLB), asks
  * the adapter to create a rigid body (`world.renderer.physicsCreateBody`),
  * forwards pause/resume events, and steps physics each frame via the adapter
  * (`world.renderer.physicsStep`). Under Babylon the adapter delegates to
@@ -100,12 +101,16 @@ export class PhysicsSystem extends System {
     if (this.created.has(entity.id)) return;
     const comp = entity.get(PhysicsComponent);
     if (!comp || !comp.autoCreate) return;
-    const mesh = entity.get(MeshPrimitiveComponent);
-    if (!mesh?.handle) return; // mesh not ready yet
+    // A MeshPrimitive sibling that has not minted yet: wait for its handle.
+    // Any other mesh source — a Renderable, a GLB Mesh, a procedural rock — is
+    // answered by the adapter itself: physicsCreateBody reports false while
+    // there is no mesh under this entity's id, and this runs again next tick.
+    const prim = entity.get(MeshPrimitiveComponent);
+    if (prim && !prim.handle) return;
 
     const r = this.world?.renderer;
     if (!r) return;
-    r.physicsCreateBody(entity.id, comp.toBodyOpts());
+    if (!r.physicsCreateBody(entity.id, comp.toBodyOpts())) return;
     comp.isCreated = true;
     this.created.add(entity.id);
     this.eventBus.emit(PhysicsEvents.BODY_CREATED, {

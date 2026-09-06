@@ -292,3 +292,55 @@ describe('PhysicsSystem', () => {
     expect(renderer.calls.filter((c) => c.method === 'physicsCreateBody').length).toBe(1);
   });
 });
+
+/**
+ * The body is not MeshPrimitive's to grant. A Renderable, a GLB Mesh, a
+ * procedural rock — anything that mints a mesh under the entity's id — can
+ * carry a body; the adapter says whether the mesh is there yet, and the System
+ * asks again next tick until it is.
+ */
+describe('PhysicsSystem body creation for meshes MeshPrimitive did not mint', () => {
+  function build() {
+    const eventBus = new EventBus();
+    const renderer = new MockRendererAdapter();
+    const world = new World({ eventBus, renderer, detectRaces: false });
+    world.addSystem(new PhysicsSystem(eventBus));
+    world.initialize();
+    return { eventBus, renderer, world };
+  }
+
+  it('creates a body for an entity with no MeshPrimitive once the adapter has its mesh', () => {
+    const { eventBus, renderer, world } = build();
+    const created: string[] = [];
+    eventBus.on(PhysicsEvents.BODY_CREATED, (e: { entityId: string }) => created.push(e.entityId));
+    const e = world.createEntity('rock');
+    e.add(new PhysicsComponent({ shapeType: 'mesh', motionType: 'kinematic', mass: 0 }));
+    world.update(1 / 60);
+    const calls = renderer.calls.filter((c) => c.method === 'physicsCreateBody');
+    expect(calls).toHaveLength(1);
+    expect((calls[0].args[1] as { shapeType: string }).shapeType).toBe('mesh');
+    expect(created).toEqual(['rock']);
+    expect(e.get(PhysicsComponent)!.isCreated).toBe(true);
+  });
+
+  it('keeps asking while the adapter reports no mesh under the id, and confirms once it does', () => {
+    const { eventBus, renderer, world } = build();
+    const created: string[] = [];
+    eventBus.on(PhysicsEvents.BODY_CREATED, (e: { entityId: string }) => created.push(e.entityId));
+    // No mesh yet for the whole first tick (the System asks on add AND on update).
+    const spy = vi.spyOn(renderer, 'physicsCreateBody').mockReturnValue(false);
+    const e = world.createEntity('late-rock');
+    e.add(new PhysicsComponent({ shapeType: 'mesh', motionType: 'kinematic', mass: 0 }));
+    world.update(1 / 60);
+    expect(created).toEqual([]);
+    expect(e.get(PhysicsComponent)!.isCreated).toBe(false);
+    expect(spy.mock.calls.length).toBeGreaterThan(0);
+    // The mesh lands: the next tick confirms, and after that nobody asks again.
+    spy.mockReturnValue(true);
+    world.update(1 / 60);
+    expect(created).toEqual(['late-rock']);
+    const asked = spy.mock.calls.length;
+    world.update(1 / 60);
+    expect(spy.mock.calls.length).toBe(asked);
+  });
+});
