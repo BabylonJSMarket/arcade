@@ -155,3 +155,4 @@ export class PhysicsSystem extends System {
 // The definitions live in Physics.defs.ts; re-exported so existing importers
 // keep working. New code should import them from './Physics.defs' directly.
 export { PhysicsComponent, type PhysicsInput, type PhysicsMotionTypeName, type PhysicsSetCollidersVisibleEvent, type PhysicsSetGravityEvent, type PhysicsSetRestitutionEvent, type PhysicsSetTimeStepEvent, type PhysicsSetVelocityEvent, type PhysicsShapeTypeName } from './Physics.defs';
+export { PHYSICS_EXTENSION, type PhysicsExtension, type PhysicsQueryHit } from './Physics.defs';

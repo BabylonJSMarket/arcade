@@ -32,6 +32,10 @@ export {
   type BabylonAmbientOcclusionHost,
 } from './Components/AmbientOcclusion/adapter/AmbientOcclusion.babylon';
 export { registerBabylonToneMappingExtension } from './Components/ToneMapping/ToneMapping.babylon';
+// The Physics component's own engine plugin: scene casts, the box-shape
+// hot-swap, angular velocity, pre-step ownership. Register it at bootstrap and
+// any component that needs a cast finds it under PHYSICS_EXTENSION.
+export { registerPhysicsExtension } from './Components/Physics/adapter/register';
 export {
   registerBabylonNeonTextExtension,
   type NeonTextHost,

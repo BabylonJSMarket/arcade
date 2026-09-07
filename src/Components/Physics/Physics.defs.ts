@@ -128,3 +128,69 @@ export class PhysicsComponent extends Component {
     };
   }
 }
+
+// ============================================
+// Adapter plugin
+// ============================================
+
+/**
+ * Name every component that needs a physics capability beyond create/step/
+ * destroy looks the plugin up under.
+ *
+ * These six calls used to sit on the shared RendererAdapter. Each had exactly
+ * one caller — Asteroid cast rays, Flipper reshaped a box, Plunger spun a body
+ * and took its pre-step away — so each was a six-file change across four
+ * adapters to serve one premium component, and Havok's cast plumbing lived in
+ * the free `ecs` package forever.
+ *
+ * They belong together, and they belong HERE. Physics is the free core
+ * component that already owns the body lifecycle; a raycast is not Asteroid's
+ * private trick, it is the thing anyone with a body eventually wants. Putting
+ * them behind one extension keeps a second component from writing a second
+ * raycast, without the shared interface growing a method per caller.
+ */
+export const PHYSICS_EXTENSION = 'physicsQueriesAndBodyOps'
+
+/** Where a cast landed. `meshId` is the body's mesh, not the caster's. */
+export interface PhysicsQueryHit {
+  meshId: string
+  point: [number, number, number]
+  normal: [number, number, number]
+  /** World units from the cast's start to the contact. */
+  distance: number
+}
+
+/** What the engine plugin has to be able to do. */
+export interface PhysicsExtension {
+  /**
+   * Does this engine answer scene queries at all, right now?
+   *
+   * Both halves matter. Three's Rapier path and Lite have no casts to give, and
+   * even under Havok the WASM lands a few frames after the scene does — so a
+   * caller polls this and keeps its own geometry fallback until it turns true,
+   * rather than reading a null hit as "nothing there".
+   */
+  canQuery(): boolean
+  /** Nearest body along `from → to`, or null. The thin-projectile test. */
+  raycast(from: readonly number[], to: readonly number[]): PhysicsQueryHit | null
+  /**
+   * A sphere of `radius` swept along `from → to`: the nearest body it touches,
+   * or null. The moving-hull test — a ship is a sphere, a rock is a mesh, and
+   * the sweep catches a contact that happened between two frames.
+   */
+  sphereCast(from: readonly number[], to: readonly number[], radius: number): PhysicsQueryHit | null
+  /**
+   * Hot-swap a body's collider for a box of `halfExtents`, keeping its motion
+   * type, mass, restitution, friction, pose and velocity. For a collider that
+   * has to track a mesh whose geometry changes under it — a flipper bat
+   * swinging through its own swept volume.
+   */
+  resizeBoxBody(meshId: string, halfExtents: readonly number[]): void
+  /** Spin a body directly, in radians/second about each world axis. */
+  setBodyAngularVelocity(meshId: string, vx: number, vy: number, vz: number): void
+  /**
+   * `true` → the engine reads the mesh transform into the body each step;
+   * `false` → physics owns the transform, so a teleport is not overwritten.
+   */
+  setBodyDrivenByMesh(meshId: string, drivenByMesh: boolean): void
+}
