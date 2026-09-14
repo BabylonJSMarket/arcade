@@ -30,9 +30,12 @@ The fast path: describe your scene in JSON, hand it to `ArcadeGame`.
 
 ```ts
 import { ArcadeGame } from '@babylonjsmarket/arcade';
+import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon';
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
 
-const game = new ArcadeGame(new BabylonAdapter());
+const adapter = new BabylonAdapter();
+registerArcadePlugins(adapter); // engine code for ToneMapping, AmbientOcclusion, NeonSign, Physics
+const game = new ArcadeGame(adapter);
 await game.init(canvas);
 await game.loadSceneFromUrl('/scenes/level1.json');
 game.start();

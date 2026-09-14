@@ -28,17 +28,22 @@ npm install solid-js
 
 ```ts
 import { ArcadeGame } from '@babylonjsmarket/arcade';
+import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon';
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
-const game = new ArcadeGame(new BabylonAdapter());
+const adapter = new BabylonAdapter();
+registerArcadePlugins(adapter);
+const game = new ArcadeGame(adapter);
 
 await game.init(canvas);
 await game.loadSceneFromUrl('/scenes/level1.json');
 game.start();
 ```
 
-That's a fully wired game. The next section ([Scene JSON](./scene-json)) covers what `level1.json` should look like. The section after ([ArcadeGame](./arcade-game)) is a code walkthrough of the wrapper class itself — what it does, what it doesn't.
+That's a fully wired game. `registerArcadePlugins` installs the engine code a few built-in components need (ToneMapping, AmbientOcclusion, NeonSign, Physics casts). Leave it out and those components load but do nothing. A project made with `bjs create` already has this call in `src/main.ts`, along with a loop that installs the `adapter/register.ts` of every component you `bjs download`.
+
+The next section ([Scene JSON](./scene-json)) covers what `level1.json` should look like. The section after ([ArcadeGame](./arcade-game)) is a code walkthrough of the wrapper class itself — what it does, what it doesn't.
 
 ## Or wire systems by hand
 
