@@ -1,6 +1,6 @@
 {
   "name": "ToneMapping",
-  "description": "Scene-wide filmic grade — ACES tone mapping plus an exposure/contrast lift, the look the marketplace figure-render pipeline uses. Pair with EnvironmentTexture for image-based lighting. Ships a Babylon adapter plugin: call registerBabylonToneMappingExtension(adapter) once at bootstrap.",
+  "description": "Scene-wide filmic grade — ACES tone mapping plus an exposure/contrast lift, the look the marketplace figure-render pipeline uses. Pair with EnvironmentTexture for image-based lighting. Ships a Babylon adapter plugin (adapter/register.ts), installed by registerArcadePlugins(adapter) from @babylonjsmarket/arcade/babylon — a scaffolded project already makes that call.",
   "category": "rendering",
   "components": [
     "ToneMappingComponent"

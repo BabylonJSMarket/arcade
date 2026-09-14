@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   ToneMappingComponent,
   ToneMappingSystem,
@@ -114,6 +114,7 @@ describe('registerBabylonToneMappingExtension — drives scene image processing'
     };
     const captured: { impl?: ToneMappingExtension } = {};
     const host = {
+      kind: 'babylon',
       registerExtension: (_name: string, i: object) => {
         captured.impl = i as ToneMappingExtension;
       },
@@ -145,5 +146,12 @@ describe('registerBabylonToneMappingExtension — drives scene image processing'
     captured.impl!.apply({ mode: 'aces', exposure: 1.05, contrast: 1.05 });
     captured.impl!.clear();
     expect(scene.imageProcessingConfiguration.toneMappingEnabled).toBe(false);
+  });
+
+  it('registers nothing on a non-Babylon host, so a plugin glob can call it on any engine', () => {
+    const registerExtension = vi.fn();
+    registerBabylonToneMappingExtension({ kind: 'three', registerExtension });
+    registerBabylonToneMappingExtension({ kind: 'babylon-lite', registerExtension });
+    expect(registerExtension).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,7 @@
  * ToneMapping.ts — renderer-agnostic System.
  *
  * Applies the scene-wide tone-mapping grade once per component through the
- * `toneMapping` adapter plugin (ToneMapping.babylon.ts), and clears it on
+ * `toneMapping` adapter plugin (adapter/ToneMapping.babylon.ts), and clears it on
  * removal. If no plugin is registered (headless tests, an un-bootstrapped
  * renderer) the apply is a safe no-op.
  */
@@ -26,7 +26,7 @@ export {
   type ToneMappingSettings,
   type ToneMappingExtension,
 };
-export { registerBabylonToneMappingExtension } from './ToneMapping.babylon';
+export { registerBabylonToneMappingExtension } from './adapter/register';
 
 interface ToneMappingRuntime {
   applied: boolean;

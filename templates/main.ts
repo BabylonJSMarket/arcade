@@ -7,8 +7,8 @@
 // scene is loaded instead of the default. This is how `bjs download <asset>`
 // previews a downloaded asset — it drops public/<key>/scene.json and opens
 // /?scene=/<key>/scene.json. With no param, the default scene loads.
-import { ArcadeGame, registerBabylonToneMappingExtension } from '@babylonjsmarket/arcade'
-import { registerBabylonAmbientOcclusionExtension, registerBabylonNeonTextExtension } from '@babylonjsmarket/arcade/babylon'
+import { ArcadeGame } from '@babylonjsmarket/arcade'
+import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon'
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'
 import { mountArcadeViz, mountControlsHud, hintsFromSceneTitle } from '@babylonjsmarket/arcade/viz'
 import { mountViz } from '@babylonjsmarket/viz/solid'
@@ -34,15 +34,12 @@ const sceneUrl = new URLSearchParams(window.location.search).get('scene')
 
 const adapter = new BabylonAdapter()
 
-// Built-in arcade adapter plugins: the ACES tone-mapping grade that
-// EnvironmentTexture{preset:'studio'} + ToneMapping rely on for the marketplace
-// figure look, the SSAO2 contact-shadow pass behind AmbientOcclusion, and the
-// slab-geometry text extrusion behind NeonSign (without it a sign quietly draws
-// a flat label quad instead). Free arcade components aren't downloaded, so the
-// auto-wire below won't catch these — register them explicitly.
-registerBabylonToneMappingExtension(adapter)
-registerBabylonAmbientOcclusionExtension(adapter)
-registerBabylonNeonTextExtension(adapter)
+// Built-in arcade adapter plugins: one call installs the ACES grade behind
+// ToneMapping, the SSAO2 pass behind AmbientOcclusion, the extruded text behind
+// NeonSign and the Havok casts behind Physics. The components ship inside the
+// arcade package, so the auto-wire below can't see them. When arcade adds a
+// built-in plugin, this call picks it up with no edit here.
+registerArcadePlugins(adapter)
 
 // Auto-wire adapter plugins shipped by downloaded components. A component that
 // needs an engine feature the adapter doesn't expose — AnimateMeshy's runtime

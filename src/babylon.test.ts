@@ -36,6 +36,7 @@ import * as main from './index';
 import { AMBIENT_OCCLUSION_EXTENSION } from './Components/AmbientOcclusion/AmbientOcclusion.core';
 import { NEON_TEXT_EXTENSION } from './Components/NeonSign/NeonSign.core';
 import { TONE_MAPPING_EXTENSION } from './Components/ToneMapping/ToneMapping.defs';
+import { PHYSICS_EXTENSION } from './Components/Physics/Physics.defs';
 
 describe('@babylonjsmarket/arcade/babylon — the Babylon-only plugin entry', () => {
   it('exposes the register functions a Babylon host needs', () => {
@@ -96,5 +97,25 @@ describe('@babylonjsmarket/arcade/babylon — the Babylon-only plugin entry', ()
     const three = { kind: 'three', registerExtension: vi.fn() };
     babylon.registerBabylonAmbientOcclusionExtension(three);
     expect(three.registerExtension).not.toHaveBeenCalled();
+  });
+
+  it('registerArcadePlugins installs every built-in plugin in one call', () => {
+    const registered = new Map<string, object>();
+    const host = {
+      kind: 'babylon' as const,
+      registerExtension: (name: string, impl: object) => void registered.set(name, impl),
+      getScene: () => null,
+    };
+    babylon.registerArcadePlugins(host);
+    expect([...registered.keys()].sort()).toEqual(
+      [TONE_MAPPING_EXTENSION, AMBIENT_OCCLUSION_EXTENSION, NEON_TEXT_EXTENSION, PHYSICS_EXTENSION].sort(),
+    );
+  });
+
+  it('registerArcadePlugins skips the Babylon-only plugins on a Three host', () => {
+    const registered: string[] = [];
+    babylon.registerArcadePlugins({ kind: 'three', registerExtension: (name) => void registered.push(name) });
+    // Physics is the one built-in with a Three plugin.
+    expect(registered).toEqual([PHYSICS_EXTENSION]);
   });
 });

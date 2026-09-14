@@ -276,13 +276,8 @@ describe("arcade CLI", () => {
   // The Babylon-only adapter plugins the starter main.ts registers. The other
   // renderers must lose every trace of them — a surviving import of
   // @babylonjsmarket/arcade/babylon drags @babylonjs/core into a Three project.
-  const BABYLON_PLUGINS = [
-    "registerBabylonToneMappingExtension",
-    "registerBabylonAmbientOcclusionExtension",
-    "registerBabylonNeonTextExtension",
-  ];
   function expectNoBabylonPlugins(main: string): void {
-    expect(main).not.toMatch(/registerBabylon\w+/);
+    expect(main).not.toMatch(/registerBabylon\w+|registerArcadePlugins/);
     expect(main).not.toContain("@babylonjsmarket/arcade/babylon");
     expect(main).not.toContain("Built-in arcade adapter plugins");
     // The strip closes up cleanly: adapter construction, one blank line, then
@@ -303,12 +298,11 @@ describe("arcade CLI", () => {
       const main = fs.readFileSync(path.join(tmpDir, "d", "src", "main.ts"), "utf-8");
       expect(main).toContain("new BabylonAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/babylon'");
-      // The Babylon-only plugins the free components need are registered
-      // explicitly (the auto-wire only sees downloaded components). Without
-      // the neon-text one a scaffolded room's NeonSigns fall back to flat quads.
-      for (const plugin of BABYLON_PLUGINS) {
-        expect(main).toContain(`${plugin}(adapter)`);
-      }
+      // The built-in plugins the free components need go in with one call
+      // (the auto-wire only sees downloaded components). Without it a
+      // scaffolded room's NeonSigns fall back to flat quads.
+      expect(main).toContain("registerArcadePlugins(adapter)");
+      expect(main).not.toMatch(/registerBabylon\w+Extension\(adapter\)/);
       expect(main).toContain("from '@babylonjsmarket/arcade/babylon'");
       const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, "d", "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@babylonjs/core");
