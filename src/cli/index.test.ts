@@ -146,6 +146,41 @@ describe("arcade CLI", () => {
       });
     }, 60_000);
 
+    it("ships `npm test`: a vitest script, vitest devDep, and an example test", async () => {
+      await runCli([dir, "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, dir);
+      const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
+      expect(pkg.scripts.test).toBe("vitest run");
+      expect(pkg.devDependencies.vitest).toMatch(/^\^4\./);
+      const testTs = fs.readFileSync(path.join(root, "src", "scenes", "scenes.test.ts"), "utf-8");
+      // Loads the default scene against the mock renderer: no GPU, no canvas.
+      expect(testTs).toContain("import { MockRendererAdapter } from '@babylonjsmarket/ecs'");
+      expect(testTs).toContain("import { SCENES, DEFAULT_SCENE } from './index'");
+      expect(testTs).toContain("import { REGISTRY } from '../registry'");
+      expect(testTs).toContain("game.loadScene(scene)");
+      // Vitest reads `@vitest-environment <name>` from ANY comment in the file,
+      // so a prose mention would silently switch this test to jsdom (not installed).
+      expect(testTs).not.toContain("@vitest-environment");
+    }, 60_000);
+
+    it("pins vite 8 + typescript 6 with a vite-8-ready solid plugin", async () => {
+      await runCli([dir, "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, dir);
+      const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
+      expect(pkg.devDependencies.vite).toMatch(/^\^8\./);
+      expect(pkg.devDependencies.typescript).toMatch(/^~6\.0\./);
+      expect(pkg.devDependencies["vite-plugin-solid"]).toBe("^2.11.14");
+      expect(pkg.devDependencies.eslint).toMatch(/^\^10\./);
+      const viteConfig = fs.readFileSync(path.join(root, "vite.config.js"), "utf-8");
+      // Vite 8 transforms with oxc; an `esbuild` key only earns a warning.
+      expect(viteConfig).not.toMatch(/^\s*esbuild:/m);
+      expect(viteConfig).toContain("build: { target: 'esnext' }");
+      // Tests run in Node (jsdom is not installed) and inline our packages,
+      // whose dist uses extensionless imports Node's ESM loader can't follow.
+      expect(viteConfig).toContain("environment: 'node'");
+      expect(viteConfig).toContain("inline: [/@babylonjsmarket\\//]");
+    }, 60_000);
+
     it("ships a tiny main.ts that loads the default scene (and honors ?scene=)", async () => {
       await runCli([dir, "--overwrite"], tmpDir);
       const mainTs = fs.readFileSync(
@@ -325,6 +360,9 @@ describe("arcade CLI", () => {
       expect(html).toContain("esm.sh/three");
       const vite = fs.readFileSync(path.join(root, "vite.config.js"), "utf-8");
       expect(vite).toContain("@dimforge/rapier3d-compat");
+      // Vite 8 pre-bundling ecs breaks ThreeAdapter's @vite-ignore three/addons imports.
+      expect(vite).toMatch(/exclude: \[[^\]]*'@babylonjsmarket\/ecs'/);
+      expect(vite).not.toContain("include: ['@babylonjs/core'");
     }, 60_000);
 
     it("--renderer babylon-lite wires the Lite adapter + Havok, no three import map", async () => {
@@ -390,6 +428,10 @@ describe("arcade CLI", () => {
 
       // Shared framework wiring is identical to the arcade kind.
       expect(fs.existsSync(path.join(root, "src", "registry.ts"))).toBe(true);
+      // main.ts (shared by both kinds) imports GAMES from ./games, so a single
+      // game needs the (empty) games registry too or `tsc` fails.
+      expect(fs.existsSync(path.join(root, "src", "games", "index.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(root, "src", "scenes", "scenes.test.ts"))).toBe(true);
       const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
       expect(main).toContain("new BabylonAdapter()");
     }, 60_000);

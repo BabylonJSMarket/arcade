@@ -58,20 +58,54 @@ function componentFiles(componentsSrc: string, name: string): string[] {
   return out;
 }
 
-/** Scan scene.ts + registry.ts for arcade component names used as object keys. */
+/**
+ * Files a bare `arcade eject` scans for component names, relative to the
+ * project root. What the scaffold writes today:
+ *
+ *  - `src/scenes/*.ts`            — the scene modules (game.ts / arcade-room.ts)
+ *  - `public/games/<name>/scene.json` — each game added inside an arcade
+ *  - `src/registry.ts`            — the shared resolver map
+ *
+ * plus the single-file layout older scaffolds wrote (`src/scene.ts`,
+ * `src/scene.json`), so projects made before the scenes/ split still work.
+ * Test files are skipped. Only files that exist are returned.
+ */
+export function sceneSourceFiles(projectDir: string): string[] {
+  const out: string[] = [];
+  const add = (rel: string) => {
+    if (fs.existsSync(path.join(projectDir, rel))) out.push(rel);
+  };
+  const listDir = (rel: string) => {
+    const dir = path.join(projectDir, rel);
+    return fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }) : [];
+  };
+  for (const e of listDir("src/scenes")) {
+    if (e.isFile() && /\.(ts|json)$/.test(e.name) && !/\.test\.ts$/.test(e.name)) {
+      out.push(`src/scenes/${e.name}`);
+    }
+  }
+  for (const e of listDir("public/games")) {
+    if (e.isDirectory()) add(`public/games/${e.name}/scene.json`);
+  }
+  add("src/registry.ts");
+  add("src/scene.ts");
+  add("src/scene.json");
+  return out;
+}
+
+/** Scan the project's scene + registry files for arcade component names used as object keys. */
 function parseUsedComponents(
   projectDir: string,
   names: string[],
 ): Set<string> {
   const used = new Set<string>();
-  const text = ["src/scene.ts", "src/registry.ts", "src/scene.json"]
-    .map((f) => path.join(projectDir, f))
-    .filter((p) => fs.existsSync(p))
-    .map((p) => fs.readFileSync(p, "utf8"))
+  const text = sceneSourceFiles(projectDir)
+    .map((f) => fs.readFileSync(path.join(projectDir, f), "utf8"))
     .join("\n");
   for (const name of names) {
-    // name as an object key: not preceded by `.` or a word char, followed by `:`
-    const re = new RegExp(`(?:^|[^.\\w])${name}\\s*:`, "m");
+    // name as an object key: not preceded by `.` or a word char, followed by
+    // `:`. The key may be quoted — scene JSON always is (`"Score": {}`).
+    const re = new RegExp(`(?:^|[^.\\w])(["']?)${name}\\1\\s*:`, "m");
     if (re.test(text)) used.add(name);
   }
   return used;
@@ -244,7 +278,7 @@ function buildPlan(
     seed = parseUsedComponents(projectDir, names);
     if (seed.size === 0) {
       throw new Error(
-        "Couldn't detect any arcade components in src/scene.ts or src/registry.ts. Pass names explicitly (`arcade eject Bullet Enemy`) or use --all.",
+        "Couldn't detect any arcade components in src/scenes/*.ts, public/games/*/scene.json, src/registry.ts or src/scene.ts. Pass names explicitly (`arcade eject Bullet Enemy`) or use --all.",
       );
     }
   }

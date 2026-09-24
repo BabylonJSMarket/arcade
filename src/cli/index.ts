@@ -510,6 +510,7 @@ async function init() {
       dev: "vite",
       build: "tsc && vite build",
       preview: "vite preview",
+      test: "vitest run",
       lint: "eslint src",
     },
     dependencies: {
@@ -519,12 +520,19 @@ async function init() {
       ...engineDeps,
     },
     devDependencies: {
-      typescript: "^5.5.0",
-      vite: "^6.0.0",
-      "vite-plugin-solid": "^2.11.0",
+      // typescript stays on 6.0.x: @typescript-eslint/parser 8 declares
+      // `typescript <6.1.0` as its peer, so ~6.0 is the newest that installs
+      // clean. vite 8 needs vite-plugin-solid >= 2.11.11 (its first release
+      // with ^8 in the peer range). vitest stays on 4: 5.x declares
+      // node "^22.12.0 || ^24.0.0 || >=26.0.0", so npm warns EBADENGINE on
+      // Node 25; 4.1 takes ">=24" and vite ^8.
+      typescript: "~6.0.3",
+      vite: "^8.3.0",
+      vitest: "^4.1.11",
+      "vite-plugin-solid": "^2.11.14",
       "solid-js": "^1.9.0",
-      eslint: "^9.0.0",
-      "@typescript-eslint/parser": "^8.0.0",
+      eslint: "^10.0.0",
+      "@typescript-eslint/parser": "^8.70.0",
       "@babylonjsmarket/eslint-plugin": range(ESLINT_PLUGIN_VERSION),
       ...engineDevDeps,
     },
@@ -536,9 +544,18 @@ async function init() {
   // from optimizeDeps so esbuild doesn't pre-bundle them with the default
   // React JSX transform before solid sees them.
   //
-  // build.target: 'esnext' opts esbuild into top-level await (our main.ts
+  // build.target: 'esnext' opts the bundler into top-level await (our main.ts
   // uses `await game.init(canvas)` directly). Without this, the default
-  // browser baseline rejects TLA at bundle time.
+  // browser baseline rejects TLA at bundle time. (Vite 8 transforms with oxc,
+  // not esbuild, so the old `esbuild: { target }` line is gone — Vite 8 warns
+  // "Both esbuild and oxc options were set" and ignores it.)
+  //
+  // test: the @babylonjsmarket packages are inlined because their dist uses
+  // extensionless relative imports (`./ArcadeGame`), which Node's own ESM
+  // loader can't resolve. `environment: 'node'` is required: without it
+  // vite-plugin-solid defaults vitest to jsdom, which the scaffold does not
+  // install, and `npm test` exits 1 with "MISSING DEPENDENCY jsdom".
+  //
   // Rapier (WASM) and Babylon Lite (WebGPU shader assets) get the same
   // dedupe + optimize-exclude treatment as havok. (Three itself is CDN-loaded
   // via the import map, so it stays out of Vite's graph.) The demo pulls both;
@@ -546,6 +563,13 @@ async function init() {
   const viteExtras = demo ? ["@dimforge/rapier3d-compat", "@babylonjs/lite"] : (rc.viteExtras ?? []);
   const demoDedupe = viteExtras.map((p) => `\n      '${p}',`).join("");
   const demoExclude = viteExtras.map((p) => `, '${p}'`).join("");
+  // Three: ecs is excluded too, and Babylon is not pre-bundled. Vite 8's
+  // pre-bundle turns ThreeAdapter's @vite-ignore imports into literal
+  // `three/addons/...` imports, which fail to resolve (Three comes from the CDN
+  // import map, not node_modules).
+  const isThree = renderer === "three" && !demo;
+  const ecsExclude = isThree ? ", '@babylonjsmarket/ecs'" : "";
+  const includeLine = isThree ? "" : "\n    include: ['@babylonjs/core', '@babylonjs/loaders']";
   write(
     "vite.config.js",
     `import { defineConfig } from 'vite';
@@ -555,7 +579,10 @@ export default defineConfig({
   plugins: [solid({ include: /\\.(jsx|tsx)$/ })],
   server: { port: 3000 },
   build: { target: 'esnext' },
-  esbuild: { target: 'esnext' },
+  test: {
+    environment: 'node',
+    server: { deps: { inline: [/@babylonjsmarket\\//] } },
+  },
   // Force ONE copy of the engine packages. When the framework packages are
   // linked from a workspace (file: deps), the app and the linked packages can
   // otherwise each resolve their own @babylonjs/core — two Babylon instances in
@@ -575,8 +602,7 @@ export default defineConfig({
     // the default React JSX transform — that throws "React is not defined" at
     // runtime (viz ships raw .tsx source). havok excluded so Vite doesn't
     // rewrite its wasm URL.
-    exclude: ['@babylonjsmarket/arcade', '@babylonjsmarket/viz', '@babylonjs/havok'${demoExclude}],
-    include: ['@babylonjs/core', '@babylonjs/loaders']
+    exclude: ['@babylonjsmarket/arcade', '@babylonjsmarket/viz', '@babylonjs/havok'${demoExclude}${ecsExclude}],${includeLine}
   }
 });
 `,
@@ -785,11 +811,19 @@ ${threeImportmap}    <style>
     } else {
       write("src/scenes/index.ts", readTemplate("scenes-index.ts"));
       write("src/scenes/arcade-room.ts", readTemplate("arcade-room.scene.ts"));
-      // The games registry — empty until `npm create @babylonjsmarket/arcade`
-      // is run INSIDE the project, which adds one.
-      write("src/games/index.ts", readTemplate("games-index.ts"));
     }
+    // The games registry — empty until `npm create @babylonjsmarket/arcade`
+    // is run INSIDE an arcade, which adds one. Both kinds need it: the shared
+    // main.ts imports GAMES + gameFromPath from ./games for its router, so a
+    // single game without it fails `tsc` with "Cannot find module ./games".
+    write("src/games/index.ts", readTemplate("games-index.ts"));
   }
+
+  // Example test: loads the default scene against MockRendererAdapter so
+  // `npm test` passes on a fresh scaffold and shows how to test without a GPU.
+  // Every kind (game / arcade / demo) exports the same SCENES + DEFAULT_SCENE
+  // shape from src/scenes/index.ts, so one test fits all three.
+  write("src/scenes/scenes.test.ts", readTemplate("scenes.test.ts"));
 
   // Shared component resolver map (HUD panels + any custom components). The
   // demo uses only stock components, so the empty default map is correct too.
@@ -909,6 +943,7 @@ ${readmeSceneMapRow}
 \`\`\`bash
 npm install
 npm run dev      # http://localhost:3000
+npm test         # runs src/scenes/scenes.test.ts (no browser needed)
 \`\`\`
 
 ${readmeAssetsNote}

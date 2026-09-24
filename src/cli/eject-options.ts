@@ -10,8 +10,10 @@ Copy arcade component source into your project so you own and can edit it
 wired into ${cyan("src/registry.ts")} so they override the package's built-in copy.
 
 With no component names, ejects every arcade component referenced by your
-${cyan("src/scene.ts")} / ${cyan("src/registry.ts")} (plus their dependencies). Name
-components explicitly to eject just those, or use --all for the whole library.
+scenes (plus their dependencies). It scans ${cyan("src/scenes/*.ts")},
+${cyan("public/games/*/scene.json")} and ${cyan("src/registry.ts")} (and the older
+${cyan("src/scene.ts")} / ${cyan("src/scene.json")}). Name components explicitly to
+eject just those, or use --all for the whole library.
 
 Each eject also drops the ${bold("babylonjsmarket")} Claude skill into
 ${cyan(".claude/skills/")} so Claude Code auto-discovers it with no plugin install.

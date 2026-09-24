@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { eject, rewriteImports } from "./eject.js";
+import { eject, rewriteImports, sceneSourceFiles } from "./eject.js";
 import { EJECT_HELP } from "./eject-options.js";
 
 // eject() reads the REAL component source that ships in this package
@@ -134,6 +134,11 @@ describe("arcade eject", () => {
     it("also responds to -h", async () => {
       await runEject(["-h"]);
       expect(joinLogs()).toContain("Usage: arcade eject");
+    });
+
+    it("names the scaffold's scene paths in the help text", () => {
+      expect(EJECT_HELP).toContain("src/scenes/*.ts");
+      expect(EJECT_HELP).toContain("public/games/*/scene.json");
     });
   });
 
@@ -314,6 +319,88 @@ describe("arcade eject", () => {
       await runEject([]);
       expect(exists("src/components/Score/Score.ts")).toBe(true);
       expect(exists("src/components/MeshPrimitive/MeshPrimitive.ts")).toBe(true);
+    });
+
+    it("scans src/scenes/*.ts — the layout the scaffold writes today", async () => {
+      // Mirrors a fresh `--kind game` scaffold: the scene lives in
+      // src/scenes/game.ts and registry.ts is the auto-glob (no component keys).
+      const scenesDir = path.join(tmpDir, "src", "scenes");
+      fs.mkdirSync(scenesDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(scenesDir, "game.ts"),
+        `export const GAME = {
+  name: 'Game',
+  entities: {
+    Hero: { components: { MeshPrimitive: { primitive: 'box' }, ArcCamera: {} } }
+  }
+};\n`,
+      );
+      fs.writeFileSync(
+        path.join(scenesDir, "index.ts"),
+        "import { GAME } from './game'\nexport const SCENES = { game: GAME }\n",
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, "src", "registry.ts"),
+        "const modules = import.meta.glob('./components/*/*.ts')\nexport const REGISTRY = {}\n",
+      );
+      await runEject(["--dry-run"]);
+      expect(exitCode).toBeUndefined();
+      expect(joinLogs()).toContain("MeshPrimitive");
+      expect(joinLogs()).toContain("ArcCamera");
+      expect(joinLogs()).not.toContain("Score");
+      expect(exists("src/components")).toBe(false);
+    });
+
+    it("scans public/games/*/scene.json, where quoted JSON keys count", async () => {
+      // A game added INSIDE an arcade keeps its entities in scene JSON, whose
+      // keys are always quoted (`"Score": {}`).
+      const gameDir = path.join(tmpDir, "public", "games", "frogger");
+      fs.mkdirSync(gameDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(gameDir, "scene.json"),
+        JSON.stringify({ name: "frogger", entities: { Frog: { components: { Score: {} } } } }),
+      );
+      await runEject(["--dry-run"]);
+      expect(exitCode).toBeUndefined();
+      expect(joinLogs()).toMatch(/components: .*Score/);
+    });
+
+    it("lists scaffold-layout files first, keeps the legacy paths, and skips tests", () => {
+      for (const rel of [
+        "src/scenes/index.ts",
+        "src/scenes/game.ts",
+        "src/scenes/scenes.test.ts",
+        "public/games/frogger/scene.json",
+        "src/registry.ts",
+        "src/scene.ts",
+        "src/scene.json",
+      ]) {
+        fs.mkdirSync(path.dirname(path.join(tmpDir, rel)), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, rel), "");
+      }
+      // A game folder with no scene.json is ignored rather than crashing.
+      fs.mkdirSync(path.join(tmpDir, "public", "games", "empty"), { recursive: true });
+      expect(sceneSourceFiles(tmpDir).sort()).toEqual(
+        [
+          "public/games/frogger/scene.json",
+          "src/registry.ts",
+          "src/scene.json",
+          "src/scene.ts",
+          "src/scenes/game.ts",
+          "src/scenes/index.ts",
+        ].sort(),
+      );
+    });
+
+    it("returns no files for an empty project", () => {
+      expect(sceneSourceFiles(tmpDir)).toEqual([]);
+    });
+
+    it("names the scanned paths when it finds nothing", async () => {
+      await runEject([]);
+      expect(exitCode).toBe(1);
+      expect(errs.join("\n")).toContain("src/scenes/*.ts");
+      expect(errs.join("\n")).toContain("public/games/*/scene.json");
     });
 
     it("does not match a dotted member access (e.g. foo.Score:)", async () => {
