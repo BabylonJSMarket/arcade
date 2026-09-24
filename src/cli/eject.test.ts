@@ -167,6 +167,13 @@ describe("arcade eject", () => {
       expect(others).toEqual(["Score"]);
     });
 
+    it("copies plain tests but not the jsdom debug-panel tests (ArcCamera)", async () => {
+      await runEject(["ArcCamera"]);
+      const files = fs.readdirSync(path.join(tmpDir, "src", "components", "ArcCamera"));
+      expect(files).toContain("ArcCamera.ts");
+      expect(files.some((f) => /\.viz\.test\.ts$/.test(f))).toBe(false);
+    });
+
     it("pulls a direct sibling dependency into the closure (Health → MeshPrimitive)", async () => {
       await runEject(["Health"]);
       expect(exists("src/components/Health/Health.ts")).toBe(true);

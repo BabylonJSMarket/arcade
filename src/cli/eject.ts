@@ -192,8 +192,18 @@ export function rewriteImports(
     );
 }
 
+/**
+ * Debug-panel tests (`*.viz.test.ts`, `*.panel.test.ts`) are not copied: they
+ * need jsdom, which a scaffold does not install, and they fail the scaffold's
+ * `noUnusedLocals` build. Plain unit tests are kept, since submit wants one.
+ */
+export const EJECT_SKIP = /\.(viz|panel)\.test\.tsx?$/;
+
 function copyDir(src: string, dest: string) {
-  fs.cpSync(src, dest, { recursive: true });
+  fs.cpSync(src, dest, {
+    recursive: true,
+    filter: (from) => !EJECT_SKIP.test(path.basename(from)),
+  });
 }
 
 /** Rewrite sibling imports in every .ts/.tsx file under a directory tree. */
