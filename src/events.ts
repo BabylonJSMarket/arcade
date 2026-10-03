@@ -835,3 +835,139 @@ export const SpaceShooterHealthEvents = {
   /** A freighter cargo car was lost. payload: { id }. */
   FREIGHTER_CAR_LOST: 'spaceshooter.freighter.car.lost',
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gravity golf — the n-body set (GravityMass / GravityBody / MassDriver /
+// CaptureZone / TrajectoryPreview), the two-view camera and pointer drag it is
+// steered with, and the SpaceGolf director + HUD that make a game of it. Names
+// live here for the usual reason: the HUD listens to six emitters and imports
+// none of them.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GravityEvents — from GravityBody (the n-body integrator).
+export const GravityEvents = {
+  /**
+   * A GravityBody touched the surface of a GravityMass. `swallowed` is true when
+   * that mass `absorbs` (an event horizon) and false for a solid crash. The body
+   * has already been released when this fires.
+   * payload: { bodyId, massId, swallowed, x, y, z, vx, vy, vz }.
+   */
+  CONTACT: 'gravity.body.contact',
+} as const;
+
+// MassDriverEvents — from MassDriver (the pooled-body launcher).
+export const MassDriverEvents = {
+  /** A body left the muzzle. payload: { driverId, entityId, x, y, z, vx, vy, vz }. */
+  LAUNCHED: 'massdriver.launched',
+  /** The driver's pool had no slot to give. payload: { driverId, pool }. */
+  JAMMED: 'massdriver.jammed',
+} as const;
+
+// MassDriverInputEvents — what MassDriver listens for.
+export const MassDriverInputEvents = {
+  /** Fire one body now. Omit `driverId` to fire every driver. payload: { driverId? }. */
+  FIRE: 'massdriver.fire',
+  /** Start or stop the automatic cadence. payload: { driverId?, active }. */
+  SET_ACTIVE: 'massdriver.active.set',
+} as const;
+
+// CaptureZoneEvents — from CaptureZone.
+export const CaptureZoneEvents = {
+  /** An entity entered the zone and was taken. payload: { zoneId, entityId, points, x, y, z }. */
+  CAPTURED: 'capturezone.captured',
+} as const;
+
+// TrajectoryPreviewEvents — from TrajectoryPreview.
+export const TrajectoryPreviewEvents = {
+  /**
+   * The predicted path now ends differently. `outcome` is one of `capture`,
+   * `crash`, `swallow`, `escape`, `open` (still flying when the preview ran out).
+   * payload: { entityId, outcome, targetId }.
+   */
+  OUTCOME_CHANGED: 'trajectory.outcome.changed',
+} as const;
+
+// ActiveCameraEvents — any camera component that makes itself THE camera.
+// A pointer tool needs the handle to build a ray, and should not care which
+// camera component produced it. payload: { entityId, handle }.
+export const ActiveCameraEvents = {
+  CHANGED: 'camera.active.changed',
+} as const;
+
+// AxisViewCameraEvents — from AxisViewCamera (the top/side view switcher).
+export const AxisViewCameraEvents = {
+  /** A switch began. payload: { entityId, view, previous }. */
+  VIEW_CHANGED: 'axisview.view.changed',
+} as const;
+
+// AxisViewCameraInputEvents — what AxisViewCamera listens for.
+export const AxisViewCameraInputEvents = {
+  /** Go to a named view. payload: { view }. */
+  SET_VIEW: 'axisview.view.set',
+  /** Go to the other view. payload: {}. */
+  TOGGLE: 'axisview.view.toggle',
+} as const;
+
+// PointerDragEvents — from PointerDrag.
+export const PointerDragEvents = {
+  /** The draggable under the pointer changed. payload: { entityId } (null when none). */
+  HOVER_CHANGED: 'pointerdrag.hover.changed',
+  /** A drag began. payload: { entityId, x, y, z }. */
+  STARTED: 'pointerdrag.started',
+  /** A dragged entity moved. payload: { entityId, x, y, z }. */
+  MOVED: 'pointerdrag.moved',
+  /** A drag finished. payload: { entityId, x, y, z }. */
+  ENDED: 'pointerdrag.ended',
+  /** Wheel turned over a draggable. payload: { entityId, delta } (+1 = away from you). */
+  WHEEL: 'pointerdrag.wheel',
+  /** Right-click on a draggable. payload: { entityId }. */
+  CONTEXT: 'pointerdrag.context',
+  /**
+   * Double-click on empty space. The point is where the pointer ray crosses the
+   * plane through the world origin facing the camera. payload: { x, y, z }.
+   */
+  EMPTY_DOUBLE_CLICKED: 'pointerdrag.empty.doubleclicked',
+} as const;
+
+// BlackHoleEvents — from BlackHole.
+export const BlackHoleEvents = {
+  /** A black hole's mass changed. payload: { entityId, mass, min, max }. */
+  MASS_CHANGED: 'blackhole.mass.changed',
+} as const;
+
+// BlackHoleInputEvents — what BlackHole listens for (besides pointer wheel).
+export const BlackHoleInputEvents = {
+  /** Nudge one black hole's mass by `steps` of its `massStep`. payload: { entityId, steps }. */
+  ADJUST_MASS: 'blackhole.mass.adjust',
+} as const;
+
+// SpaceGolfEvents — from SpaceGolfDirector.
+export const SpaceGolfEvents = {
+  /** A level is laid out. payload: { index, total, name, quota, maxMisses, maxBlackHoles, hint }. */
+  LEVEL_STARTED: 'spacegolf.level.started',
+  /** The tally moved. payload: { delivered, quota, missed, maxMisses, blackHoles, maxBlackHoles }. */
+  PROGRESS_CHANGED: 'spacegolf.progress.changed',
+  /** Quota met. payload: { index, name, bonus }. */
+  LEVEL_CLEARED: 'spacegolf.level.cleared',
+  /** Too many misses; the level restarts. payload: { index, name }. */
+  LEVEL_FAILED: 'spacegolf.level.failed',
+  /** The last level was cleared. payload: { score }. */
+  GAME_COMPLETED: 'spacegolf.game.completed',
+  /** A rock reached the plant. payload: { entityId, points, x, y, z }. */
+  ROCK_DELIVERED: 'spacegolf.rock.delivered',
+  /**
+   * A rock was lost. `reason` is `crashed`, `swallowed`, `escaped` (left the
+   * field) or `expired` (flew too long). payload: { entityId, reason, x, y, z }.
+   */
+  ROCK_LOST: 'spacegolf.rock.lost',
+} as const;
+
+// SpaceGolfInputEvents — what SpaceGolfDirector listens for (HUD buttons, keys).
+export const SpaceGolfInputEvents = {
+  /** Start the current level again. payload: {}. */
+  RESTART_LEVEL: 'spacegolf.level.restart',
+  /** Add a black hole at a point (or at the field centre). payload: { x?, y?, z? }. */
+  ADD_BLACK_HOLE: 'spacegolf.blackhole.add',
+  /** Remove one black hole. payload: { entityId }. */
+  REMOVE_BLACK_HOLE: 'spacegolf.blackhole.remove',
+} as const;
