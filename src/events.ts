@@ -951,7 +951,7 @@ export const SpaceGolfEvents = {
   LEVEL_CLEARED: 'spacegolf.level.cleared',
   /** Too many misses; the level restarts. payload: { index, name }. */
   LEVEL_FAILED: 'spacegolf.level.failed',
-  /** The last level was cleared. payload: { score }. */
+  /** The last level was cleared; the next start resets the score. payload: {}. */
   GAME_COMPLETED: 'spacegolf.game.completed',
   /** A rock reached the plant. payload: { entityId, points, x, y, z }. */
   ROCK_DELIVERED: 'spacegolf.rock.delivered',
