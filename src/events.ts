@@ -923,10 +923,11 @@ export const PointerDragEvents = {
   /** Right-click on a draggable. payload: { entityId }. */
   CONTEXT: 'pointerdrag.context',
   /**
-   * Double-click on empty space. The point is where the pointer ray crosses the
-   * plane through the world origin facing the camera. payload: { x, y, z }.
+   * A click on empty space: a press and release with the pointer kept still.
+   * The point is where the pointer ray crosses the plane through the world
+   * origin facing the camera. payload: { x, y, z }.
    */
-  EMPTY_DOUBLE_CLICKED: 'pointerdrag.empty.doubleclicked',
+  EMPTY_CLICKED: 'pointerdrag.empty.clicked',
 } as const;
 
 // BlackHoleEvents — from BlackHole.
@@ -960,6 +961,13 @@ export const SpaceGolfEvents = {
    * field) or `expired` (flew too long). payload: { entityId, reason, x, y, z }.
    */
   ROCK_LOST: 'spacegolf.rock.lost',
+  /**
+   * The count before the chute opens: 3, 2, 1, then 0 the moment it opens
+   * (GO). payload: { seconds }.
+   */
+  COUNTDOWN_CHANGED: 'spacegolf.countdown.changed',
+  /** An add was turned down: the level's black holes are all out. payload: { max }. */
+  BLACK_HOLE_REFUSED: 'spacegolf.blackhole.refused',
 } as const;
 
 // SpaceGolfInputEvents — what SpaceGolfDirector listens for (HUD buttons, keys).
