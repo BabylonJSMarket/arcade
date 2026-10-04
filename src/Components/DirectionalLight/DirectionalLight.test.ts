@@ -58,6 +58,14 @@ describe('DirectionalLightComponent (core)', () => {
     expect(spec.shadow?.enabled).toBe(true);
   });
 
+  it('shadowExtent reaches the spec as extent, and only when set', () => {
+    expect(new DirectionalLightComponent().toSpec().shadow).not.toHaveProperty('extent');
+    expect(new DirectionalLightComponent().serialize()).not.toHaveProperty('shadowExtent');
+    const c = new DirectionalLightComponent({ shadowExtent: 1.8 });
+    expect(c.toSpec().shadow?.extent).toBe(1.8);
+    expect(new DirectionalLightComponent(c.serialize()).shadowExtent).toBe(1.8);
+  });
+
   it('serialize round-trips through the constructor', () => {
     const original = new DirectionalLightComponent({
       direction: [-1, -3, -1],

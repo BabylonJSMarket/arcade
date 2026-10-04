@@ -21,6 +21,13 @@ export interface DirectionalLightInput {
   shadowMinZ?: number;
   shadowMaxZ?: number;
   shadowMapSize?: number;
+  /**
+   * Half-width, world units, of the square the shadow map covers. Omit it for
+   * the renderer's default (Babylon ±25). Set it to about the size of what
+   * casts shadows: the map's texels are spread over 2·shadowExtent, so a
+   * 2.5 m table under the default gets shadows a centimetre per texel.
+   */
+  shadowExtent?: number;
   autoCreate?: boolean;
 }
 
@@ -48,6 +55,7 @@ export class DirectionalLightComponent extends Component {
   shadowMinZ: number;
   shadowMaxZ: number;
   shadowMapSize: number;
+  shadowExtent?: number;
   autoCreate: boolean;
 
   constructor(data: DirectionalLightInput = {}) {
@@ -61,6 +69,7 @@ export class DirectionalLightComponent extends Component {
     this.shadowMinZ = data.shadowMinZ ?? 0;
     this.shadowMaxZ = data.shadowMaxZ ?? 100;
     this.shadowMapSize = data.shadowMapSize ?? 1024;
+    this.shadowExtent = data.shadowExtent;
     this.autoCreate = data.autoCreate ?? true;
   }
 
@@ -76,6 +85,7 @@ export class DirectionalLightComponent extends Component {
         mapSize: this.shadowMapSize,
         minZ: this.shadowMinZ,
         maxZ: this.shadowMaxZ,
+        ...(this.shadowExtent !== undefined ? { extent: this.shadowExtent } : {}),
       },
     };
   }
@@ -91,6 +101,7 @@ export class DirectionalLightComponent extends Component {
       shadowMinZ: this.shadowMinZ,
       shadowMaxZ: this.shadowMaxZ,
       shadowMapSize: this.shadowMapSize,
+      ...(this.shadowExtent !== undefined ? { shadowExtent: this.shadowExtent } : {}),
       autoCreate: this.autoCreate,
     };
   }

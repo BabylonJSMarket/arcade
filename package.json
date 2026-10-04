@@ -96,7 +96,7 @@
     "prepublishOnly": "npm run build && npm run test:coverage"
   },
   "dependencies": {
-    "@babylonjsmarket/ecs": "^0.9.7",
+    "@babylonjsmarket/ecs": "^0.9.9",
     "@clack/prompts": "^0.10.0",
     "earcut": "^3.2.3",
     "mri": "^1.2.0",
