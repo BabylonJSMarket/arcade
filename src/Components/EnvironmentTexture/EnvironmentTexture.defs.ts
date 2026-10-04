@@ -30,6 +30,10 @@ export interface EnvironmentTextureInput {
 }
 
 export class EnvironmentTextureComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in EnvironmentTexture must still match a copy in the project.
+  static componentType = 'EnvironmentTexture';
+
   url: string;
   level: number;
   preset?: EnvironmentPreset;

@@ -6,18 +6,18 @@
  * @babylonjsmarket/arcade, so you rarely touch this file.
  *
  * It AUTO-DISCOVERS your project's own components: anything you pull with
- * `bjs download <name>` lands in `src/Components/<Name>/<Name>.ts` and is
+ * `bjs download <name>` lands in `src/components/<Name>/<Name>.ts` and is
  * registered here with zero manual wiring — the glob below maps each
- * `Components/<Name>/<Name>.ts` (the main component file, where the folder
+ * `components/<Name>/<Name>.ts` (the main component file, where the folder
  * name matches the file basename) to `<Name>: () => import(...)`. Sibling
- * files in the same folder (`<Name>.core.ts`, `<Name>.test.ts`,
- * `<Name>.panel.tsx`, `<Name>.viz.tsx`, `example.scene.json`, ...) are
- * skipped, so only the entry module is registered.
+ * files in the same folder (`<Name>.core.ts`, `<Name>.panel.tsx`,
+ * `<Name>.viz.tsx`, `example.scene.json`, ...) are skipped, so only the entry
+ * module is registered, and tests are never globbed at all.
  *
  * Bundlers tree-shake per component: each lazy `import()` becomes its own
  * chunk, so a scene only pulls in the components it actually references.
  *
- * To add a component by hand, just create `src/Components/MyThing/MyThing.ts`
+ * To add a component by hand, just create `src/components/MyThing/MyThing.ts`
  * exporting `MyThingComponent` (and optionally `MyThingSystem`) — it is picked
  * up automatically. No edit to this file is required.
  */
@@ -26,23 +26,37 @@ export type ComponentModule = Record<string, unknown>
 export type LazyComponentResolver = () => Promise<ComponentModule>
 
 // `eager: false` (the default) gives `{ [path]: () => import(path) }`, so each
-// component stays a separate lazy chunk. `bjs download` installs to
-// `src/Components/` (capital C) and `arcade eject` to `src/components/`; glob
-// both so either path is auto-registered. No matches → an empty map.
-const modules = {
-  ...import.meta.glob('./Components/*/*.ts'),
-  ...import.meta.glob('./components/*/*.ts'),
-} as Record<string, LazyComponentResolver>
+// component stays a separate lazy chunk. No matches → an empty map.
+//
+// Both folder spellings, in ONE glob call. `bjs download` and `arcade eject`
+// write `src/components/`, but a project that already has `src/Components/`
+// keeps that. Two separate calls would each match the same files on a
+// case-insensitive disk (macOS, Windows) and bundle every component twice;
+// one call walks the real folder once.
+//
+// The `!` pattern keeps tests out. `bjs download` ships a component's tests
+// beside it, and a test globbed here becomes a production chunk that imports
+// vitest and @solidjs/testing-library: `vite build` fails to resolve them.
+const modules = import.meta.glob([
+  './Components/*/*.ts',
+  './components/*/*.ts',
+  '!**/*.test.ts',
+]) as Record<string, LazyComponentResolver>
 
 // Debug panels. A `<Name>.viz.tsx` exports `<Name>DebuggerComponent` +
 // `<Name>DebuggerSystem`, which is exactly what the key `<Name>Debugger`
 // resolves to — so registering them is the same convention, one glob wider.
 // Without this a downloaded component ships its tuning panel and nothing can
 // ever put it in a scene.
-const vizModules = {
-  ...import.meta.glob('./Components/*/*.viz.tsx'),
-  ...import.meta.glob('./components/*/*.viz.tsx'),
-} as Record<string, LazyComponentResolver>
+//
+// Dev only, like the panels main.ts mounts: in a production build
+// import.meta.env.DEV is the constant false, the glob is dropped, and no
+// debugger chunk ships to players.
+const vizModules = (
+  import.meta.env.DEV
+    ? import.meta.glob(['./Components/*/*.viz.tsx', './components/*/*.viz.tsx'])
+    : {}
+) as Record<string, LazyComponentResolver>
 
 export const REGISTRY: Record<string, LazyComponentResolver> = Object.fromEntries([
   ...Object.entries(modules).flatMap(([filePath, load]) => {

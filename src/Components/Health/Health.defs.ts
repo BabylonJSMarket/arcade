@@ -20,6 +20,10 @@ export interface HealthInput {
 }
 
 export class HealthComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Health must still match a copy in the project.
+  static componentType = 'Health'
+
   hp: number
   maxHp: number
   invulnSeconds: number

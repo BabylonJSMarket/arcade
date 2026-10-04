@@ -122,6 +122,25 @@ describe('ARCADE_COMPONENT_REGISTRY', () => {
     }
   }, 30_000);
 
+  // A project that downloads one of these components holds two classes for it:
+  // arcade's, which arcade's own systems look up (Pool's
+  // `e.get(MeshPrimitiveComponent)`), and the download, which the project's
+  // registry hands the scene. Entity.get matches the two by componentTypeId, and
+  // a production build minifies both class names, so the match rests on a
+  // DECLARED id. SceneLoader's stamp is not enough: it only reaches the class it
+  // registers, never arcade's copy.
+  it('every component class declares static componentType equal to its registry key', async () => {
+    for (const name of ARCADE_COMPONENT_NAMES) {
+      const mod = await ARCADE_COMPONENT_REGISTRY[name]!();
+      const ComponentCtor = mod[`${name}Component`] as { componentType?: string };
+      expect(
+        Object.prototype.hasOwnProperty.call(ComponentCtor, 'componentType'),
+        `${name}Component must declare its own static componentType`,
+      ).toBe(true);
+      expect(ComponentCtor.componentType, `${name}Component.componentType`).toBe(name);
+    }
+  }, 30_000);
+
   it('caches the import so repeated resolver calls return the same module instance', async () => {
     const resolver = ARCADE_COMPONENT_REGISTRY.MeshPrimitive!;
     const first = await resolver();

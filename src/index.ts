@@ -2,6 +2,9 @@ export * from './ArcadeGame';
 export * from './registry';
 export * from './inputEvents';
 export * from './events';
+// The key-hint box players see. Plain DOM, so it lives here as well as in the
+// /viz barrel: a production build can show it without pulling in the debug UI.
+export * from './ControlsHud';
 export * from './Components/Pool/Pool';
 export * from './Components/MeshPrimitive/MeshPrimitive';
 export * from './Components/Movement/Movement';

@@ -33,6 +33,10 @@ export interface ScoreboardInput extends Partial<ScoreboardParams> {
 // ============================================
 
 export class ScoreboardComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Scoreboard must still match a copy in the project.
+  static componentType = 'Scoreboard';
+
   params: ScoreboardParams;
   players: ScoreboardPlayer[];
   /** Populated lazily by the System on attach. */

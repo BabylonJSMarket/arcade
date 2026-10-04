@@ -16,6 +16,10 @@ export interface ShadowInput {
 }
 
 export class ShadowComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Shadow must still match a copy in the project.
+  static componentType = 'Shadow';
+
   castShadow: boolean;
   receiveShadow: boolean;
 

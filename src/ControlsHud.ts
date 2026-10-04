@@ -8,6 +8,11 @@
  * Drive it from a scene's `controls` array, or parse them out of a `sceneTitle`
  * that already lists them ("Walk (WASD), run (Shift), …") via
  * {@link hintsFromSceneTitle}.
+ *
+ * It is for players, so it ships in a production build. That is why it is
+ * exported from the package root as well as from `@babylonjsmarket/arcade/viz`:
+ * the viz barrel drags Solid and the debug panels in with it, and the scaffold
+ * only imports that in dev.
  */
 
 export interface ControlHint {
@@ -38,7 +43,65 @@ export interface ControlsHudHandle {
   dispose(): void;
 }
 
-/** Pin a controls HUD (key-cap + label rows) bottom-left. No-op if no hints. */
+/** Gap to the screen edge, and to a HUD panel the box moves above. */
+const MARGIN = 12;
+
+/**
+ * Anything at least this share of the screen wide or tall is a layer (a HUD
+ * root that spans the screen, a full-width row), not a panel. The panels sit
+ * inside it, and measuring the layer itself would push the box off the top.
+ */
+const LAYER_SHARE = 0.9;
+
+/**
+ * Move the box up past anything else drawn in its corner.
+ *
+ * A game with a HUD of its own often puts something bottom-left too (Space
+ * Golf's TOP / SIDE / RESTART panel, for one), and a fixed box on top of it
+ * hides those buttons. Nothing tells us where a game's HUD sits, so look:
+ * every visible element overlapping the box lifts it to just above that
+ * element. If that leaves no room on screen, hide the box: the game's own HUD
+ * matters more than a key reminder. With nothing in the corner, nothing moves.
+ */
+function stepAsideFromOtherHuds(host: HTMLElement): void {
+  host.style.bottom = `${MARGIN}px`;
+  host.style.visibility = '';
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Each lift can land the box on something higher up, so measure again until
+  // it sits clear. A handful of passes covers any real stack of panels.
+  for (let pass = 0; pass < 8; pass++) {
+    const box = host.getBoundingClientRect();
+    let top = Infinity;
+    for (const el of document.body.querySelectorAll('*')) {
+      if (host.contains(el) || el instanceof HTMLCanvasElement) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (r.width >= vw * LAYER_SHARE || r.height >= vh * LAYER_SHARE) continue;
+      if (r.right <= box.left || r.left >= box.right || r.bottom <= box.top || r.top >= box.bottom) continue;
+      // Faded-out banners and hidden toasts still have a box; they are not in the way.
+      if (
+        typeof el.checkVisibility === 'function' &&
+        !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+      ) {
+        continue;
+      }
+      top = Math.min(top, r.top);
+    }
+    if (top === Infinity) return;
+    const bottom = vh - top + MARGIN;
+    if (bottom + box.height > vh - MARGIN) {
+      host.style.visibility = 'hidden';
+      return;
+    }
+    host.style.bottom = `${bottom}px`;
+  }
+}
+
+/**
+ * Pin a controls HUD (key-cap + label rows) bottom-left, clear of anything
+ * else already there (see {@link stepAsideFromOtherHuds}). No-op if no hints.
+ */
 export function mountControlsHud(hints: ControlHint[]): ControlsHudHandle {
   if (!hints.length || typeof document === 'undefined') return { dispose() {} };
 
@@ -47,7 +110,7 @@ export function mountControlsHud(hints: ControlHint[]): ControlsHudHandle {
   host.style.cssText = [
     'position:fixed',
     'left:12px',
-    'bottom:12px',
+    `bottom:${MARGIN}px`,
     'z-index:9998',
     'display:flex',
     'flex-direction:column',
@@ -89,8 +152,20 @@ export function mountControlsHud(hints: ControlHint[]): ControlsHudHandle {
   }
 
   document.body.appendChild(host);
+
+  // Place it now, and again whenever the screen or the page's top-level
+  // overlays change: a game HUD mounted after this one, or a window resize
+  // that moves the game's panels, would otherwise end up underneath it.
+  const place = () => stepAsideFromOtherHuds(host);
+  place();
+  window.addEventListener('resize', place);
+  const observer = new MutationObserver(place);
+  observer.observe(document.body, { childList: true });
+
   return {
     dispose() {
+      window.removeEventListener('resize', place);
+      observer.disconnect();
       host.remove();
     },
   };

@@ -18,6 +18,10 @@ export interface KeyboardMoverInput {
 }
 
 export class KeyboardMoverComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in KeyboardMover must still match a copy in the project.
+  static componentType = 'KeyboardMover';
+
   speed: number;
   faceMotion: boolean;
 

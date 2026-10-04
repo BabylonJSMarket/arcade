@@ -30,6 +30,10 @@ export function cloneVec3(v: Vec3): Vec3 {
 }
 
 export class PointLightComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in PointLight must still match a copy in the project.
+  static componentType = 'PointLight';
+
   position: Vec3;
   intensity: number;
   diffuse: Color;

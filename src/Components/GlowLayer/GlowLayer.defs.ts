@@ -32,6 +32,10 @@ export interface GlowLayerInput {
 }
 
 export class GlowLayerComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in GlowLayer must still match a copy in the project.
+  static componentType = 'GlowLayer';
+
   intensity: number;
   textureRatio: number;
   samples?: number;

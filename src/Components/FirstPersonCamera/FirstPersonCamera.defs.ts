@@ -67,6 +67,10 @@ export interface FirstPersonCameraInput {
 }
 
 export class FirstPersonCameraComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in FirstPersonCamera must still match a copy in the project.
+  static componentType = 'FirstPersonCamera';
+
   eyeHeight: number;
   /** Start position `[x, z]`; the live pose lives on the System's runtime map. */
   startX: number;

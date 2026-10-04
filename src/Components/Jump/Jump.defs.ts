@@ -39,6 +39,10 @@ export interface JumpInput {
 // ============================================
 
 export class JumpComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Jump must still match a copy in the project.
+  static componentType = 'Jump';
+
   key: string;
   height: number;
   duration: number;

@@ -30,6 +30,10 @@ export interface ObstacleInput {
 }
 
 export class ObstacleComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Obstacle must still match a copy in the project.
+  static componentType = 'Obstacle'
+
   center?: [number, number]
   halfWidth: number
   halfDepth: number

@@ -48,6 +48,10 @@ export interface SoundInput {
 }
 
 export class SoundComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Sound must still match a copy in the project.
+  static componentType = 'Sound';
+
   src: string;
   loop: boolean;
   autoplay: boolean;

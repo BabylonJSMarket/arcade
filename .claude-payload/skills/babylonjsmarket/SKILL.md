@@ -245,10 +245,11 @@ Boot the viz layer once per game host:
 ```ts
 import { mountArcadeViz } from '@babylonjsmarket/arcade/viz'
 const viz = mountArcadeViz(game.world, { sceneName: 'pinball' })
-// → Entities panel (` to toggle) + EventBus debugger (F4) + a pinned FPS counter. dispose() on unmount.
+// → Entities panel (F1) + EventBus debugger (F2) + a pinned FPS counter. dispose() on unmount.
+// Keys are the next free F-key in registration order; Esc lists them.
 ```
 
-`sceneName` namespaces localStorage so panels in different scenes don't collide. Opts: `fpsOverlay: false`, `eventBusDebugger: false`, `toggleKey: 'Backquote'`.
+`sceneName` namespaces localStorage so panels in different scenes don't collide. Opts: `fpsOverlay: false`, `eventBusDebugger: false`, `toggleKey: 'Backquote'` (pins the Entities key instead of the next free F-key).
 
 Every debug panel registers through one singleton: `vizStore`. Panels get draggable / closable / resizable chrome + localStorage persistence for free. Persist slider/dropdown state with `setPanelData`/`getPanelData` (NOT a `createSignal` seeded with the scene default — that resets on reload):
 

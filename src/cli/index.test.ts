@@ -193,8 +193,20 @@ describe("arcade CLI", () => {
       // The Esc gear/FPS menu + themed panels come from the viz renderer; the
       // scaffold must mount it (and pull a theme) or panels render bare.
       expect(mainTs).toContain("mountViz");
-      expect(mainTs).toContain("from '@babylonjsmarket/viz/solid'");
+      expect(mainTs).toContain("import('@babylonjsmarket/viz/solid')");
       expect(mainTs).toContain("@babylonjsmarket/viz/themes/");
+      // …but only in dev. The panels load through dynamic imports inside the
+      // DEV check, which a production build drops; one static import of a viz
+      // package would put the debug UI in front of players.
+      expect(mainTs).toContain("if (import.meta.env.DEV) {");
+      expect(mainTs).toContain("import('@babylonjsmarket/arcade/viz')");
+      expect(mainTs).not.toMatch(/^import [^\n]*'@babylonjsmarket\/(arcade\/)?viz[/']/m);
+      // The key-hint box is for players: it comes from the package root, so it
+      // stays in production without the viz barrel.
+      expect(mainTs).toMatch(/^import \{[^}]*mountControlsHud[^}]*\} from '@babylonjsmarket\/arcade'$/m);
+      // The hotkeys the comments promise are the ones viz hands out.
+      expect(mainTs).toContain("F1 Entities");
+      expect(mainTs).not.toMatch(/` for Entities|F4 for/);
       expect(mainTs).toContain("from './scenes'");
       expect(mainTs).toContain("from './registry'");
       expect(mainTs).toContain("loadScene(scene");
@@ -223,12 +235,32 @@ describe("arcade CLI", () => {
       );
       expect(registryTs).toContain("export const REGISTRY");
       // Auto-glob: components dropped by `bjs download` into
-      // src/Components/<Name>/<Name>.ts are registered with zero manual wiring.
-      expect(registryTs).toContain("import.meta.glob('./Components/*/*.ts')");
-      // …and `arcade eject`'s lowercase target is globbed too.
-      expect(registryTs).toContain("import.meta.glob('./components/*/*.ts')");
+      // src/components/<Name>/<Name>.ts are registered with zero manual wiring,
+      // and a legacy src/Components/ still is.
+      expect(registryTs).toContain("'./components/*/*.ts'");
+      expect(registryTs).toContain("'./Components/*/*.ts'");
+      // ONE glob call for both spellings: two calls each match the same files
+      // on a case-insensitive disk and bundle every component twice.
+      expect(registryTs).not.toContain("import.meta.glob('./Components/*/*.ts')");
+      expect(registryTs).not.toContain("import.meta.glob('./components/*/*.ts')");
+      // Downloaded tests never become production chunks.
+      expect(registryTs).toContain("'!**/*.test.ts'");
+      // Debugger panels register in dev only.
+      expect(registryTs).toMatch(/import\.meta\.env\.DEV\s*\?\s*import\.meta\.glob\(\[/);
       // No hand-maintained literal object body to keep in sync.
       expect(registryTs).not.toContain("export const REGISTRY = {}");
+    }, 60_000);
+
+    it("keeps tests out of tsc, so a download's tests can't fail `npm run build`", async () => {
+      await runCli([dir, "--overwrite"], tmpDir);
+      const tsconfig = JSON.parse(
+        fs.readFileSync(path.join(tmpDir, dir, "tsconfig.json"), "utf-8"),
+      );
+      expect(tsconfig.include).toEqual(["src"]);
+      expect(tsconfig.exclude).toEqual(["src/**/*.test.ts", "src/**/*.test.tsx"]);
+      // Still the strict settings a reader's own code is held to.
+      expect(tsconfig.compilerOptions.strict).toBe(true);
+      expect(tsconfig.compilerOptions.noUnusedLocals).toBe(true);
     }, 60_000);
   });
 
@@ -456,6 +488,11 @@ describe("arcade CLI", () => {
       const readme = fs.readFileSync(path.join(tmpDir, "d", "README.md"), "utf-8");
       expect(readme).toContain("src/scenes/game.ts");
       expect(readme).not.toContain("row of\ncabinets");
+      // The real dev hotkeys, and the production build that drops them.
+      expect(readme).toContain("`F1`\nEntities, `F2` EventBus, `F3` State Stepper");
+      expect(readme).not.toContain("`F4`");
+      expect(readme).toContain("npm run build");
+      expect(readme).toContain("npm run preview");
     }, 60_000);
 
     it("rejects an unknown --kind without scaffolding", async () => {

@@ -35,6 +35,10 @@ export interface AnimationInput extends Partial<AnimationParams> {
 // ============================================
 
 export class AnimationComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Animation must still match a copy in the project.
+  static componentType = 'Animation';
+
   params: AnimationParams;
   idleClip: string;
   walkClip: string;

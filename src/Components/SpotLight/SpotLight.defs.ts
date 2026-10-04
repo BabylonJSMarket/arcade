@@ -43,6 +43,10 @@ function cloneVec3(v: Vec3): Vec3 {
 }
 
 export class SpotLightComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in SpotLight must still match a copy in the project.
+  static componentType = 'SpotLight';
+
   position: Vec3;
   direction: Vec3;
   angle: number;

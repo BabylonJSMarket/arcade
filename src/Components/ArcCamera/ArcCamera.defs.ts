@@ -87,6 +87,10 @@ export function getArcCameraRuntime(comp: ArcCameraComponent): ArcCameraRuntime 
 }
 
 export class ArcCameraComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in ArcCamera must still match a copy in the project.
+  static componentType = 'ArcCamera';
+
   target?: string;
   restTarget?: string;
   follow: boolean;

@@ -17,6 +17,10 @@ export interface CameraFollowInput extends Partial<CameraFollowParams> {
 }
 
 export class CameraFollowComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in CameraFollow must still match a copy in the project.
+  static componentType = 'CameraFollow';
+
   params: CameraFollowParams;
   target: string;
   instance: CameraFollowInstance | null = null;

@@ -629,6 +629,11 @@ export default [
 `,
   );
 
+  // Tests stay out of `tsc`, and so out of `npm run build`: vitest runs them
+  // without a type check either way, and the ones `bjs download` brings with a
+  // component import test-only packages (@solidjs/testing-library, node's
+  // types) a game never installs. Without the exclude, the first download
+  // turns `npm run build` red before Vite runs.
   write(
     "tsconfig.json",
     `{
@@ -653,7 +658,8 @@ export default [
       "~/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
 `,
   );
@@ -944,15 +950,18 @@ ${readmeSceneMapRow}
 npm install
 npm run dev      # http://localhost:3000
 npm test         # runs src/scenes/scenes.test.ts (no browser needed)
+npm run build    # type-check, then bundle the game into dist/
+npm run preview  # serve dist/ at http://localhost:4173
 \`\`\`
 
 ${readmeAssetsNote}
 
 ## How it works
 
-\`src/main.ts\` boots the renderer, mounts the viz panels (press \`\\\`\` for
-the Entities panel, \`F4\` for the EventBus debugger), then calls
-\`game.loadScene(...)\` with the default scene — that's it.
+\`src/main.ts\` boots the renderer, mounts the debug panels in dev (\`F1\`
+Entities, \`F2\` EventBus, \`F3\` State Stepper, \`Esc\` for the menu that
+lists every panel), then calls \`game.loadScene(...)\` with the default scene —
+that's it. A production build (\`npm run build\`) leaves the panels out.
 
 Everything else — meshes, lights, cameras, gameplay logic — is declared in the
 scene modules as entities + named components. The arcade package's default

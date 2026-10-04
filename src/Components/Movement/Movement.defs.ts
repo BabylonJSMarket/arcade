@@ -41,6 +41,10 @@ export interface MovementInput extends Partial<MovementParams> {
 // ============================================
 
 export class MovementComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Movement must still match a copy in the project.
+  static componentType = 'Movement';
+
   params: MovementParams;
   /** Ground Y passed into the core each frame. null = no grounding. */
   groundY: number | null;

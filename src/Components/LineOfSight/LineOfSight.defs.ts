@@ -26,6 +26,10 @@ export interface LineOfSightInput {
 }
 
 export class LineOfSightComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in LineOfSight must still match a copy in the project.
+  static componentType = 'LineOfSight'
+
   targetTag: string
   fov: number
   range: number

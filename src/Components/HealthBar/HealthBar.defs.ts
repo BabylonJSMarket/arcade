@@ -28,6 +28,10 @@ export interface HealthBarInput {
 }
 
 export class HealthBarComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in HealthBar must still match a copy in the project.
+  static componentType = 'HealthBar'
+
   width: number
   height: number
   offsetY: number

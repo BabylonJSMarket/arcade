@@ -66,6 +66,10 @@ export function cloneVec3(v: Vec3): Vec3 {
 }
 
 export class NeonSignComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in NeonSign must still match a copy in the project.
+  static componentType = 'NeonSign';
+
   text: string;
   color: Color;
   position: Vec3;

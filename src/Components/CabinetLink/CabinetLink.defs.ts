@@ -51,6 +51,10 @@ export interface CabinetLinkInput {
 }
 
 export class CabinetLinkComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in CabinetLink must still match a copy in the project.
+  static componentType = 'CabinetLink';
+
   game: string;
   route: string;
   title: string;

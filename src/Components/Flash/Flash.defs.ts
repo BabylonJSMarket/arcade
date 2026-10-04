@@ -15,6 +15,10 @@ export interface FlashInput {
 }
 
 export class FlashComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Flash must still match a copy in the project.
+  static componentType = 'Flash'
+
   lifetime: number
 
   constructor(data: FlashInput = {}) {

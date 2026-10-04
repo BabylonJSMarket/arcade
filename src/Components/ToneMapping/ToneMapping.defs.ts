@@ -38,6 +38,10 @@ export interface ToneMappingExtension {
 }
 
 export class ToneMappingComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in ToneMapping must still match a copy in the project.
+  static componentType = 'ToneMapping';
+
   mode: ToneMappingMode;
   exposure: number;
   contrast: number;

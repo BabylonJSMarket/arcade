@@ -40,6 +40,10 @@ function cloneColor(c: Color): Color {
 }
 
 export class FogComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Fog must still match a copy in the project.
+  static componentType = 'Fog';
+
   mode: FogMode;
   color: Color;
   density: number;

@@ -48,6 +48,10 @@ export function toVec3(input: unknown, fallback: Vec3): Vec3 {
 // ============================================
 
 export class MeshComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Mesh must still match a copy in the project.
+  static componentType = 'Mesh';
+
   params: MeshParams;
   /** Populated by the System on first update. */
   instance: MeshInstance | null = null;

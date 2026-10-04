@@ -26,6 +26,10 @@ export interface EntityPoolInput {
 }
 
 export class EntityPoolComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in EntityPool must still match a copy in the project.
+  static componentType = 'EntityPool'
+
   pool: string
   size: number
   tags: string[]

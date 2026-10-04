@@ -25,6 +25,10 @@ export interface PoolInput {
  * onto an instance.
  */
 export class PoolComponent extends Component {
+  // Declared, not read off the class name: a minified build renames classes,
+  // and arcade's built-in Pool must still match a copy in the project.
+  static componentType = 'Pool'
+
   /** Empty string means "use the blueprint entity's id as the pool name". */
   name: string
   size: number

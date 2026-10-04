@@ -1,29 +1,17 @@
-// Tiny boot — boots the renderer, mounts viz panels (` for Entities, F4 for
-// the EventBus debugger), loads a scene, and starts the render loop.
-// You rarely need to edit this. To change the arcade, edit the scenes under
-// src/scenes/ (start with src/scenes/arcade-room.ts).
+// Tiny boot — boots the renderer, loads a scene, and starts the render loop.
+// In dev (`npm run dev`) it also mounts the debug panels: F1 Entities,
+// F2 EventBus, F3 State Stepper, and Esc for the menu that lists them all.
+// A production build (`npm run build`) leaves the panels out.
+// You rarely need to edit this. To change the game, edit the scenes under
+// src/scenes/ (src/scenes/index.ts lists them).
 //
 // `?scene=<url>` override: if the URL carries a scene query param, that JSON
 // scene is loaded instead of the default. This is how `bjs download <asset>`
 // previews a downloaded asset — it drops public/<key>/scene.json and opens
 // /?scene=/<key>/scene.json. With no param, the default scene loads.
-import { ArcadeGame } from '@babylonjsmarket/arcade'
+import { ArcadeGame, mountControlsHud, hintsFromSceneTitle } from '@babylonjsmarket/arcade'
 import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon'
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'
-import { mountArcadeViz, mountControlsHud, hintsFromSceneTitle } from '@babylonjsmarket/arcade/viz'
-import { mountViz } from '@babylonjsmarket/viz/solid'
-// Debug-panel themes — the Esc gear menu lets you switch between them. Without
-// at least one theme the panels register and the hotkeys toggle them, but they
-// render unstyled (the "old"/invisible look).
-import '@babylonjsmarket/viz/themes/flat.css'
-import '@babylonjsmarket/viz/themes/neumorphic.css'
-import '@babylonjsmarket/viz/themes/glassmorphic.css'
-import '@babylonjsmarket/viz/themes/brutalism.css'
-import '@babylonjsmarket/viz/themes/comicbook.css'
-import '@babylonjsmarket/viz/themes/windows95.css'
-import '@babylonjsmarket/viz/themes/unity.css'
-import '@babylonjsmarket/viz/themes/unreal.css'
-import '@babylonjsmarket/viz/themes/godot.css'
 import { SCENES, DEFAULT_SCENE } from './scenes'
 import { GAMES, gameFromPath } from './games'
 import { CabinetLinkEvents } from '@babylonjsmarket/arcade'
@@ -45,7 +33,7 @@ registerArcadePlugins(adapter)
 // needs an engine feature the adapter doesn't expose — AnimateMeshy's runtime
 // retarget, for example — ships an `adapter/register.ts` exporting a
 // `register…Extension(adapter)` function. `bjs download` drops it under
-// `src/Components/<Name>/adapter/`; this installs every one on the adapter
+// `src/components/<Name>/adapter/`; this installs every one on the adapter
 // BEFORE the scene loads, so the component's System finds its plugin at load
 // time. Projects with no such component match nothing here (a no-op).
 const adapterPlugins = import.meta.glob(
@@ -70,11 +58,33 @@ const sceneName = sceneUrl ?? scene!.name
 
 // Mount the debug viz *before* loadScene so any HUD-panel components in the
 // scene find a live vizStore to register against:
-//   - mountArcadeViz: entity list (`) + EventBus debugger (F4).
-//   - mountViz: the panel renderer + StateStepper + the Esc gear/FPS menu that
-//     lists every panel so you can toggle them on/off.
-mountArcadeViz(game.world, { sceneName })
-mountViz(game.world, { sceneName })
+//   - mountArcadeViz: Entities (F1) + the EventBus debugger (F2) + an FPS counter.
+//   - mountViz: the panel renderer + State Stepper (F3) + the Esc gear/FPS menu
+//     that lists every panel so you can toggle them on/off.
+// F-keys go out in the order panels register, so these three are F1-F3, and a
+// scene's own panels that don't name a key get F4 and up. The themes style the
+// panels; the gear menu switches between them.
+//
+// Dev only. In a production build import.meta.env.DEV is the constant false,
+// so the bundler drops this block and everything it imports: players get the
+// game, not the debugger.
+if (import.meta.env.DEV) {
+  const [{ mountArcadeViz }, { mountViz }] = await Promise.all([
+    import('@babylonjsmarket/arcade/viz'),
+    import('@babylonjsmarket/viz/solid'),
+    import('@babylonjsmarket/viz/themes/flat.css'),
+    import('@babylonjsmarket/viz/themes/neumorphic.css'),
+    import('@babylonjsmarket/viz/themes/glassmorphic.css'),
+    import('@babylonjsmarket/viz/themes/brutalism.css'),
+    import('@babylonjsmarket/viz/themes/comicbook.css'),
+    import('@babylonjsmarket/viz/themes/windows95.css'),
+    import('@babylonjsmarket/viz/themes/unity.css'),
+    import('@babylonjsmarket/viz/themes/unreal.css'),
+    import('@babylonjsmarket/viz/themes/godot.css'),
+  ])
+  mountArcadeViz(game.world, { sceneName })
+  mountViz(game.world, { sceneName })
+}
 
 if (sceneUrl) {
   await game.loadSceneFromUrl(sceneUrl)
@@ -127,9 +137,12 @@ if (!sceneUrl && gameFromPath(window.location.pathname)) {
   await showRoute(window.location.pathname)
 }
 
-// Controls HUD — a small key-hint overlay pinned bottom-left. Hints come from
-// the scene's optional `controls` list, or are parsed from its `sceneTitle`
-// when it already spells them out ("Walk (WASD), run (Shift), jump (Space)…").
+// Controls HUD — a small key-hint overlay pinned bottom-left. Unlike the debug
+// panels it is for players, so it stays in a production build; it moves up out
+// of the way if the scene's own HUD already has something in that corner.
+// Hints come from the scene's optional `controls` list (`[]` turns the box
+// off), or are parsed from its `sceneTitle` when it already spells them out
+// ("Walk (WASD), run (Shift), jump (Space)…").
 const hudScene: { controls?: { key: string; label: string }[]; sceneTitle?: string } | null =
   sceneUrl ? await fetch(sceneUrl).then((r) => r.json()).catch(() => null) : (scene as never)
 const hudHints = hudScene?.controls ?? hintsFromSceneTitle(hudScene?.sceneTitle)
