@@ -866,7 +866,11 @@ export const GravityEvents = {
 export const MassDriverEvents = {
   /** A body left the muzzle. payload: { driverId, entityId, x, y, z, vx, vy, vz }. */
   LAUNCHED: 'massdriver.launched',
-  /** The driver's pool had no slot to give. payload: { driverId, pool }. */
+  /**
+   * The driver has no pool to fire from: none by that name, or one of size 0.
+   * (A pool with every slot in flight recycles its oldest body instead.)
+   * payload: { driverId, pool }.
+   */
   JAMMED: 'massdriver.jammed',
 } as const;
 
