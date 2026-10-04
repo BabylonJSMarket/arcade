@@ -853,6 +853,12 @@ export const GravityEvents = {
    * payload: { bodyId, massId, swallowed, x, y, z, vx, vy, vz }.
    */
   CONTACT: 'gravity.body.contact',
+  /**
+   * A GravityBody went into one Wormhole mouth and came out of the other, with
+   * the velocity it went in with. The point is where it came out.
+   * payload: { bodyId, fromId, toId, x, y, z, vx, vy, vz }.
+   */
+  JUMPED: 'gravity.body.jumped',
 } as const;
 
 // MassDriverEvents — from MassDriver (the pooled-body launcher).
@@ -944,11 +950,17 @@ export const BlackHoleInputEvents = {
 
 // SpaceGolfEvents — from SpaceGolfDirector.
 export const SpaceGolfEvents = {
-  /** A level is laid out. payload: { index, total, name, quota, maxMisses, maxBlackHoles, hint }. */
+  /**
+   * A level is laid out. `solvable` says whether it carries a solution.
+   * payload: { index, total, name, quota, maxMisses, maxBlackHoles, hint, solvable }.
+   */
   LEVEL_STARTED: 'spacegolf.level.started',
   /** The tally moved. payload: { delivered, quota, missed, maxMisses, blackHoles, maxBlackHoles }. */
   PROGRESS_CHANGED: 'spacegolf.progress.changed',
-  /** Quota met. payload: { index, name, bonus }. */
+  /**
+   * Quota met. `assisted` is true when the level's solution was placed for the
+   * player, which pays no level bonus. payload: { index, name, bonus, assisted }.
+   */
   LEVEL_CLEARED: 'spacegolf.level.cleared',
   /** Too many misses; the level restarts. payload: { index, name }. */
   LEVEL_FAILED: 'spacegolf.level.failed',
@@ -968,6 +980,14 @@ export const SpaceGolfEvents = {
   COUNTDOWN_CHANGED: 'spacegolf.countdown.changed',
   /** An add was turned down: the level's black holes are all out. payload: { max }. */
   BLACK_HOLE_REFUSED: 'spacegolf.blackhole.refused',
+  /**
+   * The time between rocks changed (or was first set). `scale` multiplies each
+   * level's own interval; `interval` is the seconds that gives this level.
+   * payload: { scale, interval, slowest, fastest }.
+   */
+  CADENCE_CHANGED: 'spacegolf.cadence.changed',
+  /** The level's solution was placed for the player. payload: { index, holes }. */
+  SOLVED: 'spacegolf.level.solved',
 } as const;
 
 // SpaceGolfInputEvents — what SpaceGolfDirector listens for (HUD buttons, keys).
@@ -978,4 +998,13 @@ export const SpaceGolfInputEvents = {
   ADD_BLACK_HOLE: 'spacegolf.blackhole.add',
   /** Remove one black hole. payload: { entityId }. */
   REMOVE_BLACK_HOLE: 'spacegolf.blackhole.remove',
+  /**
+   * Go to a level: `index` (0-based) or `step` levels on from this one, wrapping.
+   * payload: { index? , step? }.
+   */
+  GOTO_LEVEL: 'spacegolf.level.goto',
+  /** Change the time between rocks by `steps` notches; +1 is slower. payload: { steps }. */
+  ADJUST_CADENCE: 'spacegolf.cadence.adjust',
+  /** Place this level's solution in place of the player's black holes. payload: {}. */
+  SOLVE: 'spacegolf.level.solve',
 } as const;
