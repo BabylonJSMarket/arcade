@@ -898,6 +898,25 @@ export const TrajectoryPreviewEvents = {
   OUTCOME_CHANGED: 'trajectory.outcome.changed',
 } as const;
 
+// ConicPathEvents — from ConicPath (the exact two-body orbit drawn from the equations).
+export const ConicPathEvents = {
+  /**
+   * The drawn orbit changed shape: a launcher's speed or direction moved, or the
+   * central mass did. Fires on the first frame and whenever a number changes in
+   * its 4th decimal, not every frame. `kind` is `circle`, `ellipse`,
+   * `parabola`, `hyperbola` or `radial` (a launch straight up or down);
+   * `period` and `apoapsis` are 0 for an orbit that never comes back.
+   * `landAngle` (degrees round the mass), `landX` and `galileoX` say where the
+   * shot comes down: `landX` for the true orbit and `galileoX` for Galileo's
+   * flat-ground parabola, both measured sideways from the muzzle, so a
+   * difference of a few pixels on screen still reads as a number. They are 0
+   * when the shot never comes down (and `galileoX` when the overlay is off).
+   * payload: { entityId, aroundId, kind, eccentricity, semiLatusRectum, energy,
+   *   period, periapsis, apoapsis, landAngle, landX, galileoX }.
+   */
+  CHANGED: 'conicpath.changed',
+} as const;
+
 // ActiveCameraEvents — any camera component that makes itself THE camera.
 // A pointer tool needs the handle to build a ray, and should not care which
 // camera component produced it. payload: { entityId, handle }.
@@ -986,6 +1005,11 @@ export const SpaceGolfEvents = {
   /** An add was turned down: the level's black holes are all out. payload: { max }. */
   BLACK_HOLE_REFUSED: 'spacegolf.blackhole.refused',
   /**
+   * A black hole went back to its pool: removed by the player, or cleared off
+   * the field by a new layout or SOLVE. payload: { entityId }.
+   */
+  BLACK_HOLE_REMOVED: 'spacegolf.blackhole.removed',
+  /**
    * The time between rocks changed (or was first set). `scale` multiplies each
    * level's own interval; `interval` is the seconds that gives this level.
    * payload: { scale, interval, slowest, fastest }.
@@ -1012,4 +1036,47 @@ export const SpaceGolfInputEvents = {
   ADJUST_CADENCE: 'spacegolf.cadence.adjust',
   /** Place this level's solution in place of the player's black holes. payload: {}. */
   SOLVE: 'spacegolf.level.solve',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Billiards — the table (BilliardTable), its balls (BilliardBall), the cue
+// (BilliardCue) and the rack (BilliardRack). Same engine idea as the gravity
+// set: a fixed step, events checked after every step. Names live here so a
+// scorer or a HUD can listen without importing the table.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// BilliardTableEvents — from BilliardTable (the fixed-step table).
+export const BilliardTableEvents = {
+  /** Two balls hit. payload: { aId, bId, speed, x, z }. `speed` is the closing speed, m/s. */
+  COLLIDED: 'billiards.ball.collided',
+  /** A ball bounced off a cushion. payload: { entityId, rail, speed, x, z }. */
+  CUSHIONED: 'billiards.ball.cushioned',
+  /** An object ball dropped into a pocket. payload: { entityId, number, pocketId, x, z }. */
+  POTTED: 'billiards.ball.potted',
+  /** The cue ball dropped into a pocket and was put back on its spot. payload: { entityId, pocketId }. */
+  SCRATCHED: 'billiards.cue.scratched',
+  /** Every ball on the table has stopped. payload: { moving: 0 }. */
+  SETTLED: 'billiards.table.settled',
+} as const;
+
+// BilliardCueEvents — from BilliardCue.
+export const BilliardCueEvents = {
+  /**
+   * The cue struck the cue ball. `tipOffset` is where the tip landed, as a
+   * fraction of the radius above (+) or below (−) the centre.
+   * payload: { entityId, speed, tipOffset, dirX, dirZ }.
+   */
+  STRUCK: 'billiards.cue.struck',
+} as const;
+
+// BilliardRackEvents — from BilliardRack.
+export const BilliardRackEvents = {
+  /** Fifteen balls are racked and the cue ball is on its spot. payload: { count }. */
+  RACKED: 'billiards.rack.racked',
+} as const;
+
+// BilliardRackInputEvents — what BilliardRack listens for.
+export const BilliardRackInputEvents = {
+  /** Rack the balls again. payload: {}. */
+  RERACK: 'billiards.rack.request',
 } as const;
