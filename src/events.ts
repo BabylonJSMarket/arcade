@@ -1067,6 +1067,26 @@ export const BilliardCueEvents = {
    * payload: { entityId, speed, tipOffset, dirX, dirZ }.
    */
   STRUCK: 'billiards.cue.struck',
+  /**
+   * What the cue is doing, and how hard it is pulled back: `state` is
+   * 'aiming' (still balls, no press), 'pulling' (pressed and dragging) or
+   * 'waiting' (balls still moving). `power` is 0..1 of a full pull, `speed`
+   * the m/s a release now would give. Sent when either changes.
+   * payload: { state, power, speed }.
+   */
+  POWER_CHANGED: 'billiards.cue.power.changed',
+} as const;
+
+// BilliardTurnsEvents — from BilliardTurns.
+export const BilliardTurnsEvents = {
+  /**
+   * Whose shot it is, and every ball each player has potted. `reason` is
+   * 'start' (a new rack), 'potted' (a ball just dropped, same shot), 'again'
+   * (potted and shoots again), 'miss', 'scratch' (cue ball potted) or 'over'
+   * (the table is clear; `winner` is a player index, or null on a tie).
+   * payload: { current, players: [{ name, potted }], reason, shot, over, winner }.
+   */
+  CHANGED: 'billiards.turns.changed',
 } as const;
 
 // BilliardRackEvents — from BilliardRack.
