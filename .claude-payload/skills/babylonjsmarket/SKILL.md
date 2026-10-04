@@ -169,6 +169,13 @@ Gotchas the pool design respects:
 - **Park-write vs per-frame-write race.** A despawn parks the entity synchronously inside the killer's `onUpdate`, so the parked system's `onEntityRemoved` runs attributed to that system. If `onEntityRemoved` writes a handle with the **same adapter method** the system also writes per-frame, they collide (the bug that flickered health bars: `layout()` and the park-hide both called `setMeshScale`). Fix: the park-hide uses a *different* method — `HealthBar` parks via `setMeshVisible`, leaving `setMeshScale` to `layout()`.
 - **Size = peak concurrent.** ≥ the max alive at once, so recycling never steals a live entity.
 - **Teardown.** `removeAllEntities` force-destroys pooled entities; their meshes are reclaimed by `renderer.dispose()` (wholesale), not per-entity.
+- **Set a spawn pose on the COMPONENT.** On a re-acquire MeshPrimitiveSystem queues a restore (position, rotation, visibility from the component) and writes it from its own `onUpdate`. So after `const e = world.acquire('chute', {x,y,z})`, set `e.get(MeshPrimitiveComponent)!.rotation = [...]` — never call `setMeshRotation` that frame.
+- **Park and re-acquire can happen in ONE frame.** The free list is LIFO: release a slot and the next `acquire` hands the same one back. A "hide on park" in `onEntityRemoved` plus a "show" in your `onUpdate` is then two writers on one handle — record the park and hide from your own `onUpdate`, skipping ids that are active again.
+- **Pool blueprints are live until consumed.** A `Pool` blueprint carries its instances' components, so a System querying those components runs on the blueprint in the first frame. Add `excluded: [PoolComponent]` to the query and filter `!e.has(PoolComponent)` in tag/component lookups. Pools exist only after PoolSystem's first update; wait for `pool.ready { pool }` before `acquire` (it returns `null` for an unknown pool).
+
+**Cameras and pointers.** There is no `getActiveCamera()`: camera components announce their handle on the bus (`arccamera.created { handle }`, `camera.active.changed { entityId, handle }`). Listen to POINTER events on `renderer.getRenderingCanvas()`, store state in the handler, act in `onUpdate`. `screenToWorldPoint(cam, nx, ny, d, out)` takes 0..1 of the canvas's CSS box and starts on the near plane — build a ray from `d = 0` and `d = 1` and intersect your own plane. An identity camera looks down +Z with world +X on screen-LEFT; for any camera, screen-right = forward × up.
+
+**Predictors and per-step effects.** An aim line that predicts a body must call the sim's own step function at the sim's fixed step — and every OTHER per-step effect on the body (contacts, portals, pushes, goals) must run at the same point of that same step in both. A once-a-frame System that teleports a body, or checks a goal, beside an integrator that checks contacts every substep, disagrees with the predictor exactly when it matters (a black hole parked beside a wormhole mouth, or on the edge of the goal). Let the integrator own every per-step effect, calling pure `.core` functions the predictor calls too; other components supply data and react to its events. For a goal that a once-a-frame System scores, the integrator STOPS the body on the step it comes in, so the System finds it where it arrived.
 
 ## 6. Scene JSON
 
@@ -245,11 +252,10 @@ Boot the viz layer once per game host:
 ```ts
 import { mountArcadeViz } from '@babylonjsmarket/arcade/viz'
 const viz = mountArcadeViz(game.world, { sceneName: 'pinball' })
-// → Entities panel (F1) + EventBus debugger (F2) + a pinned FPS counter. dispose() on unmount.
-// Keys are the next free F-key in registration order; Esc lists them.
+// → Entities panel (` to toggle) + EventBus debugger (F4) + a pinned FPS counter. dispose() on unmount.
 ```
 
-`sceneName` namespaces localStorage so panels in different scenes don't collide. Opts: `fpsOverlay: false`, `eventBusDebugger: false`, `toggleKey: 'Backquote'` (pins the Entities key instead of the next free F-key).
+`sceneName` namespaces localStorage so panels in different scenes don't collide. Opts: `fpsOverlay: false`, `eventBusDebugger: false`, `toggleKey: 'Backquote'`.
 
 Every debug panel registers through one singleton: `vizStore`. Panels get draggable / closable / resizable chrome + localStorage persistence for free. Persist slider/dropdown state with `setPanelData`/`getPanelData` (NOT a `createSignal` seeded with the scene default — that resets on reload):
 
