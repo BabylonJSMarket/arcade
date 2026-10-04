@@ -848,8 +848,9 @@ export const SpaceShooterHealthEvents = {
 export const GravityEvents = {
   /**
    * A GravityBody touched the surface of a GravityMass. `swallowed` is true when
-   * that mass `absorbs` (an event horizon) and false for a solid crash. The body
-   * has already been released when this fires.
+   * that mass `absorbs` (an event horizon) and false for a solid crash. With the
+   * body's `releaseOnContact` on (the default) it has already been taken out of
+   * play when this fires.
    * payload: { bodyId, massId, swallowed, x, y, z, vx, vy, vz }.
    */
   CONTACT: 'gravity.body.contact',
@@ -994,7 +995,7 @@ export const SpaceGolfEvents = {
 export const SpaceGolfInputEvents = {
   /** Start the current level again. payload: {}. */
   RESTART_LEVEL: 'spacegolf.level.restart',
-  /** Add a black hole at a point (or at the field centre). payload: { x?, y?, z? }. */
+  /** Add a black hole at a point (or at the world origin). payload: { x?, y?, z? }. */
   ADD_BLACK_HOLE: 'spacegolf.blackhole.add',
   /** Remove one black hole. payload: { entityId }. */
   REMOVE_BLACK_HOLE: 'spacegolf.blackhole.remove',
