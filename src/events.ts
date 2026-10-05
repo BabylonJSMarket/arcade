@@ -694,8 +694,8 @@ export const PinballScrollCameraEvents = {
 // PinballDirectorEvents — from PinballDirector.
 export const PinballDirectorEvents = {
   /**
-   * The whole game, every time it moves: state ('attract' | 'ready' |
-   * 'playing' | 'bonus' | 'over'), ball number, score, and what is lit.
+   * The whole game, every time it moves: phase ('attract' | 'ready' |
+   * 'playing' | 'over'), ball number, score, and what is lit.
    * payload: PinballGameState (see PinballDirector.defs).
    */
   CHANGED: 'pinball.game.changed',
