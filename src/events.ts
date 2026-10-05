@@ -936,6 +936,12 @@ export const AxisViewCameraInputEvents = {
   SET_VIEW: 'axisview.view.set',
   /** Go to the other view. payload: {}. */
   TOGGLE: 'axisview.view.toggle',
+  /**
+   * Zoom in about a world point, which stays put on screen while the camera
+   * eases in or out. `zoom` 1 is the whole volume; 2 is twice as close.
+   * payload: { zoom, anchor?: [x, y, z] }.
+   */
+  ZOOM: 'axisview.zoom.set',
 } as const;
 
 // PointerDragEvents — from PointerDrag.
