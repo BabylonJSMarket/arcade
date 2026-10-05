@@ -591,6 +591,124 @@ export const PinballBuilderInputEvents = {
   DRAW_PATH: 'pinballBuilder.drawPath',
 } as const
 
+// ── The pinball kit: one event dictionary for every part of the table. A
+// director, a HUD or a sound can listen to any of these without importing the
+// part that fires it.
+
+// PlungerEvents — from Plunger.
+export const PlungerEvents = {
+  /** The ball is in the shooter lane, waiting for the launch. payload: { ballId }. */
+  SERVED: 'plunger.served',
+  /** How far the plunger is pulled back, 0..1, while it charges. payload: { power }. */
+  CHARGE: 'plunger.charge',
+  /** The ball left the plunger. payload: { ballId, power, speed }. */
+  LAUNCHED: 'plunger.launched',
+  /** The ball fell off the bottom of the table. payload: { ballId }. */
+  DRAINED: 'plunger.drained',
+} as const
+
+// PlungerInputEvents — what Plunger listens for.
+export const PlungerInputEvents = {
+  /** Put the ball in the shooter lane. payload: {}. */
+  SERVE: 'plunger.serve',
+  /** Take the ball off the table and hold it there (game over). payload: {}. */
+  PARK: 'plunger.park',
+} as const
+
+// BumperEvents — from Bumper.
+export const BumperEvents = {
+  /** The ball hit a pop bumper. payload: { bumperId, ballId, points }. */
+  HIT: 'bumper.hit',
+} as const
+
+// SlingshotEvents — from Slingshot.
+export const SlingshotEvents = {
+  /** A slingshot kicked the ball. payload: { entityId, ballId, points, speed }. */
+  KICKED: 'slingshot.kicked',
+} as const
+
+// SpinnerEvents — from Spinner.
+export const SpinnerEvents = {
+  /** The spinner turned over. payload: { spinnerId, revolutions, points }. */
+  SPUN: 'spinner.spun',
+} as const
+
+// MouseHoleEvents — from MouseHole.
+export const MouseHoleEvents = {
+  /** A saucer caught the ball. payload: { holeId, entityId }. */
+  CAPTURED: 'mouseHole.captured',
+  /** A saucer kicked the ball back out. payload: { holeId, entityId }. */
+  RELEASED: 'mouseHole.released',
+} as const
+
+// DropTargetEvents — from DropTarget.
+export const DropTargetEvents = {
+  /** A target dropped. payload: { entityId, bank, points, remaining }. */
+  DOWN: 'dropTarget.down',
+  /** The last target of a bank dropped. payload: { bank, count }. */
+  BANK_COMPLETE: 'dropTarget.bankComplete',
+  /** A bank stood back up. payload: { bank }. */
+  RESET: 'dropTarget.reset',
+} as const
+
+// DropTargetInputEvents — what DropTarget listens for.
+export const DropTargetInputEvents = {
+  /** Stand a bank back up now. payload: { bank? } (no bank = every bank). */
+  RESET: 'dropTarget.resetRequest',
+} as const
+
+// RolloverEvents — from Rollover.
+export const RolloverEvents = {
+  /** A lane lit, or the lit lanes moved. payload: { group, index, lit }. */
+  CHANGED: 'rollover.changed',
+  /** Every lane in a group is lit. payload: { group, count }. */
+  COMPLETE: 'rollover.complete',
+} as const
+
+// PinballRampEvents — from PinballRamp.
+export const PinballRampEvents = {
+  /** The ball made it to the top of a ramp. payload: { entityId, ballId, points }. */
+  MADE: 'pinballRamp.made',
+} as const
+
+// WireRailEvents — from WireRail.
+export const WireRailEvents = {
+  /** A wire rail picked the ball up. payload: { entityId, ballId }. */
+  ENTERED: 'wireRail.entered',
+  /** A wire rail let the ball go at its far end. payload: { entityId, ballId }. */
+  EXITED: 'wireRail.exited',
+} as const
+
+// PinballGateEvents — from PinballGate.
+export const PinballGateEvents = {
+  /** The ball went through a one-way gate the allowed way. payload: { entityId, ballId }. */
+  PASSED: 'pinballGate.passed',
+} as const
+
+// PinballScrollCameraEvents — from PinballScrollCamera.
+export const PinballScrollCameraEvents = {
+  /** The camera moved to another screen of the table. payload: { screen, count }. */
+  SCREEN_CHANGED: 'pinballScrollCamera.screenChanged',
+} as const
+
+// PinballDirectorEvents — from PinballDirector.
+export const PinballDirectorEvents = {
+  /**
+   * The whole game, every time it moves: state ('attract' | 'ready' |
+   * 'playing' | 'bonus' | 'over'), ball number, score, and what is lit.
+   * payload: PinballGameState (see PinballDirector.defs).
+   */
+  CHANGED: 'pinball.game.changed',
+  /** Something to tell the player: "BALL SAVED", "JACKPOT". payload: { text, kind }. */
+  MESSAGE: 'pinball.game.message',
+} as const
+
+// PinballDirectorInputEvents — what PinballDirector listens for.
+export const PinballDirectorInputEvents = {
+  /** Start a new game. payload: {}. */
+  START: 'pinball.game.start',
+} as const
+
 
 
 // P2PNetworkEvents — protocol for premium P2PNetwork
