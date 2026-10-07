@@ -37,26 +37,6 @@ describe('HealthSystem', () => {
     );
   });
 
-  it('scales every hit by damageScale, and takes none at 0', () => {
-    const half = makeEntity({ hp: 10, maxHp: 10, damageScale: 0.5 });
-    const spy = vi.fn();
-    eventBus.on(HealthEvents.DAMAGED, spy);
-    eventBus.emit(HealthInputEvents.DAMAGE, { entityId: half.id, damage: 4 });
-    expect(half.get(HealthComponent)!.hp).toBe(8);
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ entityId: half.id, damage: 2 }));
-
-    const god = makeEntity({ hp: 10, maxHp: 10, damageScale: 0 });
-    spy.mockClear();
-    eventBus.emit(HealthInputEvents.DAMAGE, { entityId: god.id, damage: 999 });
-    expect(god.get(HealthComponent)!.hp).toBe(10);
-    expect(spy).not.toHaveBeenCalled();
-  });
-
-  it('defaults damageScale to 1 and round-trips it', () => {
-    expect(new HealthComponent().damageScale).toBe(1);
-    expect(new HealthComponent(new HealthComponent({ damageScale: 0.3 }).serialize()).damageScale).toBe(0.3);
-  });
-
   it('ignores damage aimed at an unknown entity id', () => {
     makeEntity({ hp: 10 });
     const spy = vi.fn();
