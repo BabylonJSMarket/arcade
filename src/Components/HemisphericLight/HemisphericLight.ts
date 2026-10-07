@@ -92,8 +92,11 @@ export class HemisphericLightSystem extends System {
     rt.initialized = true;
     this.lastIntensities.set(comp, comp.intensity);
 
+    // The handle lets another system (a day/night clock) drive this light,
+    // exactly as DirectionalLight's CREATED does.
     this.eventBus.emit(HemisphericLightEvents.CREATED, {
       entityId: entity.id,
+      handle: rt.handle,
       intensity: comp.intensity,
     });
   }

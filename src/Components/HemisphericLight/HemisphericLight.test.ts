@@ -94,12 +94,13 @@ describe('HemisphericLightSystem — adapter integration', () => {
     expect((call?.args[1] as { intensity: number }).intensity).toBe(0.5);
   });
 
-  it('emits CREATED with entity id and intensity', () => {
+  it('emits CREATED with entity id, light handle and intensity', () => {
     const spy = vi.fn();
     eventBus.on(HemisphericLightEvents.CREATED, spy);
     const entity = world.createEntity();
     entity.add(new HemisphericLightComponent({ intensity: 0.4 }));
-    expect(spy).toHaveBeenCalledWith({ entityId: entity.id, intensity: 0.4 });
+    // The handle is what lets another system (a day/night clock) drive the light.
+    expect(spy).toHaveBeenCalledWith({ entityId: entity.id, handle: expect.anything(), intensity: 0.4 });
   });
 
   it('forwards intensity changes through the adapter on update', () => {

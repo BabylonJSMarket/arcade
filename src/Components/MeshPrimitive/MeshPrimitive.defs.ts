@@ -85,6 +85,8 @@ export interface MeshPrimitiveInput {
     ambientTexture?: string;
     metallic?: number;
     roughness?: number;
+    /** Physically-based material even without textures (lit by the HDR environment). */
+    pbr?: boolean;
     uScale?: number;
     vScale?: number;
     /**
@@ -204,6 +206,7 @@ export class MeshPrimitiveComponent extends Component {
         ambientTexture: m.ambientTexture,
         metallic: m.metallic,
         roughness: m.roughness,
+        pbr: m.pbr,
         uScale: m.uScale,
         vScale: m.vScale,
         maxSimultaneousLights: m.maxSimultaneousLights,
@@ -245,6 +248,7 @@ export class MeshPrimitiveComponent extends Component {
           ambientTexture: this.material.ambientTexture,
           metallic: this.material.metallic,
           roughness: this.material.roughness,
+          pbr: this.material.pbr,
           uScale: this.material.uScale,
           vScale: this.material.vScale,
           maxSimultaneousLights: this.material.maxSimultaneousLights,
