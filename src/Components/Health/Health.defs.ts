@@ -15,6 +15,8 @@ export interface HealthInput {
   maxHp?: number
   /** Post-damage grace period in seconds. 0 = no i-frames. */
   invulnSeconds?: number
+  /** Multiplies every hit taken: 1 normal, 0.5 half, 0 invincible. */
+  damageScale?: number
   /** If set, entity teleports here + restores full HP when HP hits 0. */
   respawnPosition?: [number, number, number]
 }
@@ -27,6 +29,7 @@ export class HealthComponent extends Component {
   hp: number
   maxHp: number
   invulnSeconds: number
+  damageScale: number
   respawnPosition: [number, number, number] | null
 
   /** Wall-clock ms (performance.now) until which damage is ignored. */
@@ -37,6 +40,7 @@ export class HealthComponent extends Component {
     this.hp = data.hp ?? 10
     this.maxHp = data.maxHp ?? this.hp
     this.invulnSeconds = data.invulnSeconds ?? 0
+    this.damageScale = data.damageScale ?? 1
     this.respawnPosition = data.respawnPosition ?? null
   }
 
@@ -45,6 +49,7 @@ export class HealthComponent extends Component {
       hp: this.hp,
       maxHp: this.maxHp,
       invulnSeconds: this.invulnSeconds,
+      damageScale: this.damageScale,
       respawnPosition: this.respawnPosition ?? undefined,
     }
   }

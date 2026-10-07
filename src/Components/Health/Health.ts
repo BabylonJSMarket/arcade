@@ -41,14 +41,16 @@ export class HealthSystem extends System {
     if (!h || h.hp <= 0 || req.damage <= 0) return
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
     if (now < h.invulnUntil) return
+    const damage = req.damage * Math.max(0, h.damageScale)
+    if (damage <= 0) return
 
-    h.hp = Math.max(0, h.hp - req.damage)
+    h.hp = Math.max(0, h.hp - damage)
     if (h.invulnSeconds > 0) h.invulnUntil = now + h.invulnSeconds * 1000
     this.eventBus.emit(HealthEvents.DAMAGED, {
       entityId: req.entityId,
       hp: h.hp,
       maxHp: h.maxHp,
-      damage: req.damage,
+      damage,
     })
 
     if (h.hp <= 0) {
