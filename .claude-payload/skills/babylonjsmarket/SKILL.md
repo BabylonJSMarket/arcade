@@ -1,6 +1,6 @@
 ---
 name: babylonjsmarket
-description: Author and review code that uses the @babylonjsmarket family — @babylonjsmarket/ecs (World, System, Entity, Component, EventBus, SceneLoader), /arcade (arcade Components + the `arcade` CLI), and /viz. Invoke when writing or reviewing a class extending System or Component, scene JSON, a `.viz.tsx` debug panel (vizStore), event names on the bus, or when scaffolding a new Component+System — including any file importing from @babylonjsmarket/ecs, /arcade, or /viz. Also use to discover/download components from the marketplace.
+description: Author and review code that uses the @babylonjsmarket family — @babylonjsmarket/ecs (World, System, Entity, Component, EventBus, SceneLoader), /arcade (the ArcadeGame runner + the `arcade` CLI), and /viz. Invoke when writing or reviewing a class extending System or Component, scene JSON, a `.viz.tsx` debug panel (vizStore), event names on the bus, or when scaffolding a new Component+System — including any file importing from @babylonjsmarket/ecs, /arcade, or /viz. Also use to discover/download components from the marketplace.
 ---
 
 # @babylonjsmarket — ECS, arcade & viz authoring
@@ -116,7 +116,8 @@ Known dead synonyms → correct name: `score.updated`→`score.changed`; `enemy.
 **Source of truth:** declare each event once in the component's `{Name}Events` (emitted) or `{Name}InputEvents` (listened-to) constant, and import the constant everywhere — never a string literal. Listeners that hardcode the string are how synonyms creep in.
 
 ```ts
-// ✅ imports the canonical name from the emitter's .events.ts (never its System)
+// ✅ imports the canonical name from the emitter's .events file
+// (core components like Score are project source: ./components/Score/Score.events)
 import { ScoreEvents } from '../Score/Score.events';
 this.eventBus.on(ScoreEvents.CHANGED, ...);
 
@@ -230,7 +231,7 @@ export class FooSystem extends System {
 
 When the user names a component concept ("add Health", "scaffold a Cooldown component"):
 
-1. **Run §0 capability detection first.** If neither `@babylonjsmarket/ecs` nor `@babylonjsmarket/arcade` is present, stop and tell the user to add one first. Scaffold against only what's present — if arcade is absent, import `System`/types from `@babylonjsmarket/ecs`, not arcade, and don't reference arcade Components or `@babylonjsmarket/arcade/viz`.
+1. **Run §0 capability detection first.** If neither `@babylonjsmarket/ecs` nor `@babylonjsmarket/arcade` is present, stop and tell the user to add one first. Scaffold against only what's present — if arcade is absent, import `System`/types from `@babylonjsmarket/ecs`, not arcade, and don't reference `ArcadeGame` or `@babylonjsmarket/arcade/viz`.
 2. **Derive names:** `Name` (PascalCase), `slug` (kebab), `lowerName` (camelCase).
 3. **Pick the output dir,** in order of preference: `src/components/{Name}/` if `src/components/` exists; else `src/games/<existing-game>/components/{Name}/` for a multi-game monorepo; else ask.
 4. **Duplicate check:** if `{outputDir}/{Name}.ts` already exists, stop — extend it in place rather than scaffold a duplicate.
@@ -367,11 +368,15 @@ npm create @babylonjsmarket/arcade <dir>     # or: npx @babylonjsmarket/arcade i
 
 There is **no template choice** — every scaffold is a single multigame arcade. After scaffolding: `cd <dir> && npm install && npm run dev`, then open the printed URL.
 
-The scaffold ships one starter scene, the **arcade room** (`src/scenes/arcade-room.ts`), plus the multigame structure: `src/scenes/index.ts` is the scene map (`SCENES` + `DEFAULT_SCENE`) — the seam where you register more scenes; `src/registry.ts` maps every folder in `src/components/` to a lazy import; `src/main.ts` is the tiny boot that installs each component's `adapter/register.ts` plugin and loads the default scene. Assets (carpet textures, cabinet GLB) stream from `https://babylonjsgames.com/arcade/...`. Scenes are TS modules that declare entities + components **by name**; `ArcadeGame` lazy-imports each name through `src/registry.ts` the first time it appears. Arcade has no built-in components: the free core set is downloaded into `src/components/` when the project is created. If a scene warns that a component is missing, run `npx arcade core` (fills in missing core files, never overwrites) or `bjs download <Name>`. To fill the arcade, add `src/scenes/<my-game>.ts`, register it in `src/scenes/index.ts`, and load it with `game.loadScene(SCENES['<my-game>'])`. **Custom components** go under `src/components/<Name>/<Name>.ts` and the registry finds them by folder name with no edit (outside a scaffold, pass `ArcadeGame`'s `componentRegistry` option) — each resolver is `() => import('./components/Thing/Thing')` returning `{ ThingComponent, ThingSystem }`. To change a core component, edit its source in `src/components/` directly — it is already yours.
+The scaffold ships one starter scene, the **arcade room** (`src/scenes/arcade-room.ts`), plus the multigame structure: `src/scenes/index.ts` is the scene map (`SCENES` + `DEFAULT_SCENE`) — the seam where you register more scenes; `src/registry.ts` holds shared resolvers; `src/main.ts` is the tiny boot that loads the default scene. Assets (carpet textures, cabinet GLB) stream from `https://babylonjsgames.com/arcade/...`. Scenes are TS modules that declare entities + components **by name**; each name is a folder in `src/components/`, loaded the first time a scene uses it. To fill the arcade, add `src/scenes/<my-game>.ts`, register it in `src/scenes/index.ts`, and load it with `game.loadScene(SCENES['<my-game>'])`. **Custom components** go in the same `src/components/` folder; `src/registry.ts` registers every folder there by name (or use `ArcadeGame`'s `componentRegistry` option — each resolver is `() => import('./components/Thing')` returning `{ ThingComponent, ThingSystem }`). A component with an engine plugin keeps it in `adapter/register.ts`; `main.ts` globs `./components/*/adapter/register.ts` and registers each one (`registerArcadePlugins` is gone).
+
+**The core components are project source.** Since arcade 0.13.0 the package bundles no components. The 35 free core ones (MeshPrimitive, Mesh, the lights, cameras, Physics, Health, Score, Shadow, Skybox, Pool, Sound, …) live in the marketplace as free components and are **downloaded into `src/components/` at create time** (no login). `--no-core` skips that; `npx arcade core` fills in any that are missing; `bjs download <Name>` fetches one. The project owns those files: to change a core component's behavior, edit its folder in place. (`arcade eject` is gone — there is nothing left to eject.)
+
+**Import core names from the project copy**, never from the package: `./components/<Name>/<Name>.events` for event names, `./components/<Name>/<Name>.defs` for component classes. `@babylonjsmarket/arcade` still exports `ArcadeGame`, `ControlsHud`, `mountArcadeViz`, `KeyboardInputEvents` / `inputEvents`, `BulletEvents`, the SkeletonAnimator events, and the scaffolder CLI.
 
 ## 13. Discovering & downloading components from the marketplace
 
-The full marketplace ships 50+ components beyond the free core set. Use the existing **`bjs` CLI** (`@babylonjsmarket/bjs`, in `tools/bjs-cli/`) — **do not build a new tool**. It authenticates and pulls component files from the server library into a local library, from which you bring them into the project.
+The full marketplace ships 50+ components beyond the free core set. `bjs download <Name>` installs one (free or paid) into the project's `src/components/<Name>/`. Use the existing **`bjs` CLI** (`@babylonjsmarket/bjs`, in `tools/bjs-cli/`) — **do not build a new tool**. It authenticates and pulls component files from the server library into a local library, from which you bring them into the project.
 
 Verified commands and flows (`tools/bjs-cli/src/index.ts`, `commands/*.ts`, `utils/component-catalog.ts`):
 
@@ -380,7 +385,7 @@ Verified commands and flows (`tools/bjs-cli/src/index.ts`, `commands/*.ts`, `uti
 - `bjs bbs` — the interactive BBS-style interface where library browse/sync/install lives:
   - **Settings → Sync Library** calls the server manifest (`GET /api/library/manifest`) and downloads every accessible component's files (`GET /api/library/file/<path>`) into your local library (`~/.bjs/Library`, structured `Components/<Name>/<Name>.ts` etc.). Locked (unowned) components show a price and are skipped.
   - In a project's panel, **`[C] Components`** lists components in your local library not yet installed and copies the selected one into the project (`src/Components/<Name>.ts`, plus its `tests/Components/<Name>.test.ts` if present).
-- `bjs download <asset-key>` — downloads a marketplace **asset** (e.g. a GLB), not a component file.
+- `bjs download <asset-key | ComponentName>` — downloads a marketplace **asset** (e.g. a GLB) into `public/`, or, when the name is not an asset, a **component** into `src/components/<Name>/`.
 
 The underlying endpoints (consumed by the above, not separate CLI flags): `GET /api/library/manifest` returns `{ files: ServerFileInfo[], totalFiles, unlockedFiles }` where each entry has `path`, `version`, `category`, `hasAccess`, `price?`, `files[]`, `dependencies?`; `GET /api/library/file/<encoded path>` returns `{ content, version }`. Both go through `AuthManager.makeAuthenticatedRequest` (Bearer token).
 
