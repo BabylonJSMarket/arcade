@@ -20,9 +20,6 @@ export default defineConfig({
         'src/**/*.panel.tsx',
         'src/**/index.ts',
         'src/viz.ts', // re-export barrel
-        // Solid debug-UI in the shared viz layer (entity list, FPS overlay) —
-        // ephemeral UI, not unit-tested. mountArcadeViz.ts (logic) stays in scope.
-        'src/Components/_shared/viz/**/*.tsx',
       ],
       // Publish guardrail: prepublishOnly runs `test:coverage`, so a publish
       // ABORTS if coverage regresses. lines/functions/statements are held at

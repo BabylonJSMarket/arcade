@@ -27,11 +27,12 @@ It prints one `name@version` per installed `@babylonjsmarket/*` package (alphabe
 | If present | You may use | Authoritative types (verify here) |
 |---|---|---|
 | `@babylonjsmarket/ecs` | `World`, `System`, `Entity`, `Component`, `EventBus`, `SceneLoader`; subpaths `./babylon`, `./three`, `./babylon-lite`, `./testing` (`runMechanicContract`), `./renderer-types` | `node_modules/@babylonjsmarket/ecs/dist/**/*.d.ts` |
-| `@babylonjsmarket/arcade` | arcade Components (`MeshPrimitive`, `Movement`, `Physics`, `Score`, `Enemy`, …), `@babylonjsmarket/arcade/viz` (`vizStore`, `mountArcadeViz`), the `arcade` CLI | `node_modules/@babylonjsmarket/arcade/dist/**/*.d.ts` |
+| `@babylonjsmarket/arcade` | the game runner: `ArcadeGame`, `mountControlsHud`, the shared event names (`KeyboardInputEvents`, `MouseInputEvents`, `BulletEvents`, `SkeletonAnimator*Events`), `@babylonjsmarket/arcade/viz` (`vizStore`, `mountArcadeViz`), the `arcade` CLI (scaffold + `arcade core`). **No components** — since 0.13.0 the core set (`MeshPrimitive`, `Movement`, `Physics`, `Score`, `Enemy`, …) is source in the project's `src/components/` | `node_modules/@babylonjsmarket/arcade/dist/**/*.d.ts`; components: `src/components/<Name>/` |
 | `@babylonjsmarket/viz` | standalone panel/theme APIs: `./core`, `./solid`, `./ecs`, theme CSS | `node_modules/@babylonjsmarket/viz/dist/**/*.d.ts` |
 
 Rules:
-- If `arcade` is absent, do **not** suggest `vizStore` / `@babylonjsmarket/arcade/viz` panels or arcade Components — import the System base and types from `@babylonjsmarket/ecs` instead.
+- If `arcade` is absent, do **not** suggest `vizStore` / `@babylonjsmarket/arcade/viz` panels or `ArcadeGame` — import the System base and types from `@babylonjsmarket/ecs` instead.
+- Never import a component (`MeshPrimitiveComponent`, `ScoreEvents`, …) from `@babylonjsmarket/arcade`. Components live in `src/components/<Name>/`; if one is missing, run `npx arcade core` (core set) or `bjs download <Name>` (marketplace).
 - If `viz` is absent, don't reach for `@babylonjsmarket/viz`.
 - If the detector prints `NONE`, the project doesn't consume this family — say so rather than scaffolding against it.
 
@@ -115,8 +116,8 @@ Known dead synonyms → correct name: `score.updated`→`score.changed`; `enemy.
 **Source of truth:** declare each event once in the component's `{Name}Events` (emitted) or `{Name}InputEvents` (listened-to) constant, and import the constant everywhere — never a string literal. Listeners that hardcode the string are how synonyms creep in.
 
 ```ts
-// ✅ imports the canonical name from the emitter
-import { ScoreEvents } from '@babylonjsmarket/arcade';
+// ✅ imports the canonical name from the emitter's .events.ts (never its System)
+import { ScoreEvents } from '../Score/Score.events';
 this.eventBus.on(ScoreEvents.CHANGED, ...);
 
 // ❌ hardcoded synonym — breaks silently when the emitter renames
@@ -366,13 +367,11 @@ npm create @babylonjsmarket/arcade <dir>     # or: npx @babylonjsmarket/arcade i
 
 There is **no template choice** — every scaffold is a single multigame arcade. After scaffolding: `cd <dir> && npm install && npm run dev`, then open the printed URL.
 
-The scaffold ships one starter scene, the **arcade room** (`src/scenes/arcade-room.ts`), plus the multigame structure: `src/scenes/index.ts` is the scene map (`SCENES` + `DEFAULT_SCENE`) — the seam where you register more scenes; `src/registry.ts` holds shared resolvers; `src/main.ts` is the tiny boot that loads the default scene. Assets (carpet textures, cabinet GLB) stream from `https://babylonjsgames.com/arcade/...`. Scenes are TS modules that declare entities + components **by name**; arcade lazy-imports each named built-in the first time it appears. To fill the arcade, add `src/scenes/<my-game>.ts`, register it in `src/scenes/index.ts`, and load it with `game.loadScene(SCENES['<my-game>'])`. **Custom components** go under `src/components/` and are wired up via `src/registry.ts` (or `ArcadeGame`'s `componentRegistry` option) — each resolver is `() => import('./components/Thing')` returning `{ ThingComponent, ThingSystem }`.
-
-**`arcade eject`** copies built-in arcade component source into the project so you own and can edit it (shadcn-style). It writes `src/components/<Name>/` folders, patches `src/registry.ts` so the local copies override the package's built-ins, and drops this skill into `.claude/skills/babylonjsmarket/`. Forms: `arcade eject` (eject what the scenes + `registry.ts` reference + their deps), `arcade eject <Name>...` (specific components), `arcade eject --all`, and `--dry-run` to preview. Use it when the user wants to customize a built-in component's behavior rather than wrap it.
+The scaffold ships one starter scene, the **arcade room** (`src/scenes/arcade-room.ts`), plus the multigame structure: `src/scenes/index.ts` is the scene map (`SCENES` + `DEFAULT_SCENE`) — the seam where you register more scenes; `src/registry.ts` maps every folder in `src/components/` to a lazy import; `src/main.ts` is the tiny boot that installs each component's `adapter/register.ts` plugin and loads the default scene. Assets (carpet textures, cabinet GLB) stream from `https://babylonjsgames.com/arcade/...`. Scenes are TS modules that declare entities + components **by name**; `ArcadeGame` lazy-imports each name through `src/registry.ts` the first time it appears. Arcade has no built-in components: the free core set is downloaded into `src/components/` when the project is created. If a scene warns that a component is missing, run `npx arcade core` (fills in missing core files, never overwrites) or `bjs download <Name>`. To fill the arcade, add `src/scenes/<my-game>.ts`, register it in `src/scenes/index.ts`, and load it with `game.loadScene(SCENES['<my-game>'])`. **Custom components** go under `src/components/<Name>/<Name>.ts` and the registry finds them by folder name with no edit (outside a scaffold, pass `ArcadeGame`'s `componentRegistry` option) — each resolver is `() => import('./components/Thing/Thing')` returning `{ ThingComponent, ThingSystem }`. To change a core component, edit its source in `src/components/` directly — it is already yours.
 
 ## 13. Discovering & downloading components from the marketplace
 
-The full marketplace ships 50+ components beyond the arcade starter bundle. Use the existing **`bjs` CLI** (`@babylonjsmarket/bjs`, in `tools/bjs-cli/`) — **do not build a new tool**. It authenticates and pulls component files from the server library into a local library, from which you bring them into the project.
+The full marketplace ships 50+ components beyond the free core set. Use the existing **`bjs` CLI** (`@babylonjsmarket/bjs`, in `tools/bjs-cli/`) — **do not build a new tool**. It authenticates and pulls component files from the server library into a local library, from which you bring them into the project.
 
 Verified commands and flows (`tools/bjs-cli/src/index.ts`, `commands/*.ts`, `utils/component-catalog.ts`):
 

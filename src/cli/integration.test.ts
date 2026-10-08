@@ -41,6 +41,13 @@ const REPO_ROOT = path.resolve(ARCADE_ROOT, '..', '..')
 const ROOT_NODE_MODULES = path.join(REPO_ROOT, 'node_modules')
 const TSC_BIN = path.join(ROOT_NODE_MODULES, '.bin', 'tsc')
 const CLI_PATH = path.join(ARCADE_ROOT, 'dist', 'cli', 'index.js')
+// The scaffold downloads the core components into src/components, and main.ts
+// imports from them. Copy them from the local CodeLibrary instead of the
+// network, the same way index.test.ts does.
+const LIBRARY_DIR = path.join(REPO_ROOT, 'CodeLibrary')
+const CORE_ENV: Record<string, string> = fs.existsSync(path.join(LIBRARY_DIR, 'Components'))
+  ? { ARCADE_CORE_FROM: LIBRARY_DIR }
+  : {}
 
 // The scaffolded-project typecheck fabricates node_modules by symlinking the
 // monorepo ROOT install — tsc plus the ambient types the scaffold references
@@ -227,14 +234,19 @@ interface RunResult {
 }
 
 async function execCli(args: string[], cwd: string): Promise<RunResult> {
-  return runNode([CLI_PATH, ...args], cwd, 60_000)
+  return runNode([CLI_PATH, ...args], cwd, 60_000, CORE_ENV)
 }
 
-async function runNode(args: string[], cwd: string, timeoutMs: number): Promise<RunResult> {
+async function runNode(
+  args: string[],
+  cwd: string,
+  timeoutMs: number,
+  extraEnv: Record<string, string> = {},
+): Promise<RunResult> {
   try {
     const { stdout, stderr } = await execFileAsync(process.execPath, args, {
       cwd,
-      env: { ...process.env, CI: 'true' },
+      env: { ...process.env, CI: 'true', ...extraEnv },
       maxBuffer: 50 * 1024 * 1024,
       timeout: timeoutMs,
     })

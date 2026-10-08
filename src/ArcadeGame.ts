@@ -7,10 +7,11 @@ import {
   type RendererAdapter,
   type RendererInitOptions,
 } from "@babylonjsmarket/ecs";
-import {
-  ARCADE_COMPONENT_REGISTRY,
-  type LazyComponentResolver,
-} from "./registry";
+
+/** A component's module: `<Name>Component`, and any `<Name>…System`. */
+export type ComponentModule = Record<string, unknown>;
+/** Loads one component module on demand — `() => import('./components/X/X')`. */
+export type LazyComponentResolver = () => Promise<ComponentModule>;
 
 /**
  * Scene JSON shape. Kept minimal here — anything else in the JSON is forwarded
@@ -24,9 +25,11 @@ interface SceneJson {
 
 export interface ArcadeGameOptions {
   /**
-   * Extra component resolvers to merge with the built-in arcade registry.
-   * Use this to add components from other packages (e.g. a future
-   * @babylonjsmarket/arcade-ai) or one-off custom components in your project.
+   * How a scene's component names become code: name → lazy module import.
+   * This is the ONLY place ArcadeGame looks — arcade ships no components of its
+   * own. A scaffolded project passes its `src/registry.ts` map, which globs
+   * every folder in `src/components/` (the core set `arcade core` downloads,
+   * plus anything `bjs download` adds).
    */
   componentRegistry?: Record<string, LazyComponentResolver>;
 }
@@ -38,22 +41,23 @@ export interface ArcadeGameOptions {
  * adds **lazy component resolution**: components referenced by name in a
  * scene JSON file are dynamically imported the first time they're seen, then
  * registered with the SceneLoader and (if they expose a System) added to the
- * World.
+ * World. Names resolve through `options.componentRegistry` only.
  *
  * Usage:
  * ```ts
  * import { ArcadeGame } from '@babylonjsmarket/arcade';
  * import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
  *
- * const game = new ArcadeGame(new BabylonAdapter());
+ * import { REGISTRY } from './registry'; // globs src/components/*
+ *
+ * const game = new ArcadeGame(new BabylonAdapter(), { componentRegistry: REGISTRY });
  * await game.init(canvas);
  * await game.loadSceneFromUrl('/scenes/level1.json');
  * game.start();
  * ```
  *
- * If your scene only uses `MeshPrimitive`, `KeyboardMover`, and `ArcCamera`,
- * those are the only component modules that get pulled into the bundle —
- * `Physics`, `Animation`, etc. stay tree-shaken out.
+ * Only the components a loaded scene names get imported, so each stays its own
+ * lazy chunk.
  */
 export class ArcadeGame {
   public readonly world: World;
@@ -63,6 +67,8 @@ export class ArcadeGame {
 
   private readonly resolvers: Record<string, LazyComponentResolver>;
   private readonly registered = new Set<string>();
+  /** Names already warned about, so a missing component warns once. */
+  private readonly warnedMissing = new Set<string>();
   private running = false;
   /**
    * Systems the CURRENT scene added, so switching scenes can tear exactly
@@ -80,10 +86,7 @@ export class ArcadeGame {
       sceneLoader: this.sceneLoader,
       renderer,
     });
-    this.resolvers = {
-      ...ARCADE_COMPONENT_REGISTRY,
-      ...(options.componentRegistry ?? {}),
-    };
+    this.resolvers = { ...(options.componentRegistry ?? {}) };
   }
 
   async init(canvas: HTMLCanvasElement, opts?: RendererInitOptions): Promise<void> {
@@ -189,7 +192,15 @@ export class ArcadeGame {
     if (this.registered.has(name)) return;
     const resolve = this.resolvers[name];
     if (!resolve) {
-      console.warn(`[ArcadeGame] No resolver for component "${name}" — register one with addComponentResolver() or pass componentRegistry to the constructor.`);
+      if (!this.warnedMissing.has(name)) {
+        this.warnedMissing.add(name);
+        console.warn(
+          `[ArcadeGame] The scene uses component "${name}", but this project does not have it, so entities skip it. ` +
+            `Core components: run \`npx arcade core\`. Marketplace components: run \`bjs download ${name}\`. ` +
+            `Either puts it in src/components/, where src/registry.ts finds it. ` +
+            `(Arcade itself ships no components; pass them with the componentRegistry option or addComponentResolver().)`,
+        );
+      }
       return;
     }
 

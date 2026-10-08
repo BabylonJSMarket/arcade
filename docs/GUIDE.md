@@ -1,53 +1,65 @@
-# Basics — User Guide
+# Arcade — User Guide
 
-Curated arcade-style components for the `@babylonjsmarket/ecs` framework, plus a lazy JSON scene loader that ships only the components your scene actually uses.
+`@babylonjsmarket/arcade` runs games built on `@babylonjsmarket/ecs`. You describe a scene in JSON. `ArcadeGame` imports the components the scene names, starts their systems, and runs the loop.
 
-## Installation
+The package holds the runner, not the parts. The free core components — meshes, lights, cameras, input, physics, scoring, pooling — live as source in your project's `src/components/`. The scaffold downloads them, `npx arcade core` fills in any that are missing, and `bjs download <Name>` adds more from the marketplace.
 
-```bash
-npm install @babylonjsmarket/arcade @babylonjsmarket/ecs
-```
-
-Pick a renderer:
+## Start a project
 
 ```bash
-# For BabylonJS
-npm install @babylonjs/core @babylonjs/loaders @babylonjs/havok
-
-# For Three.js
-npm install three
+npm create @babylonjsmarket/arcade my-game
+cd my-game
+npm install
+npm run dev
 ```
 
-(Optional, for debug viz panels:)
+You get:
+
+| File | Job |
+| --- | --- |
+| `src/components/` | Every component the game uses, as source. The core set lands here on create. |
+| `src/registry.ts` | Maps each folder in `src/components/` to a lazy import. You rarely edit it. |
+| `src/main.ts` | Boots the renderer, installs each component's engine plugin, loads the scene. |
+| `src/scenes/` | Your scenes, as TS modules listed in `src/scenes/index.ts`. |
+
+Pick a single game with `--kind game`, or the default multigame arcade room. Pick an engine with `--renderer babylon | babylon-lite | three`.
+
+## Get the core components
+
+The scaffold downloads them when it creates the project. If that failed, or you passed `--no-core`, run this inside the project:
 
 ```bash
-npm install solid-js
+npx arcade core
 ```
 
-## Quick Start
+It writes only the files that are missing, so it is safe to run again. `--core-from <dir>` copies from a local CodeLibrary checkout instead of downloading.
 
-The fast path: describe your scene in JSON, hand it to `ArcadeGame`.
+For a marketplace component, use the member CLI:
+
+```bash
+bjs download Health
+```
+
+Both drop a folder into `src/components/`, and `src/registry.ts` picks it up with no edit.
+
+## Run a scene
 
 ```ts
 import { ArcadeGame } from '@babylonjsmarket/arcade';
-import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon';
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
+import { REGISTRY } from './registry';
 
-const adapter = new BabylonAdapter();
-registerArcadePlugins(adapter); // engine code for ToneMapping, AmbientOcclusion, NeonSign, Physics
-const game = new ArcadeGame(adapter);
+const game = new ArcadeGame(new BabylonAdapter(), { componentRegistry: REGISTRY });
 await game.init(canvas);
 await game.loadSceneFromUrl('/scenes/level1.json');
 game.start();
 ```
 
-That's the whole loop. The next sections explain what `level1.json` looks like and what each component does.
+`componentRegistry` is the only place `ArcadeGame` looks a name up. Arcade has no built-in list.
 
----
+## Scene JSON
 
-## Scene JSON Format
-
-A scene is an `entities` map. Each entity has optional `tags` and a `components` object. Component keys are the **component name** (`"MeshPrimitive"`, `"ArcCamera"`, etc.) and the values are the **initial component data**.
+A scene is a map of entities. Each entity has optional `tags` and a `components` object. A key is a component name, and its value is that component's starting data.
 
 ```json
 {
@@ -56,318 +68,96 @@ A scene is an `entities` map. Each entity has optional `tags` and a `components`
     "Player": {
       "tags": ["player"],
       "components": {
-        "MeshPrimitive": { "primitive": "capsule", "height": 2, "diameter": 1 },
-        "KeyboardMover":  { "speed": 8 },
-        "Physics":        { "shapeType": "capsule", "mass": 1, "lockRotation": true }
+        "MeshPrimitive": { "primitive": "capsule", "height": 2, "position": [0, 1, 0] },
+        "KeyboardMover": { "speed": 8 },
+        "Physics": { "shapeType": "capsule", "mass": 1, "lockRotation": true }
       }
     },
-    "Camera": {
+    "Floor": {
       "components": {
-        "ArcCamera": { "target": "Player", "radius": 12, "alpha": 0, "beta": 1.2 }
+        "MeshPrimitive": { "primitive": "ground", "width": 50, "depth": 50 },
+        "Physics": { "shapeType": "box", "motionType": "static" }
       }
     },
-    "Sun": {
-      "components": {
-        "DirectionalLight": { "direction": [-1, -2, -1], "intensity": 0.9 }
-      }
-    },
-    "Sky": {
-      "components": {
-        "HemisphericLight": { "intensity": 0.3 }
-      }
+    "Camera": { "components": { "ArcCamera": { "target": "Player", "radius": 14 } } },
+    "Sun": { "components": { "DirectionalLight": { "direction": [-1, -2, -1] } } }
+  }
+}
+```
+
+Each component's fields are in its own guide on [babylonjsmarket.com/library](https://babylonjsmarket.com/library), and in the source in `src/components/<Name>/`.
+
+## What loadScene does
+
+1. Collects every component name the entities use.
+2. Calls each name's resolver once, in parallel. Each becomes its own lazy chunk.
+3. Registers `<Name>Component` and every `<Name>…System` the module exports.
+4. Adds and starts every system, then creates the entities. So a one-shot event a system sends from `onEntityAdded` reaches every other system.
+
+`loadScene(data, { replace: true })` tears the current scene's entities and systems down first. Systems you added yourself stay.
+
+## A missing component
+
+If a scene names a component your registry doesn't have, `ArcadeGame` logs one warning for that name and loads the scene without it:
+
+```
+[ArcadeGame] The scene uses component "Physics", but this project does not have it, so entities skip it.
+Core components: run `npx arcade core`. Marketplace components: run `bjs download Physics`. …
+```
+
+It warns once per name, however many scenes use it.
+
+## Your own components
+
+Put a folder in `src/components/`:
+
+```ts
+// src/components/Spin/Spin.ts
+import { Component, System } from '@babylonjsmarket/ecs';
+
+export class SpinComponent extends Component {
+  speed = 1;
+}
+
+export class SpinSystem extends System {
+  protected query = { required: [SpinComponent] };
+  protected onUpdate(dt: number): void {
+    for (const e of this.entities) {
+      // turn e by e.get(SpinComponent)!.speed * dt through this.world!.renderer
     }
   }
 }
 ```
 
-When you call `loadSceneFromUrl`, `ArcadeGame`:
+The registry finds it by folder name, so `"Spin": { "speed": 2 }` works in a scene right away. Outside a scaffold, pass it yourself: `componentRegistry: { Spin: () => import('./Spin') }`, or later with `game.addComponentResolver('Spin', …)`.
 
-1. Fetches and parses the JSON
-2. Walks the entities, collects every unique component name
-3. Lazily imports each component module in parallel (one `() => import(...)` per name)
-4. Registers the resulting classes with the underlying `SceneLoader`
-5. Instantiates the scene into the World, adds the systems
+## Event names
 
-If a scene only uses `MeshPrimitive`, `ArcCamera`, and `DirectionalLight`, those are the **only** component modules the bundler pulls in.
+A component's event names live beside it in `<Name>.events.ts`. A listener imports `../Other/Other.events`, never the other component's System.
 
----
+Arcade keeps only the names that no single component owns:
 
-## The 14 Components
+| Export | Names |
+| --- | --- |
+| `KeyboardInputEvents` | `keyboard.keydown`, `keyboard.keyup` |
+| `MouseInputEvents` | `mouse.move`, `mouse.down`, `mouse.up`, `mouse.lockchanged` |
+| `BulletEvents` | `bullet.hit` |
+| `SkeletonAnimatorInputEvents`, `SkeletonAnimatorEvents` | `skeletonAnimator.setLoop`, `.playOnce`, `.completed` |
 
-### MeshPrimitive
+## Controls HUD and debug panels
 
-Spawn a mesh from a primitive shape. Required by anything visual.
+`mountControlsHud(hintsFromSceneTitle(title))` shows the key-hint box. It is plain DOM, so it is safe in a production build.
 
-```json
-"MeshPrimitive": {
-  "primitive": "capsule",
-  "height": 2,
-  "diameter": 1,
-  "position": [0, 1, 0]
-}
-```
+In dev, `mountArcadeViz(world, { sceneName })` from `@babylonjsmarket/arcade/viz` mounts the Entities panel (F1), the EventBus debugger (F2) and an FPS counter. The `/viz` subpath ships TypeScript source and needs `vite-plugin-solid`. A component's own panel ships with it, in `src/components/<Name>/<Name>.viz.tsx`.
 
-Supported primitives: `box`, `sphere`, `cylinder`, `capsule`, `ground`, `torus`, `disc`, `plane`.
+## Upgrading from 0.12
 
-### Mesh
-
-Load a `.glb` or `.gltf` asset and attach it to the entity.
-
-```json
-"Mesh": {
-  "url": "/models/character.glb",
-  "scale": 0.5
-}
-```
-
-### Movement
-
-Adds velocity-driven movement to an entity with `MeshPrimitive`. Listens for movement events (typically emitted by `KeyboardMover` or `PlayerInput`) and integrates position each frame.
-
-```json
-"Movement": {
-  "maxSpeed": 10,
-  "acceleration": 30
-}
-```
-
-### KeyboardMover
-
-WASD + arrow-key driver. Emits movement events the `Movement` component listens to.
-
-```json
-"KeyboardMover": { "speed": 8 }
-```
-
-### PlayerInput
-
-Higher-level input mapping (move, jump, action). Use instead of `KeyboardMover` when you need more than directional movement.
-
-```json
-"PlayerInput": {
-  "moveSpeed": 8,
-  "jumpForce": 12
-}
-```
-
-### Physics
-
-Rigid-body physics. Under BabylonAdapter, this is Havok. Under ThreeAdapter, this is the pluggable physics integrator you injected.
-
-```json
-"Physics": {
-  "shapeType": "capsule",
-  "motionType": "dynamic",
-  "mass": 1,
-  "friction": 0.5,
-  "restitution": 0.1,
-  "lockRotation": true
-}
-```
-
-`shapeType`: `sphere`, `box`, `capsule`. `motionType`: `dynamic` (moves with forces), `static` (immovable), `kinematic` (moves programmatically).
-
-### ArcCamera
-
-Orbiting camera around a target entity.
-
-```json
-"ArcCamera": {
-  "target": "Player",
-  "radius": 12,
-  "alpha": 0,
-  "beta": 1.2
-}
-```
-
-`target` is the entity name; the camera follows that entity automatically.
-
-### CameraFollow
-
-Camera that trails behind a target with configurable lag.
-
-```json
-"CameraFollow": {
-  "target": "Player",
-  "offset": [0, 5, -10],
-  "lag": 0.15
-}
-```
-
-### DirectionalLight
-
-Sun-style directional lighting. Pair with `Shadow` for shadow casters.
-
-```json
-"DirectionalLight": {
-  "direction": [-1, -2, -1],
-  "intensity": 1.0,
-  "color": [1, 1, 0.95]
-}
-```
-
-### HemisphericLight
-
-Ambient sky lighting with adjustable upper/lower colors.
-
-```json
-"HemisphericLight": {
-  "direction": [0, 1, 0],
-  "intensity": 0.3
-}
-```
-
-### Shadow
-
-Marks an entity (which must also have `MeshPrimitive`) as a shadow caster for a `DirectionalLight`.
-
-```json
-"Shadow": { "light": "Sun" }
-```
-
-`light` is the name of the entity with the `DirectionalLight` component.
-
-### Animation
-
-Plays / blends skeletal animation clips on a `Mesh`-loaded entity.
-
-```json
-"Animation": {
-  "clips": { "idle": "Idle", "run": "Run" },
-  "defaultClip": "idle"
-}
-```
-
-### Score
-
-Tracks numeric scores by player ID. Listens for score events.
-
-```json
-"Score": { "scores": {} }
-```
-
-### Scoreboard
-
-DOM overlay that renders the current `Score` state.
-
-```json
-"Scoreboard": {
-  "position": "top-right",
-  "fontSize": 18,
-  "players": [{ "id": "p1", "label": "Player 1" }]
-}
-```
-
----
-
-## Mixing In Custom Components
-
-`ArcadeGame` accepts an optional `componentRegistry` that merges with the built-in 14:
-
-```ts
-const game = new ArcadeGame(renderer, {
-  componentRegistry: {
-    EnemySpawner: () => import('./components/EnemySpawner'),
-    Health: () => import('@my-org/combat/Health'),
-  },
-});
-
-// Now your scene JSON can reference "EnemySpawner" and "Health" just like
-// any built-in component.
-```
-
-Each resolver returns a `Promise<Module>` where the module exports `<Name>Component` and (optionally) `<Name>System`.
-
-You can also add a resolver after construction:
-
-```ts
-game.addComponentResolver('LateLoaded', () => import('./LateLoaded'));
-```
-
----
-
-## Writing Your Own Components
-
-Every component in this package follows the same surface convention. Use it as a template:
-
-```ts
-// MyComponent.ts
-import { Component, System, EventBus, type ISystemQuery } from '@babylonjsmarket/ecs';
-
-export const MyComponentEvents = {
-  TRIGGERED: 'mycomponent.triggered',
-} as const;
-
-export const MyComponentInputEvents = {
-  ACTIVATE: 'mycomponent.activate',
-} as const;
-
-export class MyComponentComponent extends Component {
-  threshold = 1.0;
-  active = false;
-}
-
-export class MyComponentSystem extends System {
-  query: ISystemQuery = { required: [MyComponentComponent] };
-
-  constructor(eventBus: EventBus) {
-    super(eventBus);
-  }
-
-  onInitialize() {
-    this.listen(MyComponentInputEvents.ACTIVATE, (data) => {
-      // handle input — listen() auto-unsubscribes on System shutdown
-    });
-  }
-
-  onUpdate(dt: number) {
-    for (const entity of this.entities) {
-      // per-frame logic
-    }
-  }
-}
-```
-
-Required exports: `<Name>Component` (the data class) and `<Name>System` (the logic). Optional: `<Name>Events` / `<Name>InputEvents` for event-name constants.
-
----
-
-## Debug Viz Panels
-
-Each component ships with an optional Solid.js debug panel. Import them from the `/viz` subpath:
-
-```ts
-import { MeshPrimitiveDebugger } from '@babylonjsmarket/arcade/viz';
-
-// Mount the panel inside your Solid app
-<MeshPrimitiveDebugger world={world} />
-```
-
-The `/viz` subpath ships **TypeScript source** (not pre-built JS) because Solid's JSX transform isn't standard `react-jsx`. Your bundler must have `vite-plugin-solid` or an equivalent JSX compiler. `solid-js` is declared as an optional peer dependency — install it only if you use viz.
-
----
-
-## Per-Component Imports
-
-If you want maximum tree-shaking and don't need the lazy loader, import individual components by subpath:
-
-```ts
-import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '@babylonjsmarket/arcade/MeshPrimitive';
-import { MovementSystem } from '@babylonjsmarket/arcade/Movement';
-```
-
-Each component is its own dist file, so this gives bundlers the cleanest possible split.
-
----
-
-## Where to Go Next
-
-- **[@babylonjsmarket/ecs](/tools/bjs-ecs)** — The framework underneath this package. Read it to understand what components, systems, and the World do at a deeper level.
-- **[@babylonjsmarket/create-arcade](https://www.npmjs.com/package/@babylonjsmarket/create-arcade)** — One-command scaffolder that bootstraps an arcade game using both packages.
-- **[GitHub source](https://github.com/babylonjsmarket/bjsm)** — Read the components. Fork them. Replace what doesn't fit.
-
----
+1. Run `npx arcade core` in the project.
+2. Pass `componentRegistry: REGISTRY` to `ArcadeGame`.
+3. Drop `registerArcadePlugins` (and the `/babylon` import). Glob `./components/*/adapter/register.ts` the way the scaffold's `main.ts` does.
+4. Import a core component's event names from `./components/<Name>/<Name>.events`.
+5. `arcade eject` is gone. Core components are already source in your project.
 
 ## License
 
-MIT. The 14 components, the lazy loader, the viz panels — everything in this package is free forever.
+MIT.

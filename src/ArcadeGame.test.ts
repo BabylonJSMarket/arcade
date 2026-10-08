@@ -7,8 +7,7 @@ import {
   System,
   World,
 } from '@babylonjsmarket/ecs';
-import { ArcadeGame } from './ArcadeGame';
-import { ARCADE_COMPONENT_REGISTRY, type ComponentModule } from './registry';
+import { ArcadeGame, type ComponentModule } from './ArcadeGame';
 
 // ----------------------------------------------------------------------------
 // Stub component / system used by tests. We don't import any real arcade
@@ -32,6 +31,11 @@ class StubSystem extends System {
   onUpdate(_deltaTime: number): void {
     // no-op
   }
+}
+
+/** Only ArcadeGame's own warnings (SceneLoader warns about unknown names too). */
+function arcadeWarnings(warn: { mock: { calls: unknown[][] } }): string[] {
+  return warn.mock.calls.map((c) => String(c[0])).filter((m) => m.startsWith('[ArcadeGame]'));
 }
 
 /** Build a module-shaped object matching what `resolve()` returns. */
@@ -69,40 +73,31 @@ describe('ArcadeGame — construction', () => {
     expect(spy).toHaveBeenCalledWith({ ok: true });
   });
 
-  it('merges options.componentRegistry with the built-in ARCADE_COMPONENT_REGISTRY', async () => {
+  it('resolves scene names through options.componentRegistry', async () => {
     const customResolver = vi.fn(async () => makeStubModule('Custom'));
     const game = new ArcadeGame(renderer, {
       componentRegistry: { Custom: customResolver },
     });
-
-    // The custom one is reachable.
     await game.loadScene({
-      name: 'merge-test',
-      entities: {
-        e1: { components: { Custom: {} } },
-      },
+      name: 'registry-test',
+      entities: { e1: { components: { Custom: {} } } },
     });
     expect(customResolver).toHaveBeenCalledTimes(1);
-
-    // And the built-in registry is still intact — every ARCADE name has a
-    // resolver. We don't invoke them, just spot-check that the names are
-    // recognized by adding a no-op override and asserting it overrode rather
-    // than left a gap.
-    for (const name of Object.keys(ARCADE_COMPONENT_REGISTRY)) {
-      expect(typeof ARCADE_COMPONENT_REGISTRY[name]).toBe('function');
-    }
+    expect(game.sceneLoader.getComponentClass('Custom')).toBe(StubComponent);
   });
 
-  it('user-supplied componentRegistry overrides a built-in entry with the same name', async () => {
-    const override = vi.fn(async () => makeStubModule('MeshPrimitive'));
-    const game = new ArcadeGame(renderer, {
-      componentRegistry: { MeshPrimitive: override },
-    });
+  it('has no built-in components: a core name with no registry entry is unknown', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const game = new ArcadeGame(renderer);
     await game.loadScene({
-      name: 'override-test',
+      name: 'no-builtins',
       entities: { e1: { components: { MeshPrimitive: {} } } },
     });
-    expect(override).toHaveBeenCalledTimes(1);
+    expect(game.sceneLoader.getComponentClass('MeshPrimitive')).toBeUndefined();
+    const msgs = arcadeWarnings(warn);
+    expect(msgs).toHaveLength(1);
+    expect(msgs[0]).toContain('npx arcade core');
+    warn.mockRestore();
   });
 });
 
@@ -220,10 +215,25 @@ describe('ArcadeGame — loadScene lazy resolution', () => {
       name: 'missing-test',
       entities: { e1: { components: { Mystery: {} } } },
     });
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('No resolver for component "Mystery"'),
-    );
+    const msgs = arcadeWarnings(warn);
+    expect(msgs).toHaveLength(1);
+    const msg = msgs[0];
+    expect(msg).toContain('"Mystery"');
+    expect(msg).toContain('npx arcade core');
+    expect(msg).toContain('bjs download Mystery');
     expect(game.sceneLoader.getComponentClass('Mystery')).toBeUndefined();
+    warn.mockRestore();
+  });
+
+  it('warns about a missing component only once, however many scenes use it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scene = (name: string) => ({
+      name,
+      entities: { a: { components: { Ghost: {} } }, b: { components: { Ghost: {} } } },
+    });
+    await game.loadScene(scene('ghost-1'));
+    await game.loadScene(scene('ghost-2'), { replace: true });
+    expect(arcadeWarnings(warn)).toHaveLength(1);
     warn.mockRestore();
   });
 

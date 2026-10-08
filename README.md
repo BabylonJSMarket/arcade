@@ -1,78 +1,56 @@
 # @babylonjsmarket/arcade
 
-A curated bundle of reusable arcade-style components — mesh primitives, cameras, lights, input, physics, scoring, animation — built on the [@babylonjsmarket/ecs](https://www.npmjs.com/package/@babylonjsmarket/ecs) framework.
+The game runner for [@babylonjsmarket/ecs](https://www.npmjs.com/package/@babylonjsmarket/ecs). You give it a scene as JSON. It loads the components the scene names, starts their systems, and runs the loop.
 
-## Where this fits
+Arcade ships no components of its own (since 0.13.0). The free core set — meshes, lights, cameras, input, physics, scoring, pooling — comes as source into your project's `src/components/`, from `npx arcade core` or `bjs download <Name>`.
 
-```
-@babylonjsmarket/ecs                  ← the framework: World, Component, System, EventBus, renderer adapters
-        ▲
-        │ depends on
-        │
-@babylonjsmarket/arcade               ← you are here: 14 ready-to-use components
-        ▲
-        │ scaffolded by
-        │
-@babylonjsmarket/create-arcade        ← CLI that bootstraps a game using both packages
-```
+## What's in the package
 
-This is the **starter bundle** for the [BabylonJS Market](https://babylonjsmarket.com) ecosystem. The full marketplace ships 50+ components covering AI behaviors, combat, cameras, level generation, and game directors; this package gives you the 14 components every arcade game needs.
+| Piece | What it does |
+| --- | --- |
+| `ArcadeGame` | Wraps `World` + `EventBus` + `SceneLoader`. Loads a scene, imports each named component on first use, runs the loop. |
+| `mountControlsHud`, `hintsFromSceneTitle` | The small key-hint box players see. Plain DOM, safe in a production build. |
+| Event names | `KeyboardInputEvents`, `MouseInputEvents`, `BulletEvents`, `SkeletonAnimatorEvents`, `SkeletonAnimatorInputEvents`. Names no single component owns. Every other component keeps its names in its own `<Name>.events.ts`. |
+| `@babylonjsmarket/arcade/viz` | `mountArcadeViz` (Entities panel, EventBus debugger, FPS counter) for dev builds. |
+| `arcade` CLI | Scaffolds a project (`npm create @babylonjsmarket/arcade`) and fills in core components (`npx arcade core`). |
 
-If you want to build a playable scene without writing the basics from scratch — install this package, install `@babylonjsmarket/ecs` plus a renderer, and you have movement, input, physics, and a score on screen.
-
-## What's included
-
-| Component         | What it does                                                                |
-| ----------------- | --------------------------------------------------------------------------- |
-| `MeshPrimitive`   | Spawn meshes from primitive shapes (box, sphere, capsule, ground, ...)      |
-| `Mesh`            | Load `.glb`/`.gltf` assets and attach them to entities                      |
-| `Movement`        | Velocity-driven movement on `MeshPrimitive` entities                        |
-| `KeyboardMover`   | WASD + arrow-key driver that feeds `Movement`                               |
-| `PlayerInput`     | Higher-level input mapping (move, jump, action)                             |
-| `Physics`         | Dynamic/static/kinematic rigid bodies (Havok via Babylon, pure-JS via Three) |
-| `ArcCamera`       | Orbiting camera around a target entity                                      |
-| `CameraFollow`    | Tracks a target with configurable lag/lead                                  |
-| `DirectionalLight`| Sun-style directional lighting                                              |
-| `HemisphericLight`| Ambient sky lighting with adjustable color                                  |
-| `Shadow`          | Adds a `MeshPrimitive` to a `DirectionalLight`'s shadow caster set          |
-| `Animation`       | Plays/blends skeletal animation clips on loaded meshes                      |
-| `Score`           | Tracks numeric scores per player ID                                         |
-| `Scoreboard`      | DOM overlay that renders `Score` state                                      |
-
-Every component ships with the same surface convention from the framework:
-
-- `{Name}Component` — the data class
-- `{Name}System` — the logic
-- `{Name}Events` — event names the system emits
-- `{Name}InputEvents` — event names the system listens to
-
-## Install
+## Start a project
 
 ```bash
-npm install @babylonjsmarket/arcade @babylonjsmarket/ecs
-
-# pick a renderer
-npm install @babylonjs/core @babylonjs/loaders @babylonjs/havok
-# …or
-npm install three
+npm create @babylonjsmarket/arcade my-game
+cd my-game
+npm install
+npm run dev
 ```
 
-## Entry points
+The scaffold downloads the core components into `src/components/`. Its `src/registry.ts` finds every folder there, and its `main.ts` installs each component's engine plugin (`adapter/register.ts`) before the first scene loads.
 
-| Import                                  | Contents                                                                          |
-| --------------------------------------- | --------------------------------------------------------------------------------- |
-| `@babylonjsmarket/arcade`               | All 14 components and systems. **No** Solid.js viz panels.                        |
-| `@babylonjsmarket/arcade/viz`           | Solid.js debug panels for every component (see notes below)                       |
-| `@babylonjsmarket/arcade/<ComponentName>` | Single-component import — e.g. `@babylonjsmarket/arcade/MeshPrimitive`            |
+Missed the download, or used `--no-core`? Run this in the project:
 
-The per-component subpaths let bundlers tree-shake unused components even without aggressive dead-code elimination. Use them when bundle size matters; use the top-level `import { ... } from '@babylonjsmarket/arcade'` when convenience matters.
+```bash
+npx arcade core
+```
 
-## Quick start
+It fills in missing files and never overwrites one you changed. For a marketplace component, use the member CLI: `bjs download <Name>`.
 
-The fast path: describe your scene in JSON, hand it to `ArcadeGame`. Components are imported lazily, so bundlers split them per chunk and only ship what your scene uses.
+## Run a scene by hand
+
+```ts
+import { ArcadeGame } from '@babylonjsmarket/arcade';
+import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
+import { REGISTRY } from './registry'; // name → () => import('./components/<Name>/<Name>')
+
+const game = new ArcadeGame(new BabylonAdapter(), { componentRegistry: REGISTRY });
+await game.init(canvas);
+await game.loadSceneFromUrl('/scenes/level1.json');
+game.start();
+```
+
+`componentRegistry` is the only place `ArcadeGame` looks up a name. A scene that names a component you don't have logs one warning, telling you to run `npx arcade core` or `bjs download <Name>`, and loads without it.
+
+A scene:
 
 ```json
-// scenes/level1.json
 {
   "name": "Level1",
   "entities": {
@@ -80,97 +58,41 @@ The fast path: describe your scene in JSON, hand it to `ArcadeGame`. Components 
       "tags": ["player"],
       "components": {
         "MeshPrimitive": { "primitive": "capsule", "height": 2 },
-        "KeyboardMover": { "speed": 8 },
-        "Physics":  { "shapeType": "capsule", "mass": 1, "lockRotation": true }
+        "KeyboardMover": { "speed": 8 }
       }
     },
-    "Camera": {
-      "components": { "ArcCamera": { "target": "Player", "radius": 12 } }
-    },
-    "Sun": {
-      "components": { "DirectionalLight": { "direction": [-1, -2, -1] } }
-    }
+    "Camera": { "components": { "ArcCamera": { "target": "Player", "radius": 12 } } },
+    "Sun": { "components": { "DirectionalLight": { "direction": [-1, -2, -1] } } }
   }
 }
 ```
 
-```ts
-import { ArcadeGame } from '@babylonjsmarket/arcade';
-import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
+Each resolver is `() => Promise<module>`. The module must export `<Name>Component`, and may export any number of `<Name>…System` classes.
 
-const game = new ArcadeGame(new BabylonAdapter());
-await game.init(canvas);
-await game.loadSceneFromUrl('/scenes/level1.json');
-game.start();
-```
-
-That's the whole loop. `MeshPrimitive`, `KeyboardMover`, `Physics`, `ArcCamera`, `DirectionalLight` are the only modules pulled in — the other 9 components stay tree-shaken out.
-
-### Or wire systems yourself
-
-If you'd rather skip the JSON layer and instantiate systems directly:
-
-```ts
-import { World } from '@babylonjsmarket/ecs';
-import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
-import {
-  MeshPrimitiveSystem,
-  KeyboardMoverSystem,
-  ArcCameraSystem,
-  HemisphericLightSystem,
-  ScoreSystem,
-} from '@babylonjsmarket/arcade';
-
-const renderer = new BabylonAdapter();
-await renderer.init(canvas);
-
-const world = new World({ renderer });
-world.addSystem(new MeshPrimitiveSystem(world.eventBus));
-world.addSystem(new KeyboardMoverSystem(world.eventBus));
-world.addSystem(new ArcCameraSystem(world.eventBus));
-world.addSystem(new HemisphericLightSystem(world.eventBus));
-world.addSystem(new ScoreSystem(world.eventBus));
-
-renderer.startLoop((dt) => world.update(dt));
-```
-
-### Mixing in custom components
-
-`ArcadeGame` accepts an optional `componentRegistry` that merges with the built-in 14 resolvers. Use it to add components from another package or your own project:
-
-```ts
-const game = new ArcadeGame(renderer, {
-  componentRegistry: {
-    EnemySpawner: () => import('./components/EnemySpawner'),
-    Health: () => import('@my-org/combat/Health'),
-  },
-});
-```
-
-Each resolver is `() => Promise<{ [Name]Component: ..., [Name]System: ... }>` — same shape as the components in this package.
-
-For a fully scaffolded starting project that wires this together — keyboard controls, a camera that follows a player capsule, a light, and a score overlay — use:
+## Install
 
 ```bash
-npx @babylonjsmarket/create-arcade my-game
+npm install @babylonjsmarket/arcade @babylonjsmarket/ecs
+npm install @babylonjs/core @babylonjs/loaders @babylonjs/havok   # or: three
 ```
 
-## Notes on the `/viz` subpath
+## The `/viz` subpath
 
-Each component has a `.viz.tsx` Solid.js debug panel that surfaces its live state in a side panel — useful during development for tuning movement curves, light angles, physics parameters, etc.
+`@babylonjsmarket/arcade/viz` ships TypeScript source, because Solid's JSX needs a Solid-aware compiler (`vite-plugin-solid`). `solid-js` and `@babylonjsmarket/viz` are optional peers; install them only if you import `/viz`. The main entry is plain built JS with no Solid dependency.
 
-These panels ship as **TypeScript source**, not pre-compiled JS, because Solid's JSX transform isn't standard `react-jsx`. To use `@babylonjsmarket/arcade/viz`, your build pipeline must have a Solid-aware compiler (e.g. `vite-plugin-solid`, Solid's Vite preset, or `babel-preset-solid`). `solid-js` is declared as an **optional** peer dependency — install it only if you import from `/viz`.
+Each component's own debug panel (`<Name>.viz.tsx`) ships with the component in `src/components/`, not here.
 
-The plain `@babylonjsmarket/arcade` entry has **no Solid dependency** and is pre-built JS — it works in any ESM bundler.
+## Upgrading from 0.12
+
+1. Run `npx arcade core` in your project. That puts the core components in `src/components/`.
+2. Pass your registry: `new ArcadeGame(adapter, { componentRegistry: REGISTRY })`.
+3. Replace `registerArcadePlugins(adapter)` from `@babylonjsmarket/arcade/babylon` with the `adapter/register.ts` glob the scaffold's `main.ts` uses.
+4. Import a core component's event names from `./components/<Name>/<Name>.events`, not from `@babylonjsmarket/arcade`.
+5. `arcade eject` is gone. The components are already source in your project.
 
 ## See also
 
-- **[@babylonjsmarket/ecs](https://www.npmjs.com/package/@babylonjsmarket/ecs)** — The ECS framework this package is built on.
-- **[@babylonjsmarket/create-arcade](https://www.npmjs.com/package/@babylonjsmarket/create-arcade)** — CLI scaffolder for new arcade games.
-- **[BabylonJS Market](https://babylonjsmarket.com)** — The full component catalog, courses, and example games.
+- [@babylonjsmarket/ecs](https://www.npmjs.com/package/@babylonjsmarket/ecs) — the ECS framework.
+- [BabylonJS Market](https://babylonjsmarket.com) — the component library, courses and example games.
 
-## Notes
-
-- ESM only. `"type": "module"`.
-- TypeScript declarations included.
-- Tests run against the `MockRendererAdapter` from `@babylonjsmarket/ecs` — no Babylon or Three required for `npm test`.
+ESM only. TypeScript declarations included. Tests run against `MockRendererAdapter`, so `npm test` needs no Babylon or Three.

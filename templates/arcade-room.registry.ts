@@ -29,7 +29,7 @@ export type LazyComponentResolver = () => Promise<ComponentModule>
 // `eager: false` (the default) gives `{ [path]: () => import(path) }`, so each
 // component stays a separate lazy chunk. No matches → an empty map.
 //
-// Both folder spellings, in ONE glob call. `bjs download` and `arcade eject`
+// Both folder spellings, in ONE glob call. `bjs download` and `arcade core`
 // write `src/components/`, but a project that already has `src/Components/`
 // keeps that. Two separate calls would each match the same files on a
 // case-insensitive disk (macOS, Windows) and bundle every component twice;

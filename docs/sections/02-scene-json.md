@@ -1,6 +1,6 @@
 # Scene JSON Format
 
-A scene is an `entities` map. Each entity has optional `tags` and a required `components` object. Component keys are the **component name** (matching the lazy registry); values are the **initial data** for that component.
+A scene is an `entities` map. Each entity has optional `tags` and a required `components` object. Component keys are the **component name** (a folder in your `src/components/`, found by `src/registry.ts`); values are the **initial data** for that component.
 
 ## Minimum complete scene
 
@@ -70,16 +70,16 @@ the `components` keys your entities actually use.
 
 1. Reads the JSON
 2. Walks `entities`, collects every unique key from any `components` block
-3. For each unique name, calls the lazy resolver:
-   - `MeshPrimitive` → `() => import('./Components/MeshPrimitive/MeshPrimitive')`
-   - `ArcCamera`     → `() => import('./Components/ArcCamera/ArcCamera')`
+3. For each unique name, calls the lazy resolver from your `componentRegistry`:
+   - `MeshPrimitive` → `() => import('./components/MeshPrimitive/MeshPrimitive')`
+   - `ArcCamera`     → `() => import('./components/ArcCamera/ArcCamera')`
    - …
 4. Awaits all imports in parallel
 5. Registers each module's `<Name>Component` and **every** `<Name>…System` it exports (a component may drive several — e.g. a missile's guidance + impact) with the underlying SceneLoader
 6. Calls `sceneLoader.loadSceneFromData(json)` and `sceneLoader.instantiateScene(name, world)`
 7. Adds the auto-created Systems to the World
 
-The first time a scene references `Physics`, the Physics module is fetched. The second scene that references `Physics` reuses the already-cached module. Component names not in the registry produce a console warning but don't throw.
+The first time a scene references `Physics`, the Physics module is fetched. The second scene that references `Physics` reuses the already-cached module. A name not in the registry logs one warning (run `npx arcade core` or `bjs download <Name>`) and doesn't throw.
 
 ## A more realistic scene
 
@@ -123,7 +123,7 @@ A capsule the player controls with WASD, an orbiting camera, a sun, a floor with
 }
 ```
 
-That JSON, with the 5-line `main.ts` from the installation page, is a complete playable scene.
+That JSON, with the scaffold's `main.ts` and the core components in `src/components/`, is a complete playable scene.
 
 ## Pools & blueprints — recycling spawned entities
 
@@ -173,15 +173,7 @@ Each acquire resets the slot before it re-enters play: its tags snap back to exa
 
 ## Per-component data shapes
 
-Each component's data shape mirrors its public fields. See the component-specific sections of these docs:
-
-- [MeshPrimitive](./mesh-primitive) — primitive kind, dimensions, position
-- [Input & Movement](./input-and-movement) — `KeyboardMover`, `PlayerInput`, `Movement`
-- [Cameras](./cameras) — `ArcCamera`, `CameraFollow`
-- [Lighting & Shadows](./lighting-and-shadows) — `DirectionalLight`, `HemisphericLight`, `Shadow`
-- [Physics](./physics) — shape, motion, mass, locks
-- [Score & UI](./score-and-ui) — `Score`, `Scoreboard`
-- [Animation & Mesh](./animation-and-mesh) — `.glb` loading and animation playback
+Each component's data shape mirrors its public fields. Read them in the component's source (`src/components/<Name>/<Name>.defs.ts`) or its guide on [babylonjsmarket.com/library](https://babylonjsmarket.com/library).
 
 ## Referencing other entities
 
@@ -218,5 +210,5 @@ Tags are first-class in System queries — `KeyboardMover` for example uses the 
 
 ## Where to next
 
-- **[ArcadeGame walkthrough](./arcade-game)** — the loader internals
-- **[MeshPrimitive](./mesh-primitive)** — the most-used component
+- **[ArcadeGame walkthrough](./arcade-game)** — what the loader does
+- **[Extending](./extending)** — your own components and registries

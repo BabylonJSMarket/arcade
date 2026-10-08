@@ -1,111 +1,62 @@
 # Installation & Quick Start
 
-`@babylonjsmarket/arcade` is a curated bundle of 14 game components plus a lazy JSON scene loader, all built on `@babylonjsmarket/ecs`.
+`@babylonjsmarket/arcade` is the game runner for `@babylonjsmarket/ecs`: `ArcadeGame`, the controls HUD, a few shared event names, and the `arcade` scaffolder. It ships no components. The core set comes as source into your project's `src/components/`.
 
-## Install
+## Scaffold a project
+
+```bash
+npm create @babylonjsmarket/arcade my-game
+cd my-game
+npm install
+npm run dev
+```
+
+The scaffold downloads the free core components into `src/components/`. Its `src/registry.ts` maps each folder there to a lazy import, and its `main.ts` installs each component's engine plugin (`src/components/<Name>/adapter/register.ts`) before the scene loads.
+
+Options worth knowing:
+
+| Flag | Effect |
+| --- | --- |
+| `--kind game` / `--kind arcade` | One starter scene, or the multigame arcade room (default) |
+| `--renderer babylon \| babylon-lite \| three` | The engine for the whole project |
+| `--no-core` | Skip the core download (run `npx arcade core` later) |
+| `--core-from <dir>` | Copy the core set from a local CodeLibrary checkout |
+
+## Fill in the core components
+
+```bash
+npx arcade core            # inside the project
+```
+
+Writes only missing files, never overwrites one you changed. Add a marketplace component with `bjs download <Name>`.
+
+## Install by hand
 
 ```bash
 npm install @babylonjsmarket/arcade @babylonjsmarket/ecs
+npm install @babylonjs/core @babylonjs/loaders @babylonjs/havok   # or: three
 ```
 
-Pick a renderer:
-
-```bash
-# Babylon (with Havok physics)
-npm install @babylonjs/core @babylonjs/loaders @babylonjs/havok
-
-# Three.js
-npm install three
-```
-
-Optional, for the debug viz panels:
-
-```bash
-npm install solid-js
-```
-
-## The fast path: ArcadeGame
+Then run `npx arcade core` in the project to get the components, and pass a registry to `ArcadeGame`:
 
 ```ts
 import { ArcadeGame } from '@babylonjsmarket/arcade';
-import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon';
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
 
-const canvas = document.getElementById('game') as HTMLCanvasElement;
-const adapter = new BabylonAdapter();
-registerArcadePlugins(adapter);
-const game = new ArcadeGame(adapter);
-
+const game = new ArcadeGame(new BabylonAdapter(), {
+  componentRegistry: {
+    MeshPrimitive: () => import('./components/MeshPrimitive/MeshPrimitive'),
+    ArcCamera: () => import('./components/ArcCamera/ArcCamera'),
+  },
+});
 await game.init(canvas);
 await game.loadSceneFromUrl('/scenes/level1.json');
 game.start();
 ```
 
-That's a fully wired game. `registerArcadePlugins` installs the engine code a few built-in components need (ToneMapping, AmbientOcclusion, NeonSign, Physics casts). Leave it out and those components load but do nothing. A project made with `bjs create` already has this call in `src/main.ts`, along with a loop that installs the `adapter/register.ts` of every component you `bjs download`.
-
-The next section ([Scene JSON](./scene-json)) covers what `level1.json` should look like. The section after ([ArcadeGame](./arcade-game)) is a code walkthrough of the wrapper class itself — what it does, what it doesn't.
-
-## Or wire systems by hand
-
-If you don't need the JSON scene loader and you'd rather instantiate Systems directly:
-
-```ts
-import { World } from '@babylonjsmarket/ecs';
-import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon';
-import {
-  MeshPrimitiveSystem,
-  KeyboardMoverSystem,
-  ArcCameraSystem,
-  HemisphericLightSystem,
-} from '@babylonjsmarket/arcade';
-
-const renderer = new BabylonAdapter();
-await renderer.init(canvas);
-
-const world = new World({ renderer });
-world.addSystem(new MeshPrimitiveSystem(world.getEventBus()));
-world.addSystem(new KeyboardMoverSystem(world.getEventBus()));
-world.addSystem(new ArcCameraSystem(world.getEventBus()));
-world.addSystem(new HemisphericLightSystem(world.getEventBus()));
-
-renderer.startLoop((dt) => world.update(dt));
-```
-
-You'd then create entities and add components in code. The JSON path is just sugar over this.
-
-## Per-component imports
-
-If you want maximum tree-shaking and don't need the lazy loader:
-
-```ts
-import { MeshPrimitiveSystem, MeshPrimitiveComponent } from '@babylonjsmarket/arcade/MeshPrimitive';
-import { MovementSystem, MovementComponent } from '@babylonjsmarket/arcade/Movement';
-```
-
-Each component has its own dist file, so bundlers get the cleanest possible split.
-
-## What ships in v0.1
-
-| Component | What it does |
-|---|---|
-| MeshPrimitive | Spawn meshes from primitive shapes |
-| Mesh | Load .glb/.gltf assets |
-| Movement | Velocity-driven movement |
-| KeyboardMover | WASD + arrow keys |
-| PlayerInput | Higher-level input mapping |
-| ArcCamera | Orbiting camera around a target |
-| CameraFollow | Trailing camera with lag |
-| DirectionalLight | Sun-style lighting |
-| HemisphericLight | Ambient sky lighting |
-| Shadow | Shadow casting |
-| Physics | Rigid bodies (Havok via Babylon) |
-| Score | Numeric scores per player |
-| Scoreboard | DOM overlay |
-| Animation | Skeletal animation playback |
-
-The rest of these docs walk through each one — what data they carry, what events they emit and listen to, what to put in the JSON.
+A scaffold's `src/registry.ts` builds that map for you with `import.meta.glob`.
 
 ## Where to next
 
-- **[Scene JSON Format](./scene-json)** — the file the loader reads
-- **[ArcadeGame walkthrough](./arcade-game)** — what the wrapper class actually does
+- **[Scene JSON Format](./scene-json)** — what `level1.json` looks like
+- **[ArcadeGame walkthrough](./arcade-game)** — what the loader does

@@ -5,7 +5,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import mri from "mri";
 import * as prompts from "@clack/prompts";
-import { eject } from "./eject.js";
 import { coreApiUrl, installCore, type InstallCoreResult } from "./core.js";
 
 
@@ -826,7 +825,7 @@ ${threeImportmap}    <style>
   // Tiny boot — imports the scene map + REGISTRY and starts the game(s). The
   // demo boot spins up one ArcadeGame per adapter into three canvases; the
   // normal boot runs a single Babylon game. Both load pure-data scenes whose
-  // component names resolve via arcade's default registry or src/registry.ts.
+  // component names resolve through src/registry.ts (the src/components/ glob).
   if (demo) {
     write("src/main.ts", readTemplate("demo-main.ts"));
     write("src/scenes/index.ts", readTemplate("demo-scenes-index.ts"));
@@ -1040,7 +1039,7 @@ registered automatically.
   );
 
   // Drop the babylonjsmarket Claude skill so Claude Code auto-discovers it in
-  // this project (no plugin install needed). Same payload `arcade eject` uses.
+  // this project (no plugin install needed).
   if (fs.existsSync(SKILL_PAYLOAD_DIR)) {
     fs.cpSync(
       SKILL_PAYLOAD_DIR,
@@ -1151,10 +1150,6 @@ async function core(): Promise<void> {
 }
 
 async function main() {
-  if (rawArgs[0] === "eject") {
-    await eject(rawArgs.slice(1));
-    return;
-  }
   if (rawArgs[0] === "core") {
     await core();
     return;
