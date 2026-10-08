@@ -545,11 +545,15 @@ async function init() {
     : rc.deps;
   const engineDevDeps = demo ? { "@types/three": "^0.184.0" } : (rc.devDeps ?? {});
   // The core components arrive as source in src/components, with their adapter
-  // plugins (src/components/<Name>/adapter/). Those plugins are imported for
-  // every renderer — each registrar checks `adapter.kind` and skips an engine
-  // it has no plugin for — so their imports must resolve everywhere: earcut
-  // (NeonSign's extruded text) always, and @babylonjs/core on the renderers
-  // that don't already depend on it.
+  // plugins (src/components/<Name>/adapter/). main.ts imports every
+  // register.ts on every renderer; each registrar checks `adapter.kind` FIRST
+  // and only then dynamic-imports its engine half (`await import('./X.babylon')`),
+  // so a Three or Lite game never loads Babylon at runtime. But Vite still has
+  // to resolve and build those lazy chunks, so their imports must be
+  // INSTALLED everywhere: earcut (NeonSign's extruded text) always, and
+  // @babylonjs/core on the renderers that don't already depend on it. On
+  // Three/Lite that dependency is install-only: it ends up in a lazy chunk
+  // that is never fetched, never in the main bundle.
   const coreDeps: Record<string, string> = {
     earcut: "^3.2.3",
     ...("@babylonjs/core" in engineDeps ? {} : { "@babylonjs/core": "^9.0.0" }),

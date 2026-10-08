@@ -47,7 +47,19 @@ const game = new ArcadeGame(renderer, {
 
 ## Engine plugins
 
-A component that needs something the renderer adapter doesn't offer ships an `adapter/register.ts` that exports `register<Name>Extension(adapter)`. The scaffold's `main.ts` calls every one it finds before the scene loads. Outside a scaffold, call it yourself after creating the adapter.
+A component that needs something the renderer adapter doesn't offer ships an `adapter/register.ts` that exports `register<Name>Extension(adapter)`. The scaffold's `main.ts` calls every one it finds and waits for them all before the scene loads. Outside a scaffold, call it yourself after creating the adapter, and await it.
+
+A registrar may be async. Check `adapter.kind` first, then import the engine half, so a game on another engine never downloads it:
+
+```ts
+export async function registerFooExtension(adapter: FooHost): Promise<void> {
+  if (adapter.kind !== 'babylon' || typeof adapter.getScene !== 'function') return;
+  const { createBabylonFoo } = await import('./Foo.babylon');
+  adapter.registerExtension(FOO_EXTENSION, createBabylonFoo({ getScene: () => adapter.getScene!() }));
+}
+```
+
+Keep any import of `./Foo.babylon` at the top of `register.ts` to `import type`. A plain import there puts Babylon back in every game's main bundle.
 
 ## Debug panels
 

@@ -45,7 +45,7 @@ The scene still loads, without that component. `ArcadeGame` logs one warning per
 
 - **Dispose the renderer.** Call `game.renderer.dispose()` when you're done.
 - **Ship components.** They come from `npx arcade core`, `bjs download`, or your own `src/components/`.
-- **Install engine plugins.** The scaffold's `main.ts` globs `src/components/*/adapter/register.ts` and calls each `register…Extension(adapter)` before the scene loads.
+- **Install engine plugins.** The scaffold's `main.ts` globs `src/components/*/adapter/register.ts` and calls each `register…Extension(adapter)`, then awaits them all before the scene loads.
 
 ## Where to next
 

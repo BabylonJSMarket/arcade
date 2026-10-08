@@ -29,18 +29,22 @@ const adapter = new BabylonAdapter()
 // downloaded when the project was created — the ACES grade behind ToneMapping,
 // the SSAO2 pass behind AmbientOcclusion, NeonSign's extruded text, Physics'
 // casts — and anything `bjs download` adds later. Each registrar checks the
-// adapter's kind and skips an engine it has no plugin for.
+// adapter's kind first and only then imports its engine half, so a Three or
+// Babylon Lite game never downloads Babylon. A registrar may be async; every
+// one is awaited before the game boots.
 const adapterPlugins = import.meta.glob(
   ['./Components/*/adapter/register.ts', './components/*/adapter/register.ts'],
   { eager: true },
 )
+const pluginsReady: unknown[] = []
 for (const mod of Object.values(adapterPlugins)) {
   for (const [name, fn] of Object.entries(mod as Record<string, unknown>)) {
     if (typeof fn === 'function' && /^register[A-Za-z]*Extension$/.test(name)) {
-      ;(fn as (a: unknown) => void)(adapter)
+      pluginsReady.push((fn as (a: unknown) => unknown)(adapter))
     }
   }
 }
+await Promise.all(pluginsReady)
 
 const game = new ArcadeGame(adapter, { componentRegistry: REGISTRY })
 await game.init(canvas)
