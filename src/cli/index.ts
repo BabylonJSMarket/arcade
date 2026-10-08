@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import mri from "mri";
 import * as prompts from "@clack/prompts";
 import { eject } from "./eject.js";
+import { coreApiUrl, installCore, type InstallCoreResult } from "./core.js";
 
 
 // Templates live as real .ts files under packages/arcade/templates/. We
@@ -140,11 +141,43 @@ const argv = mri<{
   kind?: string;
   newProject?: boolean;
   "new-project"?: boolean;
+  core?: boolean;
+  "core-from"?: string;
 }>(argsAfterSubcommand, {
   alias: { h: "help" },
-  boolean: ["help", "overwrite", "demo", "new-project"],
-  string: ["renderer", "kind"],
+  boolean: ["help", "overwrite", "demo", "new-project", "core"],
+  string: ["renderer", "kind", "core-from"],
+  default: { core: true },
 });
+
+/**
+ * Where the core set comes from: `--core-from <dir>` (a CodeLibrary checkout),
+ * else `ARCADE_CORE_FROM`, else the site. The env form is how the monorepo's
+ * own tests scaffold without the network.
+ */
+function coreFrom(): string | undefined {
+  const flag = argv["core-from"];
+  if (typeof flag === "string" && flag) return flag;
+  return process.env.ARCADE_CORE_FROM || undefined;
+}
+
+/** One line per outcome, and the exact next step when it failed. */
+function reportCore(r: InstallCoreResult): void {
+  if (r.ok) {
+    prompts.log.step(
+      `Added ${r.components.length} core components to src/components (free, from ${r.source})`,
+    );
+    if (r.missing.length) {
+      prompts.log.warn(`Not in the core set, skipped: ${r.missing.join(", ")}`);
+    }
+    return;
+  }
+  prompts.log.warn(
+    `Could not download the core components (${r.error}).\n` +
+      "The project needs them to run. After `npm install`, run this in the project:\n" +
+      "  npx arcade core",
+  );
+}
 const cwd = process.cwd();
 
 const helpMessage = `\
@@ -158,9 +191,10 @@ Pick a KIND: a single "game" (one starter scene) or a multigame "arcade" (a
 walk-up "arcade room" — a carpeted room with a row of cabinets — whose cabinets
 launch each game). An arcade is just the same data-driven idea at scale: many
 game scenes sharing one code library. Either way, scenes are TS modules under
-src/scenes/ that declare entities + their components by name; arcade lazy-imports
-each named component the first time it appears, and custom components go under
-src/components/ wired up via src/registry.ts.
+src/scenes/ that declare entities + their components by name. Every component
+lives in src/components/: the free core set (meshes, lights, cameras, input,
+physics, scoring, …) is downloaded there when the project is created, and
+src/registry.ts picks up everything in that folder.
 
 With no arguments, start the CLI in interactive mode.
 
@@ -180,6 +214,17 @@ Options:
       --new-project          force a brand-new project even when run INSIDE an
                              existing arcade (where the default is to add a game
                              to it)
+      --no-core              don't download the core components into
+                             src/components (fetch them later with
+                             npx arcade core)
+      --core-from <dir>      copy the core components from a local library
+                             checkout (a CodeLibrary folder) instead of
+                             downloading them
+
+Also:
+  arcade core [DIRECTORY]    download the core components into an existing
+                             project's src/components (fills in missing files,
+                             never overwrites). Same --core-from option.
 
 Run inside an existing arcade, this ADDS A GAME to it rather than scaffolding a
 new project: a scene JSON under public/games/<name>/, a code seam under
@@ -500,6 +545,16 @@ async function init() {
       }
     : rc.deps;
   const engineDevDeps = demo ? { "@types/three": "^0.184.0" } : (rc.devDeps ?? {});
+  // The core components arrive as source in src/components, with their adapter
+  // plugins (src/components/<Name>/adapter/). Those plugins are imported for
+  // every renderer — each registrar checks `adapter.kind` and skips an engine
+  // it has no plugin for — so their imports must resolve everywhere: earcut
+  // (NeonSign's extruded text) always, and @babylonjs/core on the renderers
+  // that don't already depend on it.
+  const coreDeps: Record<string, string> = {
+    earcut: "^3.2.3",
+    ...("@babylonjs/core" in engineDeps ? {} : { "@babylonjs/core": "^9.0.0" }),
+  };
 
   // package.json — templates differ only in scene data + the chosen adapter.
   const pkg = {
@@ -518,6 +573,7 @@ async function init() {
       "@babylonjsmarket/arcade": range(ARCADE_VERSION),
       "@babylonjsmarket/viz": range(VIZ_VERSION),
       ...engineDeps,
+      ...coreDeps,
     },
     devDependencies: {
       // typescript stays on 6.0.x: @typescript-eslint/parser 8 declares
@@ -785,26 +841,16 @@ ${threeImportmap}    <style>
           "import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'",
           `import { ${rc.adapter} } from '${rc.import}'`,
         )
-        .replace("new BabylonAdapter()", `new ${rc.adapter}()`)
-        // registerArcadePlugins lives on the /babylon entry, which imports
-        // @babylonjs/core — a Three project doesn't have it. Drop the import
-        // and the call for the other renderers (their plugins are Babylon-only
-        // anyway: no image-processing seam, no SSAO2, no MeshBuilder.CreateText).
-        // Whatever the /babylon entry's import line names — one function or
-        // five, on one line or wrapped — goes as a unit.
-        .replace(/^import \{[^}]*\} from '@babylonjsmarket\/arcade\/babylon'\n/m, "")
-        // The whole "Built-in arcade adapter plugins" block: header comment
-        // through the registerArcadePlugins(adapter) call, up to the blank
-        // line that ends it — so adding a plugin to the template can't leave a
-        // dangling call behind.
-        .replace(/\n\/\/ Built-in arcade adapter plugins:[\s\S]*?\n\n/, "\n");
-      // A template edit that outgrows the patterns above must fail the
-      // scaffold here, loudly — not ship a main.ts that can't resolve.
-      const leftover = mainTs.match(/registerBabylon\w+|registerArcadePlugins|@babylonjsmarket\/arcade\/babylon/);
+        .replace("new BabylonAdapter()", `new ${rc.adapter}()`);
+      // The adapter lines are the only renderer-specific part now: plugins come
+      // from the downloaded components' adapter/register.ts files, which each
+      // check adapter.kind. A template edit that brings back a Babylon-only
+      // import must fail the scaffold here, loudly.
+      const leftover = mainTs.match(/BabylonAdapter|registerArcadePlugins|@babylonjsmarket\/arcade\/babylon/);
       if (leftover) {
         throw new Error(
-          `create-arcade: Babylon-only plugin reference "${leftover[0]}" survived the ${renderer} ` +
-            "strip of templates/main.ts — extend the strip in src/cli/index.ts.",
+          `create-arcade: Babylon-only reference "${leftover[0]}" survived the ${renderer} ` +
+            "swap in templates/main.ts — extend the swap in src/cli/index.ts.",
         );
       }
     }
@@ -834,6 +880,19 @@ ${threeImportmap}    <style>
   // Shared component resolver map (HUD panels + any custom components). The
   // demo uses only stock components, so the empty default map is correct too.
   write("src/registry.ts", readTemplate("arcade-room.registry.ts"));
+
+  // The core components: downloaded (free) into src/components, where the
+  // registry and main.ts's plugin auto-wire find them. The starter scenes are
+  // made of them, so a project without them does not boot — say so clearly.
+  let coreResult: InstallCoreResult | null = null;
+  if (argv.core !== false) {
+    const from = coreFrom();
+    prompts.log.step(
+      from ? `Copying the core components from ${from}...` : `Downloading the core components from ${coreApiUrl()}...`,
+    );
+    coreResult = await installCore(root, { from });
+    reportCore(coreResult);
+  }
 
   // .gitignore
   write(
@@ -941,7 +1000,8 @@ ${readmeIntro}
 |---|---|
 ${readmeFileRow}
 ${readmeSceneMapRow}
-| \`src/registry.ts\` | Resolvers for HUD panels and any custom components |
+| \`src/components/\` | Every component the scenes use — the core set, plus anything you download or write |
+| \`src/registry.ts\` | Registers every folder in \`src/components/\` by name |
 | \`src/main.ts\` | Boot: ${rc.adapter} → ArcadeGame → loadScene → start |
 
 ## Getting Started
@@ -964,16 +1024,18 @@ lists every panel), then calls \`game.loadScene(...)\` with the default scene �
 that's it. A production build (\`npm run build\`) leaves the panels out.
 
 Everything else — meshes, lights, cameras, gameplay logic — is declared in the
-scene modules as entities + named components. The arcade package's default
-registry maps every named component to its module; bundlers tree-shake any
-component a scene doesn't use.
+scene modules as entities + named components. Each named component is a folder
+in \`src/components/\`: the free core set was downloaded there when this project
+was created (re-fetch any missing file with \`npx arcade core\`), and
+\`bjs download <name>\` adds more. \`src/registry.ts\` picks up every folder;
+bundlers split each component into its own chunk, loaded only when a scene uses
+it.
 
 ${readmeGrow}
 
-To add a custom component, drop a file under \`src/components/MyThing.ts\`
-exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`), then add
-\`MyThing: () => import('./components/MyThing')\` to the resolver map in
-\`src/registry.ts\`.
+To add a custom component, create \`src/components/MyThing/MyThing.ts\`
+exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`). It is
+registered automatically.
 `,
   );
 
@@ -1008,6 +1070,11 @@ exporting \`MyThingComponent\` (and optionally \`MyThingSystem\`), then add
   // textured with its full line-up of machines instead of a bare floor — miss
   // the skins and every cabinet's art 404s. (The single-game and demo scaffolds
   // use no such assets.)
+  if (coreResult && !coreResult.ok) {
+    doneMessage += "\n  npx arcade core   # the core components did not download";
+  } else if (argv.core === false) {
+    doneMessage += "\n  npx arcade core   # skipped by --no-core; the scenes need it";
+  }
   if (!demo && kind === "arcade") {
     doneMessage += "\n\nThen pull the room's assets (member CLI):";
     doneMessage += "\n  bjs download arcade-carpet";
@@ -1061,9 +1128,35 @@ function pkgFromUserAgent(userAgent: string | undefined): PkgInfo | undefined {
   return { name: pkgSpecArr[0], version: pkgSpecArr[1] };
 }
 
+/** `arcade core [dir]` — fill in an existing project's core components. */
+async function core(): Promise<void> {
+  const dir = argv._[1] ? path.resolve(cwd, String(argv._[1])) : cwd;
+  if (!fs.existsSync(path.join(dir, "package.json"))) {
+    prompts.log.error(`No package.json in ${dir} — run this inside a project.`);
+    process.exitCode = 1;
+    return;
+  }
+  const r = await installCore(dir, { from: coreFrom() });
+  if (!r.ok) {
+    prompts.log.error(`Could not get the core components from ${r.source}: ${r.error}`);
+    process.exitCode = 1;
+    return;
+  }
+  prompts.log.success(
+    r.written.length
+      ? `Wrote ${r.written.length} file(s) for ${r.components.length} core components into src/components.`
+      : `All ${r.components.length} core components are already in src/components.`,
+  );
+  if (r.missing.length) prompts.log.warn(`Not in the core set, skipped: ${r.missing.join(", ")}`);
+}
+
 async function main() {
   if (rawArgs[0] === "eject") {
     await eject(rawArgs.slice(1));
+    return;
+  }
+  if (rawArgs[0] === "core") {
+    await core();
     return;
   }
   await init();

@@ -16,8 +16,8 @@
  * references — plus every snapshot under CodeLibrary/Scenes — it
  *   1. builds a World wired to a MockRendererAdapter,
  *   2. resolves EVERY component the scene names via a generic resolver
- *      (arcade free registry -> CodeLibrary/Components/<Name>/<Name>.ts -> a few
- *      game-local extras),
+ *      (CodeLibrary/Components/<Name>/<Name>.ts -> a few game-local extras; the
+ *      core set lives in CodeLibrary now, not in arcade),
  *   3. instantiates the scene + backfills systems (the live ArcadeGame order),
  *   4. ticks a few frames,
  * and FAILS on: a component with no resolver (the "Component not registered" /
@@ -46,10 +46,7 @@ import {
   type System,
 } from '@babylonjsmarket/ecs';
 
-import {
-  ARCADE_COMPONENT_REGISTRY,
-  type LazyComponentResolver,
-} from '../src/registry';
+type LazyComponentResolver = () => Promise<Record<string, unknown>>;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/arcade/scripts -> repo root
@@ -62,14 +59,11 @@ const COURSES_DIR = resolvePath(REPO_ROOT, 'courses');
 const DOWNLOAD_SCENE_RE = /bjs\s+download\s+scene\s+([A-Za-z0-9._-]+)/g;
 
 // ----------------------------------------------------------------------------
-// Component resolution — arcade free registry, then CodeLibrary components, then
-// a few game-local extras (mirrors validate-example-scenes.ts).
+// Component resolution — CodeLibrary components, then a few game-local extras
+// (mirrors validate-example-scenes.ts).
 // ----------------------------------------------------------------------------
 
 const EXTRA_RESOLVERS: Record<string, LazyComponentResolver> = {
-  // In the arcade package but intentionally off the lazy registry (no system).
-  Obstacle: () =>
-    import('../src/Components/Obstacle/Obstacle') as Promise<Record<string, unknown>>,
   // Game-local shooter components (not published as CodeLibrary components).
   MoneyField: () =>
     import(resolvePath(REPO_ROOT, 'games/src/games/arcade/shooter/MoneyField.ts')) as Promise<
@@ -83,7 +77,6 @@ const EXTRA_RESOLVERS: Record<string, LazyComponentResolver> = {
 
 /** Build a resolver for one component name, or null if nothing provides it. */
 function resolverFor(name: string): LazyComponentResolver | null {
-  if (ARCADE_COMPONENT_REGISTRY[name]) return ARCADE_COMPONENT_REGISTRY[name];
   for (const ext of ['.ts', '.tsx']) {
     const file = resolvePath(COMPONENTS_DIR, name, `${name}${ext}`);
     if (existsSync(file)) return () => import(file) as Promise<Record<string, unknown>>;

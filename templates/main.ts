@@ -10,11 +10,10 @@
 // previews a downloaded asset — it drops public/<key>/scene.json and opens
 // /?scene=/<key>/scene.json. With no param, the default scene loads.
 import { ArcadeGame, mountControlsHud, hintsFromSceneTitle } from '@babylonjsmarket/arcade'
-import { registerArcadePlugins } from '@babylonjsmarket/arcade/babylon'
 import { BabylonAdapter } from '@babylonjsmarket/ecs/babylon'
 import { SCENES, DEFAULT_SCENE } from './scenes'
 import { GAMES, gameFromPath } from './games'
-import { CabinetLinkEvents } from '@babylonjsmarket/arcade'
+import { CabinetLinkEvents } from './components/CabinetLink/CabinetLink.events'
 import { REGISTRY } from './registry'
 
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement
@@ -22,20 +21,15 @@ const sceneUrl = new URLSearchParams(window.location.search).get('scene')
 
 const adapter = new BabylonAdapter()
 
-// Built-in arcade adapter plugins: one call installs the ACES grade behind
-// ToneMapping, the SSAO2 pass behind AmbientOcclusion, the extruded text behind
-// NeonSign and the Havok casts behind Physics. The components ship inside the
-// arcade package, so the auto-wire below can't see them. When arcade adds a
-// built-in plugin, this call picks it up with no edit here.
-registerArcadePlugins(adapter)
-
-// Auto-wire adapter plugins shipped by downloaded components. A component that
-// needs an engine feature the adapter doesn't expose — AnimateMeshy's runtime
-// retarget, for example — ships an `adapter/register.ts` exporting a
-// `register…Extension(adapter)` function. `bjs download` drops it under
-// `src/components/<Name>/adapter/`; this installs every one on the adapter
-// BEFORE the scene loads, so the component's System finds its plugin at load
-// time. Projects with no such component match nothing here (a no-op).
+// Auto-wire adapter plugins. A component that needs an engine feature the
+// adapter doesn't expose ships an `adapter/register.ts` exporting a
+// `register…Extension(adapter)` function, and this installs every one found
+// under `src/components/<Name>/adapter/register.ts` BEFORE the scene loads, so
+// each System finds its plugin at load time. That covers the core set
+// downloaded when the project was created — the ACES grade behind ToneMapping,
+// the SSAO2 pass behind AmbientOcclusion, NeonSign's extruded text, Physics'
+// casts — and anything `bjs download` adds later. Each registrar checks the
+// adapter's kind and skips an engine it has no plugin for.
 const adapterPlugins = import.meta.glob(
   ['./Components/*/adapter/register.ts', './components/*/adapter/register.ts'],
   { eager: true },

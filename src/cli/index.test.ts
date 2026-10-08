@@ -13,21 +13,38 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, "..", "..");
 const CLI_PATH = path.join(PACKAGE_ROOT, "dist", "cli", "index.js");
 
+// The scaffold downloads the core components into src/components. Tests never
+// touch the network: in the monorepo they copy from the local CodeLibrary
+// (ARCADE_CORE_FROM), and anywhere else they point the download at a closed
+// local port, which exercises the "could not download" path instead.
+const LIBRARY_DIR = path.resolve(PACKAGE_ROOT, "..", "..", "CodeLibrary");
+const HAVE_LIBRARY = fs.existsSync(path.join(LIBRARY_DIR, "Components"));
+const UNREACHABLE_API = "http://127.0.0.1:9";
+const CORE_ENV: Record<string, string> = HAVE_LIBRARY
+  ? { ARCADE_CORE_FROM: LIBRARY_DIR }
+  : { BJS_API_URL: UNREACHABLE_API };
+
 interface RunResult {
   stdout: string;
   stderr: string;
   code: number;
 }
 
-async function runCli(args: string[], cwd: string): Promise<RunResult> {
+async function runCli(
+  args: string[],
+  cwd: string,
+  extraEnv: Record<string, string> = CORE_ENV,
+): Promise<RunResult> {
   try {
+    const env: NodeJS.ProcessEnv = { ...process.env, CI: "true", ...extraEnv };
+    // An explicit env for one run replaces the default core source entirely.
+    if (extraEnv !== CORE_ENV) {
+      if (!("ARCADE_CORE_FROM" in extraEnv)) delete env.ARCADE_CORE_FROM;
+    }
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
       [CLI_PATH, ...args],
-      {
-        cwd,
-        env: { ...process.env, CI: "true" },
-      },
+      { cwd, env },
     );
     return { stdout, stderr, code: 0 };
   } catch (err) {
@@ -122,7 +139,6 @@ describe("arcade CLI", () => {
       }
       // No legacy single-scene layout the old CLI used.
       expect(fs.existsSync(path.join(projectRoot, "src", "scene.ts"))).toBe(false);
-      expect(fs.existsSync(path.join(projectRoot, "src", "components"))).toBe(false);
     }, 60_000);
 
     it("generates a package.json with the expected name, type, and dependencies", async () => {
@@ -143,6 +159,8 @@ describe("arcade CLI", () => {
         // scaffold fails to load (the panels' viz imports go unresolved).
         "@babylonjsmarket/viz": expect.any(String),
         "@babylonjs/core": expect.any(String),
+        // NeonSign's downloaded adapter plugin extrudes text with earcut.
+        earcut: expect.any(String),
       });
     }, 60_000);
 
@@ -209,6 +227,11 @@ describe("arcade CLI", () => {
       expect(mainTs).not.toMatch(/` for Entities|F4 for/);
       expect(mainTs).toContain("from './scenes'");
       expect(mainTs).toContain("from './registry'");
+      // Core symbols come from the downloaded components, not the package.
+      expect(mainTs).toContain(
+        "import { CabinetLinkEvents } from './components/CabinetLink/CabinetLink.events'",
+      );
+      expect(mainTs).not.toMatch(/CabinetLinkEvents[^\n]*from '@babylonjsmarket\/arcade'/);
       expect(mainTs).toContain("loadScene(scene");
       // ?scene=<url> override — how `bjs download` previews a downloaded asset.
       expect(mainTs).toContain("loadSceneFromUrl");
@@ -340,15 +363,14 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
-  // The Babylon-only adapter plugins the starter main.ts registers. The other
-  // renderers must lose every trace of them — a surviving import of
-  // @babylonjsmarket/arcade/babylon drags @babylonjs/core into a Three project.
-  function expectNoBabylonPlugins(main: string): void {
+  // Plugins come only from the downloaded components' adapter/register.ts
+  // files (the core set's included). No renderer's main.ts names a Babylon
+  // plugin or the old arcade/babylon entry, which no longer carries them.
+  function expectPluginsFromComponents(main: string): void {
     expect(main).not.toMatch(/registerBabylon\w+|registerArcadePlugins/);
     expect(main).not.toContain("@babylonjsmarket/arcade/babylon");
-    expect(main).not.toContain("Built-in arcade adapter plugins");
-    // The strip closes up cleanly: adapter construction, one blank line, then
-    // the auto-wire comment (no orphaned blank lines or half a comment).
+    expect(main).toContain("'./components/*/adapter/register.ts'");
+    // Adapter construction, one blank line, then the auto-wire comment.
     expect(main).toMatch(/Adapter\(\)\n\n\/\/ Auto-wire adapter plugins/);
   }
 
@@ -365,12 +387,9 @@ describe("arcade CLI", () => {
       const main = fs.readFileSync(path.join(tmpDir, "d", "src", "main.ts"), "utf-8");
       expect(main).toContain("new BabylonAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/babylon'");
-      // The built-in plugins the free components need go in with one call
-      // (the auto-wire only sees downloaded components). Without it a
-      // scaffolded room's NeonSigns fall back to flat quads.
-      expect(main).toContain("registerArcadePlugins(adapter)");
-      expect(main).not.toMatch(/registerBabylon\w+Extension\(adapter\)/);
-      expect(main).toContain("from '@babylonjsmarket/arcade/babylon'");
+      // The core components' plugins (NeonSign's text, Physics' casts, …)
+      // arrive with the downloaded components and the auto-wire installs them.
+      expectPluginsFromComponents(main);
       const pkg = JSON.parse(fs.readFileSync(path.join(tmpDir, "d", "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@babylonjs/core");
       expect(pkg.dependencies).toHaveProperty("@babylonjs/havok");
@@ -383,10 +402,14 @@ describe("arcade CLI", () => {
       expect(main).toContain("new ThreeAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/three'");
       expect(main).not.toContain("BabylonAdapter");
-      expectNoBabylonPlugins(main);
+      expectPluginsFromComponents(main);
       const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@dimforge/rapier3d-compat");
-      expect(pkg.dependencies).not.toHaveProperty("@babylonjs/core"); // three is CDN
+      // Three itself is CDN-loaded, but the downloaded core plugins import
+      // @babylonjs/core (each registrar skips a non-Babylon adapter), so it
+      // must resolve for tsc and Vite.
+      expect(pkg.dependencies).toHaveProperty("@babylonjs/core");
+      expect(pkg.dependencies).toHaveProperty("earcut");
       expect(pkg.devDependencies).toHaveProperty("@types/three");
       const html = fs.readFileSync(path.join(root, "index.html"), "utf-8");
       expect(html).toContain("esm.sh/three");
@@ -403,7 +426,7 @@ describe("arcade CLI", () => {
       const main = fs.readFileSync(path.join(root, "src", "main.ts"), "utf-8");
       expect(main).toContain("new BabylonLiteAdapter()");
       expect(main).toContain("from '@babylonjsmarket/ecs/babylon-lite'");
-      expectNoBabylonPlugins(main);
+      expectPluginsFromComponents(main);
       const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
       expect(pkg.dependencies).toHaveProperty("@babylonjs/lite");
       expect(pkg.dependencies).toHaveProperty("@babylonjs/havok");
@@ -502,6 +525,78 @@ describe("arcade CLI", () => {
     }, 60_000);
   });
 
+  describe("core components (downloaded at create time)", () => {
+    const listFiles = (dir: string): string[] =>
+      fs.existsSync(dir)
+        ? fs.readdirSync(dir, { recursive: true, withFileTypes: true })
+            .filter((e) => e.isFile())
+            .map((e) => path.relative(dir, path.join(e.parentPath, e.name)))
+        : [];
+
+    it.skipIf(!HAVE_LIBRARY)("copies the core set into src/components, runtime files only", async () => {
+      const { code, stdout } = await runCli(["d", "--overwrite"], tmpDir);
+      expect(code).toBe(0);
+      expect(stdout).toMatch(/Added \d+ core components to src\/components/);
+      const comps = path.join(tmpDir, "d", "src", "components");
+      // What the starter scenes and main.ts name.
+      for (const rel of [
+        "MeshPrimitive/MeshPrimitive.ts",
+        "DirectionalLight/DirectionalLight.ts",
+        "FirstPersonCamera/FirstPersonCamera.ts",
+        "NeonSign/NeonSign.ts",
+        "NeonSign/adapter/register.ts",
+        "CabinetLink/CabinetLink.events.ts",
+        "ArcCamera/ArcCamera.ts",
+      ]) {
+        expect(fs.existsSync(path.join(comps, rel)), rel).toBe(true);
+      }
+      // Tests, panels and viz never land in a project (they break its tsc).
+      const files = listFiles(comps);
+      expect(files.filter((f) => /\.(test|spec)\.|\.(panel|viz)\.tsx?$/.test(f))).toEqual([]);
+      // Only builtin + free components: nothing from the paid catalogue.
+      expect(fs.existsSync(path.join(comps, "PokerAI"))).toBe(false);
+      // A shared helper a core component imports from outside its folder.
+      expect(fs.existsSync(path.join(tmpDir, "d", "src", "inputEvents.ts"))).toBe(true);
+    }, 60_000);
+
+    it("--no-core skips the download and says how to get it", async () => {
+      const { code, stdout } = await runCli(["d", "--no-core", "--overwrite"], tmpDir);
+      expect(code).toBe(0);
+      expect(fs.existsSync(path.join(tmpDir, "d", "src", "components"))).toBe(false);
+      expect(stdout).toContain("npx arcade core");
+    }, 60_000);
+
+    it("a failed download still scaffolds, and prints the next step", async () => {
+      const { code, stdout } = await runCli(["d", "--overwrite"], tmpDir, {
+        BJS_API_URL: UNREACHABLE_API,
+      });
+      expect(code).toBe(0);
+      expect(fs.existsSync(path.join(tmpDir, "d", "src", "main.ts"))).toBe(true);
+      expect(stdout).toContain("Could not download the core components");
+      expect(stdout).toContain("npx arcade core");
+    }, 60_000);
+
+    it.skipIf(!HAVE_LIBRARY)("`arcade core <dir>` fills in a project, and never overwrites", async () => {
+      await runCli(["d", "--no-core", "--overwrite"], tmpDir);
+      const root = path.join(tmpDir, "d");
+      const first = await runCli(["core", "d"], tmpDir);
+      expect(first.code).toBe(0);
+      const mp = path.join(root, "src", "components", "MeshPrimitive", "MeshPrimitive.ts");
+      expect(fs.existsSync(mp)).toBe(true);
+      fs.writeFileSync(mp, "// edited\n");
+      const again = await runCli(["core", "d"], tmpDir);
+      expect(again.code).toBe(0);
+      expect(again.stdout).toContain("already in src/components");
+      expect(fs.readFileSync(mp, "utf-8")).toBe("// edited\n");
+    }, 60_000);
+
+    it("`arcade core` outside a project fails clearly", async () => {
+      const { code, stdout, stderr } = await runCli(["core"], tmpDir);
+      expect(code).not.toBe(0);
+      expect(stdout + stderr).toContain("No package.json");
+    }, 60_000);
+  });
+
   describe("init subcommand", () => {
     it("accepts `init <name>` as a synonym for the bare positional form", async () => {
       const { code } = await runCli(
@@ -520,7 +615,7 @@ describe("arcade CLI", () => {
       const proc = spawn(
         process.execPath,
         [CLI_PATH, "Invalid Name", "--overwrite"],
-        { cwd: tmpDir, env: { ...process.env, CI: "true" } },
+        { cwd: tmpDir, env: { ...process.env, CI: "true", ...CORE_ENV } },
       );
       const exitCode = await new Promise<number>((resolve) => {
         proc.stdout.on("data", () => {});

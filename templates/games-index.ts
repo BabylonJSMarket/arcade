@@ -15,7 +15,7 @@
  * free cabinet at it.
  *
  * Components and assets are SHARED: everything `bjs download` installs lands in
- * this project's `src/Components/` and `public/`, so every game here draws from
+ * this project's `src/components/` and `public/`, so every game here draws from
  * the same pool. Downloading a component once makes it available to all of them.
  */
 

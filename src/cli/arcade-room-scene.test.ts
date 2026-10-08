@@ -10,10 +10,14 @@
  *
  * So here we load the REAL template (`templates/arcade-room.scene.ts` — the exact
  * module the CLI copies into `src/scenes/arcade-room.ts`) through a REAL
- * `ArcadeGame` wired to a `MockRendererAdapter`, which merges the built-in
- * `ARCADE_COMPONENT_REGISTRY` and resolves every component the same way the live
- * game does. No Babylon, no browser, no assets on disk — the components are
+ * `ArcadeGame` wired to a `MockRendererAdapter`. Its registry is the CORE SET a
+ * new project downloads into src/components — read here from the monorepo's
+ * CodeLibrary by the same code the CLI's `--core-from` uses — and nothing from
+ * arcade itself. No Babylon, no browser, no assets on disk — the components are
  * renderer-agnostic, so the Mock records the calls a real engine would receive.
+ *
+ * Outside the monorepo (arcade's own repo) there is no CodeLibrary to read, so
+ * the suite skips.
  *
  * The four things a "cabinet + floor + walls" room must be true for:
  *   1. every component the scene names resolves (no `No resolver` warning),
@@ -24,9 +28,31 @@
  *   4. the world ticks without throwing.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MockRendererAdapter } from '@babylonjsmarket/ecs';
 import { ArcadeGame } from '../ArcadeGame';
 import { ARCADE_ROOM } from '../../templates/arcade-room.scene';
+import { GAME } from '../../templates/game.scene';
+import { readLocalCoreBundle } from './core';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const LIBRARY_DIR = path.resolve(HERE, '..', '..', '..', '..', 'CodeLibrary');
+const HAVE_LIBRARY = fs.existsSync(path.join(LIBRARY_DIR, 'Components'));
+
+type Resolver = () => Promise<Record<string, unknown>>;
+
+/** The registry a fresh scaffold ends up with: one entry per core component. */
+function coreRegistry(): Record<string, Resolver> {
+  const bundle = readLocalCoreBundle(LIBRARY_DIR);
+  return Object.fromEntries(
+    bundle.components.map((c) => [
+      c.name,
+      (() => import(path.join(LIBRARY_DIR, c.path, `${c.name}.ts`))) as Resolver,
+    ]),
+  );
+}
 
 // The template is plain scene data; cast to whatever loadScene accepts so the
 // test tracks the real signature without importing an internal type.
@@ -48,21 +74,31 @@ const ROOM_ENTITIES = [
   'Player',
 ];
 
-describe('arcade-room starter scene — loads through the real free registry', () => {
+describe.skipIf(!HAVE_LIBRARY)('arcade-room starter scene — loads through the downloaded core set', () => {
   let renderer: MockRendererAdapter;
   let game: ArcadeGame;
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     renderer = new MockRendererAdapter();
-    // No componentRegistry override — this exercises the real built-in
-    // ARCADE_COMPONENT_REGISTRY, exactly what a fresh scaffold ships with.
-    game = new ArcadeGame(renderer);
+    // The core set, exactly what a fresh scaffold downloads into src/components.
+    game = new ArcadeGame(renderer, { componentRegistry: coreRegistry() });
     warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     warn.mockRestore();
+  });
+
+  it('names only components the core set carries (arcade built-ins are going away)', () => {
+    const core = new Set(Object.keys(coreRegistry()));
+    for (const scene of [ARCADE_ROOM, GAME]) {
+      const names = new Set(
+        Object.values(scene.entities).flatMap((e) => Object.keys((e as { components: object }).components)),
+      );
+      const outside = [...names].filter((n) => !core.has(n));
+      expect(outside, `${scene.name} names components outside the core set`).toEqual([]);
+    }
   });
 
   it('resolves every component the room references (no "No resolver" warning)', async () => {
@@ -113,5 +149,26 @@ describe('arcade-room starter scene — loads through the real free registry', (
     expect(() => {
       for (let i = 0; i < 10; i++) game.world.update(1 / 60);
     }).not.toThrow();
+  });
+});
+
+describe.skipIf(!HAVE_LIBRARY)('game starter scene — loads through the downloaded core set', () => {
+  it('resolves every component and instantiates every entity', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const renderer = new MockRendererAdapter();
+      const game = new ArcadeGame(renderer, { componentRegistry: coreRegistry() });
+      await game.loadScene(GAME as unknown as SceneArg);
+      const unresolved = warn.mock.calls
+        .flat()
+        .filter((a): a is string => typeof a === 'string' && a.includes('No resolver'));
+      expect(unresolved).toEqual([]);
+      for (const id of Object.keys(GAME.entities)) {
+        expect(game.world.getEntity(id), id).toBeDefined();
+      }
+      expect(() => game.world.update(1 / 60)).not.toThrow();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

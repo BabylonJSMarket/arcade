@@ -2,14 +2,14 @@
  * Game — the starter scene for a single game.
  *
  * A minimal, self-contained scene: a lit ground, one hero mesh, and an orbit
- * camera. Everything is pure scene data, composed entirely from components the
- * @babylonjsmarket/arcade package already knows how to instantiate — and it uses
- * no external assets, so a fresh scaffold runs offline.
+ * camera. Everything is pure scene data, composed entirely from the free core
+ * components in src/components (downloaded when the project was created) — and
+ * it uses no external assets, so once created the project runs offline.
  *
  * This is a STARTING POINT. Grow your game by adding entities + components here,
  * or split it into more scenes under `src/scenes/` (registered in
- * `src/scenes/index.ts`). Custom components go under `src/components/` and are
- * wired up via `src/registry.ts`.
+ * `src/scenes/index.ts`). Custom components go under `src/components/<Name>/`
+ * too; `src/registry.ts` picks them up by folder name.
  *
  * An "arcade" is just this same idea at scale: many game scenes sharing one code
  * library, fronted by a walk-up "arcade room" home scene whose cabinets launch

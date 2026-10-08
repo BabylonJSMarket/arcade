@@ -7,8 +7,9 @@
  *   CodeLibrary/Components/<Name>/example.scene.json
  * the validator:
  *   1. Builds a World wired to a MockRendererAdapter.
- *   2. Resolves + registers every component the scene names (arcade registry +
- *      the three off-registry extras: Obstacle, MoneyField, PlayerWalkAnimator).
+ *   2. Resolves + registers every component the scene names from
+ *      CodeLibrary/Components/<Name>/<Name>.ts (the core set lives there now,
+ *      not in arcade), plus two game-local extras: MoneyField, PlayerWalkAnimator.
  *   3. Instantiates the scene via SceneLoader and backfills systems via
  *      world.addSystem — the same "entities first, then systems" order the live
  *      ArcadeGame path uses.
@@ -35,10 +36,7 @@ import {
   type System,
 } from '@babylonjsmarket/ecs';
 
-import {
-  ARCADE_COMPONENT_REGISTRY,
-  type LazyComponentResolver,
-} from '../src/registry';
+type LazyComponentResolver = () => Promise<Record<string, unknown>>;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/arcade/scripts -> repo root
@@ -68,10 +66,8 @@ const CATALOG: string[] = [
 const SYSTEMLESS = new Set<string>(['Obstacle']);
 
 /**
- * Off-registry resolvers, merged on top of ARCADE_COMPONENT_REGISTRY:
- *   - MoneyField / PlayerWalkAnimator: game-local (games/src/games/arcade/shooter).
- * (Obstacle used to be listed here too; it is in the lazy registry now, since
- * a walk-around room declares one per wall, cabinet and prop in scene data.)
+ * Game-local resolvers (games/src/games/arcade/shooter), tried before the
+ * CodeLibrary lookup.
  */
 const EXTRA_RESOLVERS: Record<string, LazyComponentResolver> = {
   MoneyField: () =>
@@ -84,22 +80,14 @@ const EXTRA_RESOLVERS: Record<string, LazyComponentResolver> = {
     ) as Promise<Record<string, unknown>>,
 };
 
-const RESOLVERS: Record<string, LazyComponentResolver> = {
-  ...ARCADE_COMPONENT_REGISTRY,
-  ...EXTRA_RESOLVERS,
-};
-
 /**
- * Resolve a component by name: the arcade free registry / extras first, then
- * fall back to its published home under CodeLibrary/Components/<Name>/<Name>.ts.
- * The pinball + shooter kits (Bumper, Flipper, TwinStickShooter, ShooterCamera,
- * …) were vendored OUT of packages/arcade into the marketplace, so their modules
- * no longer live in ../src/Components — but their example.scene.json sidecars
- * still do, and the CATALOG still validates them. Without this fallback every
- * premium component reads as "no resolver" and its system never registers.
+ * Resolve a component by name: a game-local extra, else its home under
+ * CodeLibrary/Components/<Name>/<Name>.ts — the same source `bjs download` and a
+ * new project's core download serve. Nothing comes from arcade's own
+ * Components/ (the core set moved to CodeLibrary).
  */
 function resolverFor(name: string): LazyComponentResolver | undefined {
-  if (RESOLVERS[name]) return RESOLVERS[name];
+  if (EXTRA_RESOLVERS[name]) return EXTRA_RESOLVERS[name];
   for (const ext of ['.ts', '.tsx']) {
     const file = resolvePath(COMPONENTS_DIR, name, `${name}${ext}`);
     if (existsSync(file)) return () => import(file) as Promise<Record<string, unknown>>;

@@ -1,12 +1,13 @@
 /**
  * Shared component resolver map for every scene in the arcade.
  *
- * Every component the arcade room uses (MeshPrimitive, Mesh, DirectionalLight,
- * HemisphericLight, Shadow, ArcCamera, ...) is registered by default in
- * @babylonjsmarket/arcade, so you rarely touch this file.
+ * Every component lives in `src/components/<Name>/`: the free core set the
+ * scenes use (MeshPrimitive, Mesh, DirectionalLight, HemisphericLight, Shadow,
+ * ArcCamera, ...) was downloaded there when the project was created, and
+ * anything you pull with `bjs download <name>` lands beside it. You rarely
+ * touch this file.
  *
- * It AUTO-DISCOVERS your project's own components: anything you pull with
- * `bjs download <name>` lands in `src/components/<Name>/<Name>.ts` and is
+ * It AUTO-DISCOVERS that folder: each `src/components/<Name>/<Name>.ts` is
  * registered here with zero manual wiring — the glob below maps each
  * `components/<Name>/<Name>.ts` (the main component file, where the folder
  * name matches the file basename) to `<Name>: () => import(...)`. Sibling

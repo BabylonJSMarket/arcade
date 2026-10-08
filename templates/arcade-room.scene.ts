@@ -4,8 +4,8 @@
  * A real-world-scaled room you STAND IN and walk around with the keyboard: a
  * textured carpet floor, four walls + ceiling, warm lighting, and an arcade
  * cabinet against the back wall facing you. It is pure scene data — every entity
- * is composed from FREE @babylonjsmarket/arcade components, so it renders with
- * no extra wiring.
+ * is composed from the FREE core components downloaded into src/components when
+ * this project was created, so it renders with no extra wiring.
  *
  * Controls (FirstPersonCamera): W/S or ↑/↓ walk, A/D or ←/→ turn, Q/E strafe.
  * You spawn just inside the door at standing eye height, facing the cabinets.

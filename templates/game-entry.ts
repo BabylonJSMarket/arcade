@@ -5,11 +5,11 @@
  * editable without a rebuild. This file is for the parts a scene can't express —
  * this game's own Systems, and any component it needs registered by name.
  *
- * Nothing here is required. A game made only of stock components (the ones
- * `@babylonjsmarket/arcade` already knows, plus anything you have installed via
+ * Nothing here is required. A game made only of components already in
+ * `src/components/` (the core set, plus anything you have installed via
  * `bjs download`) runs from its scene JSON alone, and this file just names it.
  *
- * Everything in `src/Components/` and `public/` is SHARED with the rest of the
+ * Everything in `src/components/` and `public/` is SHARED with the rest of the
  * arcade — download a component or an asset once and every game can use it.
  */
 import type { ArcadeGameEntry } from '../index'
@@ -22,7 +22,7 @@ export const GAME: ArcadeGameEntry = {
 
 /**
  * Custom components for THIS game, merged into the shared registry when it
- * loads. Add entries as `{ MyComponent: () => import('../../Components/MyComponent/MyComponent') }`
+ * loads. Add entries as `{ MyComponent: () => import('../../components/MyComponent/MyComponent') }`
  * — the same shape as `src/registry.ts`.
  */
 export const GAME_COMPONENTS = {}
