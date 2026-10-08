@@ -253,6 +253,17 @@ export function writeCoreBundle(projectRoot: string, bundle: CoreBundle): string
     fs.writeFileSync(dest, f.content);
     written.push(rel);
   }
+  // Mark each core folder, so `bjs submit` knows a dependency on it names the
+  // catalogue's copy and never carries its files.
+  for (const c of bundle.components) {
+    if (!/^[A-Z][A-Za-z0-9_]*$/.test(c.name)) continue;
+    const rel = `src/components/${c.name}/meta.json`;
+    const dest = path.resolve(projectRoot, rel);
+    if (!fs.existsSync(path.dirname(dest)) || fs.existsSync(dest)) continue;
+    const meta = { name: c.name, version: c.version, builtin: true, isFree: true, dependencies: c.dependencies ?? [] };
+    fs.writeFileSync(dest, JSON.stringify(meta, null, 2) + "\n");
+    written.push(rel);
+  }
   return written;
 }
 

@@ -99,6 +99,28 @@ describe('writeCoreBundle', () => {
     expect(fs.existsSync(path.join(root, 'evil.ts'))).toBe(false);
   });
 
+  it('marks each core folder builtin in a meta.json, keeping one already there', () => {
+    const root = mkTmp();
+    put(root, 'src/components/Fog/meta.json', '{"name":"Fog","mine":true}');
+    const bundle: CoreBundle = {
+      components: [
+        { name: 'Mesh', path: 'Components/Mesh', version: '1.0.0', files: ['Mesh.ts'], dependencies: ['MeshPrimitive'] },
+        { name: 'Fog', path: 'Components/Fog', version: '1.0.0', files: ['Fog.ts'], dependencies: [] },
+      ],
+      missing: [],
+      files: [
+        { path: 'Components/Mesh/Mesh.ts', content: 'm' },
+        { path: 'Components/Fog/Fog.ts', content: 'f' },
+      ],
+    };
+    const written = writeCoreBundle(root, bundle);
+    expect(written).toContain('src/components/Mesh/meta.json');
+    expect(written).not.toContain('src/components/Fog/meta.json');
+    const meta = JSON.parse(fs.readFileSync(path.join(root, 'src/components/Mesh/meta.json'), 'utf8'));
+    expect(meta).toMatchObject({ name: 'Mesh', builtin: true, dependencies: ['MeshPrimitive'] });
+    expect(fs.readFileSync(path.join(root, 'src/components/Fog/meta.json'), 'utf8')).toContain('"mine"');
+  });
+
   it('projectPathFor matches where bjs download writes', () => {
     expect(projectPathFor('Components/X/X.ts')).toBe('src/components/X/X.ts');
     expect(projectPathFor('math/quat.ts')).toBe('src/math/quat.ts');
