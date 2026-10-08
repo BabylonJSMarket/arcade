@@ -75,6 +75,51 @@ describe('readLocalCoreBundle', () => {
   it('throws on a folder with no Components/', () => {
     expect(() => readLocalCoreBundle(mkTmp())).toThrow(/no Components/);
   });
+
+  it('skips a folder with no <Name>.ts, and an import that climbs out of the library', () => {
+    const lib = fakeLibrary();
+    put(lib, 'Components/Docs/meta.json', JSON.stringify({ builtin: true, isFree: true }));
+    put(lib, 'Components/Docs/README.md', 'not a component');
+    put(lib, 'Components/Mesh/Mesh.defs.ts', "import { Y } from '../../../../../outside';\nexport const X = 1;");
+    const b = readLocalCoreBundle(lib);
+    expect(b.components.map((c) => c.name)).not.toContain('Docs');
+    expect(b.files.some((f) => f.path.includes('outside'))).toBe(false);
+  });
+
+  it('skips a component whose meta.json does not parse', () => {
+    const lib = fakeLibrary();
+    put(lib, 'Components/Broken/meta.json', '{ not json');
+    put(lib, 'Components/Broken/Broken.ts', 'x');
+    expect(readLocalCoreBundle(lib).components.map((c) => c.name)).not.toContain('Broken');
+  });
+});
+
+describe('assembleBundle', () => {
+  it('lists a file the reader cannot find as missing', () => {
+    const b = assembleBundle(
+      [{ name: 'Mesh', path: 'Components/Mesh', version: 'v1', files: ['Mesh.ts', 'Gone.ts'], dependencies: [] }],
+      (p) => (p === 'Components/Mesh/Mesh.ts' ? 'export const Mesh = 1;' : null),
+    );
+    expect(b.missing).toEqual(['Components/Mesh/Gone.ts']);
+  });
+
+  it('reads a shared helper once when two files import it', () => {
+    const reads: string[] = [];
+    const src: Record<string, string> = {
+      'Components/A/A.ts': "import { K } from '../../inputEvents';",
+      'Components/A/A.defs.ts': "import { K } from '../../inputEvents';",
+      'inputEvents.ts': 'export const K = {};',
+    };
+    const b = assembleBundle(
+      [{ name: 'A', path: 'Components/A', version: 'v1', files: ['A.ts', 'A.defs.ts'], dependencies: [] }],
+      (p) => {
+        reads.push(p);
+        return src[p] ?? null;
+      },
+    );
+    expect(reads.filter((p) => p === 'inputEvents.ts')).toHaveLength(1);
+    expect(b.files.map((f) => f.path)).toContain('inputEvents.ts');
+  });
 });
 
 describe('writeCoreBundle', () => {
@@ -144,6 +189,59 @@ describe('fetchCoreBundle / installCore', () => {
     expect(r.ok).toBe(true);
     expect(r.components).toEqual(['Mesh']);
     expect(fs.existsSync(path.join(root, 'src/components/Mesh/Mesh.ts'))).toBe(true);
+  });
+
+  it('installs from a local library with --core-from', async () => {
+    const root = mkTmp();
+    const r = await installCore(root, { from: fakeLibrary() });
+    expect(r.ok).toBe(true);
+    expect(r.components).toEqual(['Jump', 'Mesh']);
+    expect(fs.existsSync(path.join(root, 'src/components/Mesh/Mesh.ts'))).toBe(true);
+  });
+
+  it('treats a bundle with no missing list as nothing missing', async () => {
+    const { missing: _m, ...noMissing } = okBundle;
+    const b = await fetchCoreBundle('https://example.test', fakeFetch(200, noMissing));
+    expect(b.missing).toEqual([]);
+  });
+
+  it('falls back to the default API URL', async () => {
+    let seen = '';
+    const anyUrl = (async (url: string) => {
+      seen = url;
+      return new Response(JSON.stringify(okBundle), { status: 200 });
+    }) as unknown as typeof fetch;
+    const r = await installCore(mkTmp(), { fetchImpl: anyUrl });
+    expect(r.ok).toBe(true);
+    expect(seen).toBe(`${coreApiUrl()}/api/library/core`);
+  });
+
+  it('marks no folder for an odd name, and defaults missing dependencies', () => {
+    const root = mkTmp();
+    const bundle = {
+      components: [
+        { name: 'bad-name', path: 'Components/bad-name', version: 'v1', files: ['x.ts'] },
+        { name: 'Fog', path: 'Components/Fog', version: 'v1', files: ['Fog.ts'] },
+      ],
+      missing: [],
+      files: [
+        { path: 'Components/bad-name/x.ts', content: 'x' },
+        { path: 'Components/Fog/Fog.ts', content: 'f' },
+      ],
+    } as unknown as CoreBundle;
+    const written = writeCoreBundle(root, bundle);
+    expect(written).not.toContain('src/components/bad-name/meta.json');
+    const meta = JSON.parse(fs.readFileSync(path.join(root, 'src/components/Fog/meta.json'), 'utf8'));
+    expect(meta.dependencies).toEqual([]);
+  });
+
+  it('says which URL it could not reach', async () => {
+    const down = (async () => {
+      throw new Error('ECONNREFUSED');
+    }) as unknown as typeof fetch;
+    await expect(fetchCoreBundle('https://example.test', down)).rejects.toThrow(
+      /could not reach https:\/\/example\.test\/api\/library\/core \(ECONNREFUSED\)/,
+    );
   });
 
   it('reports a non-200 without throwing', async () => {
