@@ -96,13 +96,13 @@ const RENDERERS: Record<string, RendererConfig> = {
     label: "Babylon.js (Classic) + Havok physics",
     adapter: "BabylonAdapter",
     import: "@babylonjsmarket/ecs/babylon",
-    deps: { "@babylonjs/core": "^9.0.0", "@babylonjs/loaders": "^9.0.0", "@babylonjs/havok": "^1.3.0" },
+    deps: { "@babylonjs/core": "^9.33.1", "@babylonjs/loaders": "^9.33.1", "@babylonjs/havok": "^1.3.14" },
   },
   "babylon-lite": {
     label: "Babylon Lite + Havok physics (WebGPU)",
     adapter: "BabylonLiteAdapter",
     import: "@babylonjsmarket/ecs/babylon-lite",
-    deps: { "@babylonjs/lite": "^1.0.1", "@babylonjs/havok": "^1.3.0" },
+    deps: { "@babylonjs/lite": "^1.37.2", "@babylonjs/havok": "^1.3.14" },
     viteExtras: ["@babylonjs/lite"],
   },
   three: {
@@ -110,7 +110,7 @@ const RENDERERS: Record<string, RendererConfig> = {
     adapter: "ThreeAdapter",
     import: "@babylonjsmarket/ecs/three",
     deps: { "@dimforge/rapier3d-compat": "^0.19.3" },
-    devDeps: { "@types/three": "^0.184.0" },
+    devDeps: { "@types/three": "^0.187.0" },
     viteExtras: ["@dimforge/rapier3d-compat"],
     needsThreeImportmap: true,
   },
@@ -536,14 +536,14 @@ async function init() {
   // map — only its types are installed locally.)
   const engineDeps = demo
     ? {
-        "@babylonjs/core": "^9.0.0",
-        "@babylonjs/loaders": "^9.0.0",
-        "@babylonjs/havok": "^1.3.0",
-        "@babylonjs/lite": "^1.0.1",
+        "@babylonjs/core": "^9.33.1",
+        "@babylonjs/loaders": "^9.33.1",
+        "@babylonjs/havok": "^1.3.14",
+        "@babylonjs/lite": "^1.37.2",
         "@dimforge/rapier3d-compat": "^0.19.3",
       }
     : rc.deps;
-  const engineDevDeps = demo ? { "@types/three": "^0.184.0" } : (rc.devDeps ?? {});
+  const engineDevDeps = demo ? { "@types/three": "^0.187.0" } : (rc.devDeps ?? {});
   // The core components arrive as source in src/components, with their adapter
   // plugins (src/components/<Name>/adapter/). main.ts imports every
   // register.ts on every renderer; each registrar checks `adapter.kind` FIRST
@@ -556,7 +556,7 @@ async function init() {
   // that is never fetched, never in the main bundle.
   const coreDeps: Record<string, string> = {
     earcut: "^3.2.3",
-    ...("@babylonjs/core" in engineDeps ? {} : { "@babylonjs/core": "^9.0.0" }),
+    ...("@babylonjs/core" in engineDeps ? {} : { "@babylonjs/core": "^9.33.1" }),
   };
 
   // package.json — templates differ only in scene data + the chosen adapter.
@@ -743,8 +743,8 @@ export default [
     <script type="importmap">
     {
       "imports": {
-        "three": "https://esm.sh/three@0.184.0",
-        "three/addons/": "https://esm.sh/three@0.184.0/examples/jsm/"
+        "three": "https://esm.sh/three@0.187.0",
+        "three/addons/": "https://esm.sh/three@0.187.0/examples/jsm/"
       }
     }
     </script>
@@ -797,8 +797,8 @@ export default [
       ? `    <script type="importmap">
     {
       "imports": {
-        "three": "https://esm.sh/three@0.184.0",
-        "three/addons/": "https://esm.sh/three@0.184.0/examples/jsm/"
+        "three": "https://esm.sh/three@0.187.0",
+        "three/addons/": "https://esm.sh/three@0.187.0/examples/jsm/"
       }
     }
     </script>
