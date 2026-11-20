@@ -1,6 +1,6 @@
 {
   "name": "@babylonjsmarket/arcade",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "type": "module",
   "license": "MIT",
   "description": "The game runner for @babylonjsmarket/ecs: ArcadeGame (scene JSON in, running game out), the controls HUD, shared event names, and the `arcade` project scaffolder",
