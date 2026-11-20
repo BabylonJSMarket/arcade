@@ -59,6 +59,15 @@ const vizModules = (
     : {}
 ) as Record<string, LazyComponentResolver>
 
+// Control panels: a `<Name>.panel.tsx` exports `<Name>PanelComponent` +
+// `<Name>PanelSystem`, the knobs a scene's `<Name>Panel` entity opens with
+// its hotkey. Dev only, like the debug panels.
+const panelModules = (
+  import.meta.env.DEV
+    ? import.meta.glob(['./Components/*/*.panel.tsx', './components/*/*.panel.tsx'])
+    : {}
+) as Record<string, LazyComponentResolver>
+
 export const REGISTRY: Record<string, LazyComponentResolver> = Object.fromEntries([
   ...Object.entries(modules).flatMap(([filePath, load]) => {
     // filePath looks like './Components/<Name>/<File>.ts'. Keep only the main
@@ -76,5 +85,12 @@ export const REGISTRY: Record<string, LazyComponentResolver> = Object.fromEntrie
     const dir = parts[parts.length - 2] ?? ''
     if (file !== `${dir}.viz.tsx`) return []
     return [[`${dir}Debugger`, load]] as Array<[string, LazyComponentResolver]>
+  }),
+  ...Object.entries(panelModules).flatMap(([filePath, load]) => {
+    const parts = filePath.split('/')
+    const file = parts[parts.length - 1] ?? ''
+    const dir = parts[parts.length - 2] ?? ''
+    if (file !== `${dir}.panel.tsx`) return []
+    return [[`${dir}Panel`, load]] as Array<[string, LazyComponentResolver]>
   }),
 ])
